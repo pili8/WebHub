@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 背景圆 -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M54,54m-40,0a40,40 0,1 1,80 0a40,40 0,1 1,-80 0" />
+
+    <!-- 表格图标 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M35,35h38v38h-38z"
+        android:strokeWidth="2"
+        android:strokeColor="#FFFFFF" />
+
+    <!-- 表格横线 -->
+    <path
+        android:pathData="M35,47h38M35,59h38"
+        android:strokeWidth="2"
+        android:strokeColor="#FFFFFF" />
+
+    <!-- 表格竖线 -->
+    <path
+        android:pathData="M47,35v38M59,35v38"
+        android:strokeWidth="2"
+        android:strokeColor="#FFFFFF" />
+
+</vector>
