@@ -46,6 +46,9 @@ public class MainActivity extends AppCompatActivity {
         btnBack = findViewById(R.id.btnBack);
         tvTitle = findViewById(R.id.tvTitle);
 
+        // 设置标题
+        tvTitle.setText("CRM");
+
         // 设置返回按钮
         btnBack.setOnClickListener(v -> {
             if (webView.canGoBack()) {
@@ -100,12 +103,19 @@ public class MainActivity extends AppCompatActivity {
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
 
-                // 只允许加载目标视图 URL，阻止所有其他导航
+                // 检查是否为允许的 URL
                 if (isAllowedUrl(url)) {
                     return false; // 允许加载
                 }
 
-                // 阻止外部链接和跳转到首页
+                // 阻止跳转到金山文档首页
+                if (isKdocsHomepage(url)) {
+                    // 如果试图跳转到首页，重新加载目标视图
+                    view.loadUrl(TARGET_URL);
+                    return true;
+                }
+
+                // 阻止其他外部链接
                 return true;
             }
 
@@ -143,40 +153,49 @@ public class MainActivity extends AppCompatActivity {
                     progressBar.setVisibility(View.GONE);
                 }
             }
-
-            @Override
-            public void onReceivedTitle(WebView view, String title) {
-                super.onReceivedTitle(view, title);
-                // 更新标题（可选：显示页面标题或固定显示 CRM）
-                // tvTitle.setText(title);
-            }
         });
     }
 
     /**
      * 判断是否为允许加载的 URL
-     * 只允许当前视图链接，阻止跳转到首页或其他页面
+     * 允许金山文档相关的所有资源，只阻止跳转到首页
      */
     private boolean isAllowedUrl(String url) {
         if (url == null) return false;
 
-        // 允许目标 URL
-        if (url.equals(TARGET_URL)) return true;
+        // 允许金山文档的所有域名
+        if (url.contains("kdocs.cn")) return true;
+        if (url.contains("wps.cn")) return true;
+        if (url.contains("wps.com")) return true;
 
-        // 允许视图内的子链接（同一文档的不同视图）
-        if (url.startsWith("https://www.kdocs.cn/wo/sl/")) return true;
+        // 允许金山相关的 CDN 和资源
+        if (url.contains("klcdn.com")) return true;
+        if (url.contains("wpscdn.com")) return true;
+        if (url.contains("cache.wpscdn.com")) return true;
 
-        // 允许登录页面
-        if (url.contains("account.wps.cn") || url.contains("account.kdocs.cn")) return true;
+        // 允许登录和认证相关
+        if (url.contains("account.")) return true;
 
         // 允许 JavaScript 和空白页
         if (url.startsWith("javascript:") || url.startsWith("about:blank")) return true;
 
-        // 允许金山文档的静态资源
-        if (url.contains("cdn.kdocs.cn") || url.contains("static.kdocs.cn")) return true;
+        // 允许数据 URI
+        if (url.startsWith("data:")) return true;
 
-        // 阻止其他所有链接（包括首页）
         return false;
+    }
+
+    /**
+     * 判断是否为金山文档首页（需要阻止跳转）
+     */
+    private boolean isKdocsHomepage(String url) {
+        if (url == null) return false;
+        // 精确匹配首页 URL
+        return url.equals("https://www.kdocs.cn/")
+                || url.equals("https://www.kdocs.cn")
+                || url.equals("http://www.kdocs.cn/")
+                || url.equals("http://www.kdocs.cn")
+                || url.matches("https://www\\.kdocs\\.cn/\\??.*");
     }
 
     @Override
