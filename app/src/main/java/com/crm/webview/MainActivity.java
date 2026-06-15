@@ -62,8 +62,6 @@ public class MainActivity extends AppCompatActivity {
 
         // 启用缓存
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        settings.setAppCacheEnabled(true);
-        settings.setAppCachePath(getApplicationContext().getCacheDir().getAbsolutePath());
 
         // 允许文件访问（部分页面需要）
         settings.setAllowFileAccess(true);
