@@ -6,7 +6,6 @@ import android.net.http.SslError;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.View;
-import android.view.WindowManager;
 import android.webkit.CookieManager;
 import android.webkit.SslErrorHandler;
 import android.webkit.WebChromeClient;
@@ -14,7 +13,9 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -28,6 +29,8 @@ public class MainActivity extends AppCompatActivity {
 
     private WebView webView;
     private ProgressBar progressBar;
+    private ImageView btnBack;
+    private TextView tvTitle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,13 +38,20 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         // 保持屏幕常亮
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        // 全屏沉浸式
-        hideSystemUI();
-
+        // 初始化视图
         webView = findViewById(R.id.webview);
         progressBar = findViewById(R.id.progressBar);
+        btnBack = findViewById(R.id.btnBack);
+        tvTitle = findViewById(R.id.tvTitle);
+
+        // 设置返回按钮
+        btnBack.setOnClickListener(v -> {
+            if (webView.canGoBack()) {
+                webView.goBack();
+            }
+        });
 
         setupWebView();
         webView.loadUrl(TARGET_URL);
@@ -90,12 +100,12 @@ public class MainActivity extends AppCompatActivity {
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
 
-                // 只允许加载金山文档相关域名
+                // 只允许加载目标视图 URL，阻止所有其他导航
                 if (isAllowedUrl(url)) {
                     return false; // 允许加载
                 }
 
-                // 阻止外部链接
+                // 阻止外部链接和跳转到首页
                 return true;
             }
 
@@ -109,6 +119,9 @@ public class MainActivity extends AppCompatActivity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 progressBar.setVisibility(View.GONE);
+
+                // 更新返回按钮状态
+                btnBack.setVisibility(view.canGoBack() ? View.VISIBLE : View.GONE);
 
                 // 保存 Cookie
                 CookieManager.getInstance().flush();
@@ -130,56 +143,54 @@ public class MainActivity extends AppCompatActivity {
                     progressBar.setVisibility(View.GONE);
                 }
             }
+
+            @Override
+            public void onReceivedTitle(WebView view, String title) {
+                super.onReceivedTitle(view, title);
+                // 更新标题（可选：显示页面标题或固定显示 CRM）
+                // tvTitle.setText(title);
+            }
         });
     }
 
     /**
      * 判断是否为允许加载的 URL
-     * 只允许金山文档相关域名
+     * 只允许当前视图链接，阻止跳转到首页或其他页面
      */
     private boolean isAllowedUrl(String url) {
         if (url == null) return false;
-        return url.contains("kdocs.cn")
-                || url.contains("wps.cn")
-                || url.contains("wps.com")
-                || url.contains("kdocs.cn")
-                || url.startsWith("javascript:")
-                || url.startsWith("about:blank");
-    }
 
-    /**
-     * 隐藏系统导航栏，全屏显示
-     */
-    private void hideSystemUI() {
-        getWindow().getDecorView().setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_FULLSCREEN
-        );
-    }
+        // 允许目标 URL
+        if (url.equals(TARGET_URL)) return true;
 
-    @Override
-    public void onWindowFocusChanged(boolean hasFocus) {
-        super.onWindowFocusChanged(hasFocus);
-        if (hasFocus) {
-            hideSystemUI();
-        }
+        // 允许视图内的子链接（同一文档的不同视图）
+        if (url.startsWith("https://www.kdocs.cn/wo/sl/")) return true;
+
+        // 允许登录页面
+        if (url.contains("account.wps.cn") || url.contains("account.kdocs.cn")) return true;
+
+        // 允许 JavaScript 和空白页
+        if (url.startsWith("javascript:") || url.startsWith("about:blank")) return true;
+
+        // 允许金山文档的静态资源
+        if (url.contains("cdn.kdocs.cn") || url.contains("static.kdocs.cn")) return true;
+
+        // 阻止其他所有链接（包括首页）
+        return false;
     }
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_BACK && webView.canGoBack()) {
-            // 有历史记录时执行页面内返回
-            webView.goBack();
-            return true;
-        }
         if (keyCode == KeyEvent.KEYCODE_BACK) {
-            // 无历史记录时，不退出 APP，尝试返回多维表首页
-            webView.loadUrl(TARGET_URL);
-            return true;
+            if (webView.canGoBack()) {
+                // 有历史记录时执行页面内返回
+                webView.goBack();
+                return true;
+            } else {
+                // 无历史记录时，重新加载目标页面（不退出 APP）
+                webView.loadUrl(TARGET_URL);
+                return true;
+            }
         }
         return super.onKeyDown(keyCode, event);
     }
@@ -196,7 +207,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         webView.onResume();
-        hideSystemUI();
     }
 
     @Override

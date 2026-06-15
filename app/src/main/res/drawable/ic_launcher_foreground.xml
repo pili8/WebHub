@@ -5,28 +5,42 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- 背景圆 -->
+    <!-- 背景圆形渐变效果 -->
     <path
         android:fillColor="#4CAF50"
-        android:pathData="M54,54m-40,0a40,40 0,1 1,80 0a40,40 0,1 1,-80 0" />
+        android:pathData="M54,54m-42,0a42,42 0,1 1,84 0a42,42 0,1 1,-84 0" />
 
-    <!-- 表格图标 -->
+    <!-- 内部圆形 -->
+    <path
+        android:fillColor="#388E3C"
+        android:pathData="M54,54m-36,0a36,36 0,1 1,72 0a36,36 0,1 1,-72 0" />
+
+    <!-- 表格主体 -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M35,35h38v38h-38z"
-        android:strokeWidth="2"
-        android:strokeColor="#FFFFFF" />
+        android:pathData="M36,36h36v36h-36z" />
 
     <!-- 表格横线 -->
     <path
-        android:pathData="M35,47h38M35,59h38"
+        android:pathData="M36,48h36M36,60h36"
         android:strokeWidth="2"
-        android:strokeColor="#FFFFFF" />
+        android:strokeColor="#4CAF50" />
 
     <!-- 表格竖线 -->
     <path
-        android:pathData="M47,35v38M59,35v38"
+        android:pathData="M48,36v36M60,36v36"
         android:strokeWidth="2"
-        android:strokeColor="#FFFFFF" />
+        android:strokeColor="#4CAF50" />
+
+    <!-- 表格单元格填充 -->
+    <path
+        android:fillColor="#E8F5E9"
+        android:pathData="M36,36h12v12h-12z" />
+    <path
+        android:fillColor="#C8E6C9"
+        android:pathData="M60,48h12v12h-12z" />
+    <path
+        android:fillColor="#A5D6A7"
+        android:pathData="M48,60h12v12h-12z" />
 
 </vector>
