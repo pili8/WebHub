@@ -38,16 +38,32 @@
 
     </RelativeLayout>
 
-    <!-- WebView 内容区 -->
+    <!-- WebView 内容区 - 三个独立的 WebView -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
 
+        <!-- 销售机会（卡片） -->
         <WebView
-            android:id="@+id/webview"
+            android:id="@+id/webview_card"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="match_parent"
+            android:visibility="visible" />
+
+        <!-- 最近新增（表格） -->
+        <WebView
+            android:id="@+id/webview_table"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+
+        <!-- 录入线索（录入） -->
+        <WebView
+            android:id="@+id/webview_input"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
 
     </FrameLayout>
 
@@ -70,17 +86,19 @@
             android:background="?attr/selectableItemBackground">
 
             <ImageView
+                android:id="@+id/icon_card"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_tab_card"
                 android:contentDescription="销售机会" />
 
             <TextView
+                android:id="@+id/text_card"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="销售机会"
                 android:textSize="12sp"
-                android:textColor="#666666"
+                android:textColor="#4CAF50"
                 android:layout_marginTop="2dp" />
 
         </LinearLayout>
@@ -96,12 +114,14 @@
             android:background="?attr/selectableItemBackground">
 
             <ImageView
+                android:id="@+id/icon_table"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_tab_table"
                 android:contentDescription="最近新增" />
 
             <TextView
+                android:id="@+id/text_table"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="最近新增"
@@ -122,12 +142,14 @@
             android:background="?attr/selectableItemBackground">
 
             <ImageView
+                android:id="@+id/icon_input"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_tab_input"
                 android:contentDescription="录入线索" />
 
             <TextView
+                android:id="@+id/text_input"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="录入线索"

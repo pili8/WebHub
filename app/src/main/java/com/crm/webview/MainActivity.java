@@ -31,15 +31,18 @@ public class MainActivity extends AppCompatActivity {
     private static final String URL_INPUT = "https://www.kdocs.cn/wo/sl/v13iHfr4";  // 录入线索（录入）
     // ========================================
 
-    private static final String[] TAB_URLS = {URL_CARD, URL_TABLE, URL_INPUT};
-    private static final String[] TAB_NAMES = {"销售机会", "最近新增", "录入线索"};
-
-    private WebView webView;
+    private WebView webViewCard, webViewTable, webViewInput;
+    private WebView[] webViews;
     private ProgressBar progressBar;
     private TextView tvTitle;
     private LinearLayout tabCard, tabTable, tabInput;
     private LinearLayout[] tabs;
+    private ImageView iconCard, iconTable, iconInput;
+    private ImageView[] icons;
+    private TextView textCard, textTable, textInput;
+    private TextView[] texts;
     private int currentTab = 0;
+    private boolean[] webViewInitialized = {false, false, false};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,21 +53,38 @@ public class MainActivity extends AppCompatActivity {
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         // 初始化视图
-        webView = findViewById(R.id.webview);
+        webViewCard = findViewById(R.id.webview_card);
+        webViewTable = findViewById(R.id.webview_table);
+        webViewInput = findViewById(R.id.webview_input);
+        webViews = new WebView[]{webViewCard, webViewTable, webViewInput};
+
         progressBar = findViewById(R.id.progressBar);
         tvTitle = findViewById(R.id.tvTitle);
+
         tabCard = findViewById(R.id.tab_card);
         tabTable = findViewById(R.id.tab_table);
         tabInput = findViewById(R.id.tab_input);
-
         tabs = new LinearLayout[]{tabCard, tabTable, tabInput};
+
+        iconCard = findViewById(R.id.icon_card);
+        iconTable = findViewById(R.id.icon_table);
+        iconInput = findViewById(R.id.icon_input);
+        icons = new ImageView[]{iconCard, iconTable, iconInput};
+
+        textCard = findViewById(R.id.text_card);
+        textTable = findViewById(R.id.text_table);
+        textInput = findViewById(R.id.text_input);
+        texts = new TextView[]{textCard, textTable, textInput};
 
         // 设置选项卡点击事件
         tabCard.setOnClickListener(v -> switchTab(0));
         tabTable.setOnClickListener(v -> switchTab(1));
         tabInput.setOnClickListener(v -> switchTab(2));
 
-        setupWebView();
+        // 初始化所有 WebView
+        setupWebView(webViewCard, 0);
+        setupWebView(webViewTable, 1);
+        setupWebView(webViewInput, 2);
 
         // 默认显示第一个选项卡
         switchTab(0);
@@ -77,31 +97,41 @@ public class MainActivity extends AppCompatActivity {
         currentTab = index;
 
         // 更新标题
-        tvTitle.setText(TAB_NAMES[index]);
+        String[] titles = {"销售机会", "最近新增", "录入线索"};
+        tvTitle.setText(titles[index]);
 
         // 更新选项卡样式
         for (int i = 0; i < tabs.length; i++) {
-            LinearLayout tab = tabs[i];
-            ImageView icon = (ImageView) tab.getChildAt(0);
-            TextView text = (TextView) tab.getChildAt(1);
-
             if (i == index) {
                 // 选中状态
-                text.setTextColor(Color.parseColor("#4CAF50"));
-                icon.setColorFilter(Color.parseColor("#4CAF50"));
+                icons[i].setColorFilter(Color.parseColor("#4CAF50"));
+                texts[i].setTextColor(Color.parseColor("#4CAF50"));
             } else {
                 // 未选中状态
-                text.setTextColor(Color.parseColor("#666666"));
-                icon.setColorFilter(Color.parseColor("#666666"));
+                icons[i].setColorFilter(Color.parseColor("#666666"));
+                texts[i].setTextColor(Color.parseColor("#666666"));
             }
         }
 
-        // 加载对应 URL
-        webView.loadUrl(TAB_URLS[index]);
+        // 切换 WebView 显示
+        for (int i = 0; i < webViews.length; i++) {
+            if (i == index) {
+                webViews[i].setVisibility(View.VISIBLE);
+            } else {
+                webViews[i].setVisibility(View.GONE);
+            }
+        }
+
+        // 首次切换到该选项卡时加载 URL
+        if (!webViewInitialized[index]) {
+            String[] urls = {URL_CARD, URL_TABLE, URL_INPUT};
+            webViews[index].loadUrl(urls[index]);
+            webViewInitialized[index] = true;
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    private void setupWebView() {
+    private void setupWebView(WebView webView, int index) {
         WebSettings settings = webView.getSettings();
 
         // 启用 JavaScript
@@ -148,7 +178,10 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 super.onPageStarted(view, url, favicon);
-                progressBar.setVisibility(View.VISIBLE);
+                // 只有当前显示的 WebView 才显示进度条
+                if (view.getVisibility() == View.VISIBLE) {
+                    progressBar.setVisibility(View.VISIBLE);
+                }
             }
 
             @Override
@@ -168,9 +201,11 @@ public class MainActivity extends AppCompatActivity {
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
-                progressBar.setProgress(newProgress);
-                if (newProgress >= 100) {
-                    progressBar.setVisibility(View.GONE);
+                if (view.getVisibility() == View.VISIBLE) {
+                    progressBar.setProgress(newProgress);
+                    if (newProgress >= 100) {
+                        progressBar.setVisibility(View.GONE);
+                    }
                 }
             }
         });
@@ -206,12 +241,15 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
-            if (webView.canGoBack()) {
-                webView.goBack();
+            // 获取当前显示的 WebView
+            WebView currentWebView = webViews[currentTab];
+
+            if (currentWebView.canGoBack()) {
+                // 在当前 WebView 内返回
+                currentWebView.goBack();
                 return true;
             } else {
-                // 重新加载当前选项卡
-                webView.loadUrl(TAB_URLS[currentTab]);
+                // 已经是第一页了，不做任何操作（不退出 APP）
                 return true;
             }
         }
@@ -221,21 +259,28 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        webView.onPause();
+        // 暂停所有 WebView
+        for (WebView webView : webViews) {
+            webView.onPause();
+        }
         CookieManager.getInstance().flush();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        webView.onResume();
+        // 恢复当前显示的 WebView
+        webViews[currentTab].onResume();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (webView != null) {
-            webView.destroy();
+        // 销毁所有 WebView
+        for (WebView webView : webViews) {
+            if (webView != null) {
+                webView.destroy();
+            }
         }
     }
 }
