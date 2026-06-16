@@ -53,14 +53,14 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="每个选项卡可配置多个链接，格式：标题,网址（每行一个）"
+                android:text="链接格式：标题,网址（每行一个）\n脚本：页面加载后自动执行的JavaScript代码"
                 android:textSize="13sp"
                 android:textColor="#666666"
                 android:padding="12dp"
                 android:background="@drawable/info_bg"
                 android:layout_marginBottom="16dp" />
 
-            <!-- 选项卡1 -->
+            <!-- ========== 选项卡1 ========== -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -104,16 +104,29 @@
             <EditText
                 android:id="@+id/et_links1"
                 android:layout_width="match_parent"
-                android:layout_height="80dp"
+                android:layout_height="70dp"
                 android:hint="标题1,https://...&#10;标题2,https://..."
                 android:textSize="13sp"
                 android:inputType="textMultiLine"
                 android:gravity="top"
                 android:background="@drawable/edit_text_bg"
                 android:padding="10dp"
-                android:layout_marginBottom="16dp" />
+                android:layout_marginBottom="8dp" />
 
-            <!-- 选项卡2 -->
+            <EditText
+                android:id="@+id/et_script1"
+                android:layout_width="match_parent"
+                android:layout_height="70dp"
+                android:hint="脚本（可选）&#10;例：document.querySelector('.class').style.display='none';"
+                android:textSize="12sp"
+                android:inputType="textMultiLine"
+                android:gravity="top"
+                android:background="@drawable/edit_text_bg"
+                android:padding="10dp"
+                android:layout_marginBottom="16dp"
+                android:fontFamily="monospace" />
+
+            <!-- ========== 选项卡2 ========== -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -157,16 +170,29 @@
             <EditText
                 android:id="@+id/et_links2"
                 android:layout_width="match_parent"
-                android:layout_height="80dp"
+                android:layout_height="70dp"
                 android:hint="标题1,https://...&#10;标题2,https://..."
                 android:textSize="13sp"
                 android:inputType="textMultiLine"
                 android:gravity="top"
                 android:background="@drawable/edit_text_bg"
                 android:padding="10dp"
-                android:layout_marginBottom="16dp" />
+                android:layout_marginBottom="8dp" />
 
-            <!-- 选项卡3 -->
+            <EditText
+                android:id="@+id/et_script2"
+                android:layout_width="match_parent"
+                android:layout_height="70dp"
+                android:hint="脚本（可选）&#10;例：document.querySelector('.class').style.display='none';"
+                android:textSize="12sp"
+                android:inputType="textMultiLine"
+                android:gravity="top"
+                android:background="@drawable/edit_text_bg"
+                android:padding="10dp"
+                android:layout_marginBottom="16dp"
+                android:fontFamily="monospace" />
+
+            <!-- ========== 选项卡3 ========== -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -210,14 +236,39 @@
             <EditText
                 android:id="@+id/et_links3"
                 android:layout_width="match_parent"
-                android:layout_height="80dp"
+                android:layout_height="70dp"
                 android:hint="标题1,https://...&#10;标题2,https://..."
                 android:textSize="13sp"
                 android:inputType="textMultiLine"
                 android:gravity="top"
                 android:background="@drawable/edit_text_bg"
                 android:padding="10dp"
-                android:layout_marginBottom="24dp" />
+                android:layout_marginBottom="8dp" />
+
+            <EditText
+                android:id="@+id/et_script3"
+                android:layout_width="match_parent"
+                android:layout_height="70dp"
+                android:hint="脚本（可选）&#10;例：document.querySelector('.class').style.display='none';"
+                android:textSize="12sp"
+                android:inputType="textMultiLine"
+                android:gravity="top"
+                android:background="@drawable/edit_text_bg"
+                android:padding="10dp"
+                android:layout_marginBottom="24dp"
+                android:fontFamily="monospace" />
+
+            <!-- 脚本帮助 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="常用脚本示例：\n\n隐藏元素：\ndocument.querySelector('.类名').style.display='none';\n\n点击按钮：\ndocument.querySelector('.类名').click();\n\n修改文字：\ndocument.querySelector('.类名').textContent='新内容';\n\n隐藏多个元素：\ndocument.querySelectorAll('.类名').forEach(el=>el.style.display='none');"
+                android:textSize="12sp"
+                android:textColor="#999999"
+                android:padding="12dp"
+                android:background="@drawable/info_bg"
+                android:layout_marginBottom="16dp"
+                android:fontFamily="monospace" />
 
             <!-- 保存按钮 -->
             <Button

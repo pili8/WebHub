@@ -64,6 +64,7 @@ public class MainActivity extends AppCompatActivity {
 
     private String[] tabIconsEmoji = {"📊", "📋", "➕"};
     private String[] tabTitles = {"销售机会", "最近新增", "录入线索"};
+    private String[] tabScripts = {"", "", ""}; // 每个选项卡的自定义脚本
     private List<List<LinkItem>> tabLinks = new ArrayList<>();
 
     private SharedPreferences prefs;
@@ -219,6 +220,11 @@ public class MainActivity extends AppCompatActivity {
         tabTitles[1] = prefs.getString("title2", "最近新增");
         tabTitles[2] = prefs.getString("title3", "录入线索");
 
+        // 加载自定义脚本
+        tabScripts[0] = prefs.getString("script1", "");
+        tabScripts[1] = prefs.getString("script2", "");
+        tabScripts[2] = prefs.getString("script3", "");
+
         for (int i = 0; i < 3; i++) {
             tabLinks.get(i).clear();
             String linksStr = prefs.getString("links" + (i + 1), "");
@@ -359,6 +365,30 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * 执行自定义脚本
+     */
+    private void executeCustomScript(WebView webView) {
+        // 找到当前 WebView 对应的选项卡索引
+        int tabIndex = -1;
+        for (int i = 0; i < webViews.length; i++) {
+            if (webViews[i] == webView) {
+                tabIndex = i;
+                break;
+            }
+        }
+
+        if (tabIndex >= 0 && tabIndex < tabScripts.length) {
+            String script = tabScripts[tabIndex];
+            if (script != null && !script.isEmpty()) {
+                // 延迟执行，确保页面完全加载
+                webView.postDelayed(() -> {
+                    webView.evaluateJavascript(script, null);
+                }, 500);
+            }
+        }
+    }
+
     private int dpToPx(int dp) {
         return (int) (dp * getResources().getDisplayMetrics().density);
     }
@@ -410,6 +440,9 @@ public class MainActivity extends AppCompatActivity {
                     progressBar.setVisibility(View.GONE);
                 }
                 CookieManager.getInstance().flush();
+
+                // 执行自定义脚本
+                executeCustomScript(view);
             }
 
             @Override
