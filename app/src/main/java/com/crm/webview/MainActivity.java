@@ -33,7 +33,7 @@ public class MainActivity extends AppCompatActivity {
 
     private WebView webView;
     private ProgressBar progressBar;
-    private TextView tvTitle, tvCurrentLink, tvArrow;
+    private TextView tvTitle, tvArrow;
     private ImageView btnRefresh, btnSettings;
     private LinearLayout btnDropdown, dropdownList;
     private LinearLayout tab1, tab2, tab3;
@@ -113,7 +113,6 @@ public class MainActivity extends AppCompatActivity {
         webView = findViewById(R.id.webview_main);
         progressBar = findViewById(R.id.progressBar);
         tvTitle = findViewById(R.id.tvTitle);
-        tvCurrentLink = findViewById(R.id.tvCurrentLink);
         tvArrow = findViewById(R.id.tvArrow);
         btnDropdown = findViewById(R.id.btnDropdown);
         dropdownList = findViewById(R.id.dropdownList);
@@ -185,8 +184,6 @@ public class MainActivity extends AppCompatActivity {
         currentLinkIndex = 0;
         isDropdownOpen = false;
 
-        tvTitle.setText(tabTitles[index]);
-
         for (int i = 0; i < 3; i++) {
             if (i == index) {
                 tabTexts[i].setTextColor(Color.parseColor("#1976D2"));
@@ -202,8 +199,8 @@ public class MainActivity extends AppCompatActivity {
     private void updateDropdown() {
         List<LinkItem> links = tabLinks.get(currentTab);
 
-        // 更新当前链接显示
-        tvCurrentLink.setText(links.get(currentLinkIndex).title);
+        // 更新标题显示（当前链接名称）
+        tvTitle.setText(links.get(currentLinkIndex).title);
 
         // 多个链接时显示箭头，单个链接时隐藏
         if (links.size() > 1) {

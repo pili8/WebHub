@@ -16,16 +16,39 @@
         android:paddingStart="16dp"
         android:paddingEnd="8dp">
 
-        <TextView
-            android:id="@+id/tvTitle"
+        <!-- 当前链接名称 + 箭头 -->
+        <LinearLayout
+            android:id="@+id/btnDropdown"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
-            android:text="CRM"
-            android:textColor="@android:color/white"
-            android:textSize="17sp"
-            android:textStyle="bold" />
+            android:gravity="center_vertical"
+            android:background="?attr/selectableItemBackground">
 
+            <TextView
+                android:id="@+id/tvTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="CRM"
+                android:textColor="@android:color/white"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:maxWidth="200dp"
+                android:ellipsize="end"
+                android:singleLine="true" />
+
+            <TextView
+                android:id="@+id/tvArrow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=" ▼"
+                android:textColor="#B3FFFFFF"
+                android:textSize="12sp"
+                android:visibility="gone" />
+
+        </LinearLayout>
+
+        <!-- 刷新按钮 -->
         <ImageView
             android:id="@+id/btnRefresh"
             android:layout_width="40dp"
@@ -36,6 +59,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="刷新" />
 
+        <!-- 设置按钮 -->
         <ImageView
             android:id="@+id/btnSettings"
             android:layout_width="40dp"
@@ -48,55 +72,15 @@
 
     </LinearLayout>
 
-    <!-- 下拉选择栏 -->
+    <!-- 展开的下拉列表 -->
     <LinearLayout
+        android:id="@+id/dropdownList"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:background="#FFFFFF"
-        android:elevation="2dp">
-
-        <!-- 当前选项（点击展开/收起） -->
-        <LinearLayout
-            android:id="@+id/btnDropdown"
-            android:layout_width="match_parent"
-            android:layout_height="40dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:background="?attr/selectableItemBackground">
-
-            <TextView
-                android:id="@+id/tvCurrentLink"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text=""
-                android:textSize="14sp"
-                android:textColor="#333333" />
-
-            <TextView
-                android:id="@+id/tvArrow"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="▼"
-                android:textSize="12sp"
-                android:textColor="#999999"
-                android:visibility="gone" />
-
-        </LinearLayout>
-
-        <!-- 展开的选项列表（默认隐藏） -->
-        <LinearLayout
-            android:id="@+id/dropdownList"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone"
-            android:background="#FAFAFA" />
-
-    </LinearLayout>
+        android:elevation="4dp"
+        android:visibility="gone" />
 
     <!-- 进度条 -->
     <ProgressBar
