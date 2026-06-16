@@ -254,51 +254,35 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * 关闭金山文档中的弹窗
+     * 点击屏幕边缘（弹窗外）来关闭弹窗
      */
     private void closePopup(WebView webView) {
-        // 先检查页面上是否有弹窗
-        String checkJs = "(function() {" +
-                "  var modals = document.querySelectorAll('[class*=\"modal\"], [class*=\"dialog\"], [class*=\"popup\"], [class*=\"drawer\"], [class*=\"detail\"]');" +
-                "  for (var i = 0; i < modals.length; i++) {" +
-                "    var el = modals[i];" +
-                "    var style = window.getComputedStyle(el);" +
-                "    if (style.display !== 'none' && style.visibility !== 'hidden' && el.offsetWidth > 0) {" +
-                "      return true;" +
+        // 在屏幕边缘多个位置模拟点击
+        String js = "(function() {" +
+                "  // 获取视口尺寸" +
+                "  var w = window.innerWidth;" +
+                "  var h = window.innerHeight;" +
+                "" +
+                "  // 在屏幕边缘点击（弹窗外区域）" +
+                "  var points = [[1, 1], [1, h-1], [w-1, 1], [w-1, h-1], [w/2, 1], [1, h/2]];" +
+                "" +
+                "  for (var i = 0; i < points.length; i++) {" +
+                "    var x = points[i][0];" +
+                "    var y = points[i][1];" +
+                "    var el = document.elementFromPoint(x, y);" +
+                "    if (el && el.tagName !== 'HTML' && el.tagName !== 'BODY') {" +
+                "      el.dispatchEvent(new MouseEvent('mousedown', {clientX: x, clientY: y, bubbles: true, cancelable: true}));" +
+                "      el.dispatchEvent(new MouseEvent('mouseup', {clientX: x, clientY: y, bubbles: true, cancelable: true}));" +
+                "      el.dispatchEvent(new MouseEvent('click', {clientX: x, clientY: y, bubbles: true, cancelable: true}));" +
+                "      return 'clicked_' + x + '_' + y;" +
                 "    }" +
                 "  }" +
-                "  return false;" +
+                "  return 'no_element';" +
                 "})()";
 
-        webView.evaluateJavascript(checkJs, hasPopup -> {
-            if (hasPopup != null && hasPopup.equals("true")) {
-                // 有弹窗，尝试关闭
-                String closeJs = "(function() {" +
-                        "  // 尝试 ESC 键" +
-                        "  document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', keyCode: 27, bubbles: true}));" +
-                        "" +
-                        "  // 点击页面左上角空白区域（弹窗外）" +
-                        "  var evt = new MouseEvent('click', {clientX: 10, clientY: 10, bubbles: true});" +
-                        "  document.elementFromPoint(10, 10).dispatchEvent(evt);" +
-                        "" +
-                        "  // 查找并点击关闭按钮" +
-                        "  var btns = document.querySelectorAll('button, [role=\"button\"], .close, [class*=\"close\"]');" +
-                        "  for (var i = 0; i < btns.length; i++) {" +
-                        "    var rect = btns[i].getBoundingClientRect();" +
-                        "    if (rect.width < 60 && rect.height < 60 && (rect.top < 80 || rect.right > window.innerWidth - 80)) {" +
-                        "      btns[i].click();" +
-                        "      return 'closed';" +
-                        "    }" +
-                        "  }" +
-                        "  return 'attempted';" +
-                        "})()";
-
-                webView.evaluateJavascript(closeJs, null);
-            } else {
-                // 没有弹窗，执行返回
-                if (webView.canGoBack()) {
-                    webView.goBack();
-                }
-            }
+        webView.evaluateJavascript(js, result -> {
+            // 记录结果用于调试
+            android.util.Log.d("WebViewApp", "Close popup result: " + result);
         });
     }
 
