@@ -9,11 +9,12 @@
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="48dp"
-        android:background="#4CAF50"
+        android:background="#1976D2"
         android:elevation="4dp"
         android:paddingStart="16dp"
-        android:paddingEnd="16dp">
+        android:paddingEnd="8dp">
 
+        <!-- 标题 -->
         <TextView
             android:id="@+id/tvTitle"
             android:layout_width="wrap_content"
@@ -24,6 +25,35 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
+        <!-- 右侧按钮组 -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:orientation="horizontal">
+
+            <!-- 刷新按钮 -->
+            <ImageView
+                android:id="@+id/btnRefresh"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:padding="6dp"
+                android:src="@drawable/ic_refresh"
+                android:contentDescription="刷新" />
+
+            <!-- 设置按钮 -->
+            <ImageView
+                android:id="@+id/btnSettings"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:padding="6dp"
+                android:src="@drawable/ic_settings"
+                android:contentDescription="设置" />
+
+        </LinearLayout>
+
+        <!-- 进度条 -->
         <ProgressBar
             android:id="@+id/progressBar"
             style="?android:attr/progressBarStyleHorizontal"
@@ -31,34 +61,31 @@
             android:layout_height="3dp"
             android:layout_alignParentBottom="true"
             android:layout_marginStart="-16dp"
-            android:layout_marginEnd="-16dp"
+            android:layout_marginEnd="-8dp"
             android:max="100"
             android:progressDrawable="@drawable/progress_bar"
             android:visibility="gone" />
 
     </RelativeLayout>
 
-    <!-- WebView 内容区 - 三个独立的 WebView -->
+    <!-- WebView 内容区 -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <!-- 销售机会（卡片） -->
         <WebView
             android:id="@+id/webview_card"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:visibility="visible" />
 
-        <!-- 最近新增（表格） -->
         <WebView
             android:id="@+id/webview_table"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:visibility="gone" />
 
-        <!-- 录入线索（录入） -->
         <WebView
             android:id="@+id/webview_input"
             android:layout_width="match_parent"
@@ -75,7 +102,6 @@
         android:elevation="8dp"
         android:orientation="horizontal">
 
-        <!-- 销售机会（卡片） -->
         <LinearLayout
             android:id="@+id/tab_card"
             android:layout_width="0dp"
@@ -98,12 +124,11 @@
                 android:layout_height="wrap_content"
                 android:text="销售机会"
                 android:textSize="12sp"
-                android:textColor="#4CAF50"
+                android:textColor="#1976D2"
                 android:layout_marginTop="2dp" />
 
         </LinearLayout>
 
-        <!-- 最近新增（表格） -->
         <LinearLayout
             android:id="@+id/tab_table"
             android:layout_width="0dp"
@@ -131,7 +156,6 @@
 
         </LinearLayout>
 
-        <!-- 录入线索（录入） -->
         <LinearLayout
             android:id="@+id/tab_input"
             android:layout_width="0dp"
