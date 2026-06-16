@@ -11,7 +11,6 @@ import android.graphics.Typeface;
 import android.net.Uri;
 import android.net.http.SslError;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.SystemClock;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -43,7 +42,10 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int PERMISSION_REQUEST_CODE = 100;
 
-    private WebView webView;
+    // 每个选项卡独立的 WebView
+    private WebView webView1, webView2, webView3;
+    private WebView[] webViews;
+
     private ProgressBar progressBar;
     private TextView tvTitle, tvArrow;
     private ImageView btnRefresh, btnSettings;
@@ -58,14 +60,13 @@ public class MainActivity extends AppCompatActivity {
     private int currentTab = 0;
     private int currentLinkIndex = 0;
     private boolean isDropdownOpen = false;
+    private boolean[] tabInitialized = {false, false, false};
 
     private String[] tabIconsEmoji = {"📊", "📋", "➕"};
     private String[] tabTitles = {"销售机会", "最近新增", "录入线索"};
     private List<List<LinkItem>> tabLinks = new ArrayList<>();
 
     private SharedPreferences prefs;
-
-    // 文件上传回调
     private ValueCallback<Uri[]> filePathCallback;
 
     static class LinkItem {
@@ -95,7 +96,7 @@ public class MainActivity extends AppCompatActivity {
         loadConfig();
         updateUI();
         setupListeners();
-        setupWebView();
+        setupAllWebViews();
         requestPermissions();
         switchTab(0);
     }
@@ -103,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        webView.onResume();
+        webViews[currentTab].onResume();
 
         String[] oldLinks = {prefs.getString("links1", ""), prefs.getString("links2", ""), prefs.getString("links3", "")};
         loadConfig();
@@ -115,7 +116,7 @@ public class MainActivity extends AppCompatActivity {
         for (int i = 0; i < 3; i++) {
             if (!oldLinks[i].equals(newLinks[i])) {
                 changed = true;
-                break;
+                tabInitialized[i] = false; // 标记需要重新加载
             }
         }
 
@@ -126,7 +127,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        webView = findViewById(R.id.webview_main);
+        webView1 = findViewById(R.id.webview1);
+        webView2 = findViewById(R.id.webview2);
+        webView3 = findViewById(R.id.webview3);
+        webViews = new WebView[]{webView1, webView2, webView3};
+
         progressBar = findViewById(R.id.progressBar);
         tvTitle = findViewById(R.id.tvTitle);
         tvArrow = findViewById(R.id.tvArrow);
@@ -156,16 +161,13 @@ public class MainActivity extends AppCompatActivity {
         tab2.setOnClickListener(v -> switchTab(1));
         tab3.setOnClickListener(v -> switchTab(2));
 
-        // 点击刷新：使用缓存快速加载
-        btnRefresh.setOnClickListener(v -> webView.reload());
+        btnRefresh.setOnClickListener(v -> webViews[currentTab].reload());
 
-        // 长按刷新：强制从网络加载最新数据
         btnRefresh.setOnLongClickListener(v -> {
-            webView.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
-            webView.reload();
-            // 恢复缓存策略
-            webView.postDelayed(() -> {
-                webView.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+            webViews[currentTab].getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
+            webViews[currentTab].reload();
+            webViews[currentTab].postDelayed(() -> {
+                webViews[currentTab].getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
             }, 1000);
             Toast.makeText(this, "正在刷新最新数据...", Toast.LENGTH_SHORT).show();
             return true;
@@ -206,9 +208,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            // 权限请求结果，WebView 会自动处理
-        }
     }
 
     private void loadConfig() {
@@ -247,10 +246,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void switchTab(int index) {
+        // 暂停当前 WebView
+        webViews[currentTab].onPause();
+
         currentTab = index;
         currentLinkIndex = 0;
         isDropdownOpen = false;
 
+        // 切换 WebView 显示（不重新加载）
+        for (int i = 0; i < webViews.length; i++) {
+            webViews[i].setVisibility(i == index ? View.VISIBLE : View.GONE);
+        }
+
+        // 恢复目标 WebView
+        webViews[index].onResume();
+
+        // 更新选项卡样式
         for (int i = 0; i < 3; i++) {
             if (i == index) {
                 tabTexts[i].setTextColor(Color.parseColor("#1976D2"));
@@ -259,8 +270,13 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        // 首次切换时才加载
+        if (!tabInitialized[index]) {
+            loadCurrentLink();
+            tabInitialized[index] = true;
+        }
+
         updateDropdown();
-        loadCurrentLink();
     }
 
     private void updateDropdown() {
@@ -339,16 +355,7 @@ public class MainActivity extends AppCompatActivity {
     private void loadCurrentLink() {
         List<LinkItem> links = tabLinks.get(currentTab);
         if (currentLinkIndex < links.size()) {
-            String url = links.get(currentLinkIndex).url;
-
-            // 先用缓存快速加载
-            webView.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
-            webView.loadUrl(url);
-
-            // 延迟后后台刷新（确保缓存版本先显示）
-            webView.postDelayed(() -> {
-                webView.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT);
-            }, 3000);
+            webViews[currentTab].loadUrl(links.get(currentLinkIndex).url);
         }
     }
 
@@ -357,15 +364,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    private void setupWebView() {
+    private void setupAllWebViews() {
+        for (int i = 0; i < webViews.length; i++) {
+            setupWebView(webViews[i]);
+        }
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private void setupWebView(WebView webView) {
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
-
-        // 缓存策略：优先使用缓存，网络不通时也能用
         settings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
-
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
         settings.setUserAgentString(settings.getUserAgentString().replace("; wv", ""));
@@ -373,8 +384,6 @@ public class MainActivity extends AppCompatActivity {
         settings.setLoadWithOverviewMode(true);
         settings.setSupportZoom(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
-
-        // 启用定位
         settings.setGeolocationEnabled(true);
 
         CookieManager.getInstance().setAcceptCookie(true);
@@ -389,13 +398,17 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 super.onPageStarted(view, url, favicon);
-                progressBar.setVisibility(View.VISIBLE);
+                if (view == webViews[currentTab]) {
+                    progressBar.setVisibility(View.VISIBLE);
+                }
             }
 
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                progressBar.setVisibility(View.GONE);
+                if (view == webViews[currentTab]) {
+                    progressBar.setVisibility(View.GONE);
+                }
                 CookieManager.getInstance().flush();
             }
 
@@ -408,19 +421,19 @@ public class MainActivity extends AppCompatActivity {
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
-                progressBar.setProgress(newProgress);
-                if (newProgress >= 100) {
-                    progressBar.setVisibility(View.GONE);
+                if (view == webViews[currentTab]) {
+                    progressBar.setProgress(newProgress);
+                    if (newProgress >= 100) {
+                        progressBar.setVisibility(View.GONE);
+                    }
                 }
             }
 
-            // 定位权限请求
             @Override
             public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
                 callback.invoke(origin, true, false);
             }
 
-            // 文件选择
             @Override
             public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> callback,
                                              FileChooserParams fileChooserParams) {
@@ -476,25 +489,21 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
-            // 1. 如果下拉菜单打开，先关闭
             if (isDropdownOpen) {
                 isDropdownOpen = false;
                 updateDropdown();
                 return true;
             }
 
-            // 2. 尝试关闭弹窗
             if (tryClosePopup()) {
                 return true;
             }
 
-            // 3. 如果有网页历史，返回上一页
-            if (webView.canGoBack()) {
-                webView.goBack();
+            if (webViews[currentTab].canGoBack()) {
+                webViews[currentTab].goBack();
                 return true;
             }
 
-            // 4. 都没有则重新加载当前链接
             loadCurrentLink();
             return true;
         }
@@ -502,36 +511,39 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean tryClosePopup() {
-        // 通过点击屏幕顶部区域尝试关闭弹窗
-        float x = webView.getWidth() / 2f;
+        float x = webViews[currentTab].getWidth() / 2f;
         float y = 15f;
 
         long downTime = SystemClock.uptimeMillis();
         MotionEvent downEvent = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, x, y, 0);
-        webView.dispatchTouchEvent(downEvent);
+        webViews[currentTab].dispatchTouchEvent(downEvent);
         downEvent.recycle();
 
-        webView.postDelayed(() -> {
+        webViews[currentTab].postDelayed(() -> {
             MotionEvent upEvent = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, x, y, 0);
-            webView.dispatchTouchEvent(upEvent);
+            webViews[currentTab].dispatchTouchEvent(upEvent);
             upEvent.recycle();
         }, 50);
 
-        return true; // 总是返回 true，后续由网页自行处理
+        return true;
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        webView.onPause();
+        for (WebView webView : webViews) {
+            webView.onPause();
+        }
         CookieManager.getInstance().flush();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (webView != null) {
-            webView.destroy();
+        for (WebView webView : webViews) {
+            if (webView != null) {
+                webView.destroy();
+            }
         }
     }
 }
