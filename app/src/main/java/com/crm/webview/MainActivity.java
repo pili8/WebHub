@@ -676,6 +676,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean isAllowedUrl(String url) {
         if (url == null) return false;
 
+        // 处理特殊协议
         if (url.startsWith("tel:")) {
             Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse(url));
             if (checkSelfPermission(Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
@@ -697,14 +698,12 @@ public class MainActivity extends AppCompatActivity {
             return false;
         }
 
-        if (url.contains("kdocs.cn")) return true;
-        if (url.contains("wps.cn")) return true;
-        if (url.contains("wps.com")) return true;
-        if (url.contains("klcdn.com")) return true;
-        if (url.contains("wpscdn.com")) return true;
-        if (url.contains("account.")) return true;
-        if (url.startsWith("javascript:") || url.startsWith("about:blank")) return true;
-        if (url.startsWith("data:")) return true;
+        // 允许所有 HTTP/HTTPS 网址
+        if (url.startsWith("http://") || url.startsWith("https://")) return true;
+
+        // 允许其他常见协议
+        if (url.startsWith("javascript:") || url.startsWith("about:blank") || url.startsWith("data:")) return true;
+
         return false;
     }
 
