@@ -33,6 +33,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -126,6 +127,15 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void exportSettings() {
+        // 使用 SAF (Storage Access Framework) 选择保存位置
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/json");
+        intent.putExtra(Intent.EXTRA_TITLE, "WebHub_Config_" + System.currentTimeMillis() + ".json");
+        startActivityForResult(intent, 1002);
+    }
+
+    private void doExport(Uri uri) {
         try {
             JSONObject json = new JSONObject();
 
@@ -144,22 +154,19 @@ public class SettingsActivity extends AppCompatActivity {
             }
             json.put("tabs", tabsArray);
 
-            // 保存到文件
-            String fileName = "WebHub_Config_" + System.currentTimeMillis() + ".json";
-            File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-            File file = new File(downloadsDir, fileName);
+            // 写入到用户选择的位置
+            OutputStream os = getContentResolver().openOutputStream(uri);
+            if (os != null) {
+                os.write(json.toString(2).getBytes("UTF-8"));
+                os.close();
+                Toast.makeText(this, "导出成功", Toast.LENGTH_SHORT).show();
 
-            FileWriter writer = new FileWriter(file);
-            writer.write(json.toString(2));
-            writer.close();
-
-            Toast.makeText(this, "已导出到: " + file.getAbsolutePath(), Toast.LENGTH_LONG).show();
-
-            // 分享文件
-            Intent shareIntent = new Intent(Intent.ACTION_SEND);
-            shareIntent.setType("application/json");
-            shareIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file));
-            startActivity(Intent.createChooser(shareIntent, "分享配置文件"));
+                // 分享文件
+                Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                shareIntent.setType("application/json");
+                shareIntent.putExtra(Intent.EXTRA_STREAM, uri);
+                startActivity(Intent.createChooser(shareIntent, "分享配置文件"));
+            }
 
         } catch (Exception e) {
             Toast.makeText(this, "导出失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -175,54 +182,61 @@ public class SettingsActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == 1001 && resultCode == RESULT_OK && data != null) {
-            try {
-                Uri uri = data.getData();
-                InputStream is = getContentResolver().openInputStream(uri);
-                InputStreamReader reader = new InputStreamReader(is);
-                StringBuilder sb = new StringBuilder();
-                char[] buffer = new char[1024];
-                int len;
-                while ((len = reader.read(buffer)) != -1) {
-                    sb.append(buffer, 0, len);
-                }
-                reader.close();
+        if (resultCode != RESULT_OK || data == null) return;
 
-                JSONObject json = new JSONObject(sb.toString());
+        Uri uri = data.getData();
+        if (uri == null) return;
 
-                SharedPreferences.Editor editor = prefs.edit();
+        if (requestCode == 1001) {
+            // 导入
+            doImport(uri);
+        } else if (requestCode == 1002) {
+            // 导出
+            doExport(uri);
+        }
+    }
 
-                // 导入通用设置
-                if (json.has("kdocs_optimize")) {
-                    editor.putBoolean("kdocs_optimize", json.getBoolean("kdocs_optimize"));
-                }
-                if (json.has("tab_count")) {
-                    editor.putInt("tab_count", json.getInt("tab_count"));
-                }
-
-                // 导入选项卡配置
-                if (json.has("tabs")) {
-                    JSONArray tabsArray = json.getJSONArray("tabs");
-                    for (int i = 0; i < tabsArray.length(); i++) {
-                        JSONObject tab = tabsArray.getJSONObject(i);
-                        editor.putString("icon" + (i + 1), tab.getString("icon"));
-                        editor.putString("title" + (i + 1), tab.getString("title"));
-                        editor.putString("links" + (i + 1), tab.getString("links"));
-                    }
-                }
-
-                editor.apply();
-
-                // 重新加载
-                loadConfig();
-                buildUI();
-                switchKdocsOptimize.setChecked(prefs.getBoolean("kdocs_optimize", true));
-
-                Toast.makeText(this, "导入成功", Toast.LENGTH_SHORT).show();
-
-            } catch (Exception e) {
-                Toast.makeText(this, "导入失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+    private void doImport(Uri uri) {
+        try {
+            InputStream is = getContentResolver().openInputStream(uri);
+            InputStreamReader reader = new InputStreamReader(is);
+            StringBuilder sb = new StringBuilder();
+            char[] buffer = new char[1024];
+            int len;
+            while ((len = reader.read(buffer)) != -1) {
+                sb.append(buffer, 0, len);
             }
+            reader.close();
+
+            JSONObject json = new JSONObject(sb.toString());
+
+            SharedPreferences.Editor editor = prefs.edit();
+
+            if (json.has("kdocs_optimize")) {
+                editor.putBoolean("kdocs_optimize", json.getBoolean("kdocs_optimize"));
+            }
+            if (json.has("tab_count")) {
+                editor.putInt("tab_count", json.getInt("tab_count"));
+            }
+            if (json.has("tabs")) {
+                JSONArray tabsArray = json.getJSONArray("tabs");
+                for (int i = 0; i < tabsArray.length(); i++) {
+                    JSONObject tab = tabsArray.getJSONObject(i);
+                    editor.putString("icon" + (i + 1), tab.getString("icon"));
+                    editor.putString("title" + (i + 1), tab.getString("title"));
+                    editor.putString("links" + (i + 1), tab.getString("links"));
+                }
+            }
+
+            editor.apply();
+            loadConfig();
+            buildUI();
+            switchKdocsOptimize.setChecked(prefs.getBoolean("kdocs_optimize", true));
+
+            Toast.makeText(this, "导入成功", Toast.LENGTH_SHORT).show();
+
+        } catch (Exception e) {
+            Toast.makeText(this, "导入失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -462,12 +476,13 @@ public class SettingsActivity extends AppCompatActivity {
     private void toggleEditMode(TabData tab, TextView tvTabIcon, TextView tvTabTitle, EditText etTabIcon, EditText etTabTitle,
                                 LinearLayout linksContainer, TextView btnAddLink, TextView tvArrow, boolean editMode) {
         if (editMode) {
-            // 进入编辑模式：显示输入框，隐藏标题
+            // 进入编辑模式：隐藏图标和标题，显示输入框
+            tvTabIcon.setVisibility(View.GONE);
             tvTabTitle.setVisibility(View.GONE);
             etTabIcon.setVisibility(View.VISIBLE);
             etTabTitle.setVisibility(View.VISIBLE);
         } else {
-            // 退出编辑模式：保存并显示标题
+            // 退出编辑模式：保存并显示图标和标题
             String icon = etTabIcon.getText().toString().trim();
             String title = etTabTitle.getText().toString().trim();
             if (!icon.isEmpty()) tab.icon = icon;
@@ -476,6 +491,7 @@ public class SettingsActivity extends AppCompatActivity {
             tvTabIcon.setText(tab.icon);
             tvTabTitle.setText(tab.title);
 
+            tvTabIcon.setVisibility(View.VISIBLE);
             tvTabTitle.setVisibility(View.VISIBLE);
             etTabIcon.setVisibility(View.GONE);
             etTabTitle.setVisibility(View.GONE);
