@@ -1,7 +1,7 @@
 package com.crm.webview;
 
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Color;
@@ -9,7 +9,6 @@ import android.net.http.SslError;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.webkit.CookieManager;
@@ -19,7 +18,6 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -78,6 +76,42 @@ public class MainActivity extends AppCompatActivity {
         switchTab(0);
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        webViews[currentTab].onResume();
+
+        // 从设置页面返回时重新加载配置
+        loadConfig();
+        updateTabTitles();
+
+        // 检查 URL 是否改变，如果改变则重新加载
+        checkAndReloadIfConfigChanged();
+    }
+
+    private String[] lastUrls = new String[3];
+    private String[] lastTitles = new String[3];
+
+    private void checkAndReloadIfConfigChanged() {
+        boolean changed = false;
+        for (int i = 0; i < 3; i++) {
+            if (!urls[i].equals(lastUrls[i])) {
+                changed = true;
+                webViewInitialized[i] = false;
+            }
+        }
+        if (changed) {
+            // 重新加载当前选项卡
+            if (!webViewInitialized[currentTab]) {
+                webViews[currentTab].loadUrl(urls[currentTab]);
+                webViewInitialized[currentTab] = true;
+            }
+        }
+        // 保存当前配置用于比较
+        System.arraycopy(urls, 0, lastUrls, 0, 3);
+        System.arraycopy(titles, 0, lastTitles, 0, 3);
+    }
+
     private void loadConfig() {
         urls[0] = prefs.getString("url1", DEFAULT_URL_1);
         urls[1] = prefs.getString("url2", DEFAULT_URL_2);
@@ -85,17 +119,6 @@ public class MainActivity extends AppCompatActivity {
         titles[0] = prefs.getString("title1", DEFAULT_TITLE_1);
         titles[1] = prefs.getString("title2", DEFAULT_TITLE_2);
         titles[2] = prefs.getString("title3", DEFAULT_TITLE_3);
-    }
-
-    private void saveConfig() {
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.putString("url1", urls[0]);
-        editor.putString("url2", urls[1]);
-        editor.putString("url3", urls[2]);
-        editor.putString("title1", titles[0]);
-        editor.putString("title2", titles[1]);
-        editor.putString("title3", titles[2]);
-        editor.apply();
     }
 
     private void initViews() {
@@ -133,51 +156,16 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupButtons() {
         btnRefresh.setOnClickListener(v -> refreshCurrentPage());
-        btnSettings.setOnClickListener(v -> showSettingsDialog());
+        btnSettings.setOnClickListener(v -> openSettings());
     }
 
     private void refreshCurrentPage() {
         webViews[currentTab].reload();
     }
 
-    private void showSettingsDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_settings, null);
-
-        EditText etTitle1 = dialogView.findViewById(R.id.et_title1);
-        EditText etUrl1 = dialogView.findViewById(R.id.et_url1);
-        EditText etTitle2 = dialogView.findViewById(R.id.et_title2);
-        EditText etUrl2 = dialogView.findViewById(R.id.et_url2);
-        EditText etTitle3 = dialogView.findViewById(R.id.et_title3);
-        EditText etUrl3 = dialogView.findViewById(R.id.et_url3);
-
-        etTitle1.setText(titles[0]);
-        etUrl1.setText(urls[0]);
-        etTitle2.setText(titles[1]);
-        etUrl2.setText(urls[1]);
-        etTitle3.setText(titles[2]);
-        etUrl3.setText(urls[2]);
-
-        builder.setView(dialogView)
-                .setTitle("视图配置")
-                .setPositiveButton("保存", (dialog, which) -> {
-                    titles[0] = etTitle1.getText().toString().trim();
-                    urls[0] = etUrl1.getText().toString().trim();
-                    titles[1] = etTitle2.getText().toString().trim();
-                    urls[1] = etUrl2.getText().toString().trim();
-                    titles[2] = etTitle3.getText().toString().trim();
-                    urls[2] = etUrl3.getText().toString().trim();
-
-                    saveConfig();
-                    updateTabTitles();
-
-                    // 重新加载当前选项卡
-                    webViewInitialized[currentTab] = false;
-                    webViews[currentTab].loadUrl(urls[currentTab]);
-                    webViewInitialized[currentTab] = true;
-                })
-                .setNegativeButton("取消", null)
-                .show();
+    private void openSettings() {
+        Intent intent = new Intent(this, SettingsActivity.class);
+        startActivity(intent);
     }
 
     private void updateTabTitles() {
@@ -319,12 +307,6 @@ public class MainActivity extends AppCompatActivity {
             webView.onPause();
         }
         CookieManager.getInstance().flush();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        webViews[currentTab].onResume();
     }
 
     @Override
