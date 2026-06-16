@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:layout_marginBottom="16dp">
+
+    <!-- 选项卡标题（可点击展开/收起） -->
+    <LinearLayout
+        android:id="@+id/btnToggle"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:background="@drawable/edit_text_bg"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp">
+
+        <TextView
+            android:id="@+id/tvArrow"
+            android:layout_width="20dp"
+            android:layout_height="wrap_content"
+            android:text="▼"
+            android:textSize="12sp"
+            android:textColor="#666666" />
+
+        <TextView
+            android:id="@+id/tvTabIcon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📊"
+            android:textSize="18sp"
+            android:layout_marginStart="8dp" />
+
+        <TextView
+            android:id="@+id/tvTabTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="选项卡 1"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="#333333"
+            android:layout_marginStart="8dp" />
+
+        <EditText
+            android:id="@+id/etTabIcon"
+            android:layout_width="40dp"
+            android:layout_height="32dp"
+            android:hint="📊"
+            android:textSize="16sp"
+            android:gravity="center"
+            android:background="@android:drawable/edit_text"
+            android:maxLength="2" />
+
+        <EditText
+            android:id="@+id/etTabTitle"
+            android:layout_width="100dp"
+            android:layout_height="32dp"
+            android:hint="标题"
+            android:textSize="13sp"
+            android:background="@android:drawable/edit_text"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:layout_marginStart="4dp" />
+
+    </LinearLayout>
+
+    <!-- 链接列表容器 -->
+    <LinearLayout
+        android:id="@+id/linksContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="8dp"
+        android:visibility="gone" />
+
+    <!-- 添加链接按钮 -->
+    <TextView
+        android:id="@+id/btnAddLink"
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:gravity="center"
+        android:text="+ 添加链接"
+        android:textSize="13sp"
+        android:textColor="#1976D2"
+        android:background="@drawable/edit_text_bg"
+        android:layout_marginTop="8dp"
+        android:visibility="gone" />
+
+</LinearLayout>
