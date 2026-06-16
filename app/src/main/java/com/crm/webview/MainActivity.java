@@ -64,7 +64,7 @@ public class MainActivity extends AppCompatActivity {
 
     private String[] tabIconsEmoji = {"📊", "📋", "➕"};
     private String[] tabTitles = {"销售机会", "最近新增", "录入线索"};
-    private String[] tabScripts = {"", "", ""}; // 每个选项卡的自定义脚本
+    private String[] tabActions = {"", "", ""}; // 每个选项卡的操作配置
     private List<List<LinkItem>> tabLinks = new ArrayList<>();
 
     private SharedPreferences prefs;
@@ -220,10 +220,10 @@ public class MainActivity extends AppCompatActivity {
         tabTitles[1] = prefs.getString("title2", "最近新增");
         tabTitles[2] = prefs.getString("title3", "录入线索");
 
-        // 加载自定义脚本
-        tabScripts[0] = prefs.getString("script1", "");
-        tabScripts[1] = prefs.getString("script2", "");
-        tabScripts[2] = prefs.getString("script3", "");
+        // 加载操作配置
+        tabActions[0] = prefs.getString("actions1", "");
+        tabActions[1] = prefs.getString("actions2", "");
+        tabActions[2] = prefs.getString("actions3", "");
 
         for (int i = 0; i < 3; i++) {
             tabLinks.get(i).clear();
@@ -366,7 +366,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * 执行自定义脚本
+     * 执行自定义操作
      */
     private void executeCustomScript(WebView webView) {
         // 找到当前 WebView 对应的选项卡索引
@@ -378,15 +378,54 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        if (tabIndex >= 0 && tabIndex < tabScripts.length) {
-            String script = tabScripts[tabIndex];
-            if (script != null && !script.isEmpty()) {
-                // 延迟执行，确保页面完全加载
-                webView.postDelayed(() -> {
-                    webView.evaluateJavascript(script, null);
-                }, 500);
+        if (tabIndex >= 0 && tabIndex < tabActions.length) {
+            String actions = tabActions[tabIndex];
+            if (actions != null && !actions.isEmpty()) {
+                String js = buildScriptFromActions(actions);
+                if (!js.isEmpty()) {
+                    webView.postDelayed(() -> {
+                        webView.evaluateJavascript(js, null);
+                    }, 500);
+                }
             }
         }
+    }
+
+    /**
+     * 将操作配置转换为 JavaScript
+     * 格式：action|selector|value
+     */
+    private String buildScriptFromActions(String actions) {
+        StringBuilder js = new StringBuilder();
+        js.append("(function(){");
+
+        String[] lines = actions.split("\n");
+        for (String line : lines) {
+            line = line.trim();
+            if (line.isEmpty()) continue;
+
+            String[] parts = line.split("\\|", 3);
+            if (parts.length < 2) continue;
+
+            String action = parts[0];
+            String selector = parts[1];
+            String value = parts.length > 2 ? parts[2] : "";
+
+            // 转义引号
+            selector = selector.replace("'", "\\'");
+            value = value.replace("'", "\\'");
+
+            if ("hide".equals(action)) {
+                js.append("document.querySelectorAll('").append(selector).append("').forEach(el=>el.style.display='none');");
+            } else if ("click".equals(action)) {
+                js.append("document.querySelectorAll('").append(selector).append("').forEach(el=>el.click());");
+            } else if ("modify".equals(action)) {
+                js.append("document.querySelectorAll('").append(selector).append("').forEach(el=>el.textContent='").append(value).append("');");
+            }
+        }
+
+        js.append("})()");
+        return js.toString();
     }
 
     private int dpToPx(int dp) {
