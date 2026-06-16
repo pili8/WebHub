@@ -4,6 +4,8 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.webkit.CookieManager;
+import android.webkit.WebStorage;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -17,6 +19,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -75,6 +78,19 @@ public class SettingsActivity extends AppCompatActivity {
         // 加载金山文档优化开关状态
         switchKdocsOptimize.setChecked(prefs.getBoolean("kdocs_optimize", true));
 
+        // 设置清除缓存功能
+        TextView tvCacheSize = findViewById(R.id.tvCacheSize);
+        TextView btnClearCache = findViewById(R.id.btnClearCache);
+
+        // 显示缓存大小
+        updateCacheSize(tvCacheSize);
+
+        btnClearCache.setOnClickListener(v -> {
+            clearAllCache();
+            updateCacheSize(tvCacheSize);
+            Toast.makeText(this, "缓存已清除", Toast.LENGTH_SHORT).show();
+        });
+
         ImageView btnBack = findViewById(R.id.btnBack);
         btnBack.setOnClickListener(v -> finish());
 
@@ -83,6 +99,95 @@ public class SettingsActivity extends AppCompatActivity {
 
         loadConfig();
         buildUI();
+    }
+
+    private void updateCacheSize(TextView textView) {
+        long size = getCacheSize();
+        if (size < 1024) {
+            textView.setText(String.format("当前缓存: %d B", size));
+        } else if (size < 1024 * 1024) {
+            textView.setText(String.format("当前缓存: %.1f KB", size / 1024.0));
+        } else {
+            textView.setText(String.format("当前缓存: %.1f MB", size / (1024.0 * 1024.0)));
+        }
+    }
+
+    private long getCacheSize() {
+        long size = 0;
+        try {
+            File cacheDir = getCacheDir();
+            size += getDirSize(cacheDir);
+            File webviewDir = new File(getFilesDir(), "../app_webview");
+            if (webviewDir.exists()) {
+                size += getDirSize(webviewDir);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return size;
+    }
+
+    private long getDirSize(File dir) {
+        long size = 0;
+        if (dir.isDirectory()) {
+            File[] files = dir.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    if (file.isFile()) {
+                        size += file.length();
+                    } else {
+                        size += getDirSize(file);
+                    }
+                }
+            }
+        }
+        return size;
+    }
+
+    private void clearAllCache() {
+        try {
+            // 清除 WebView 缓存
+            android.webkit.WebView webView = new android.webkit.WebView(this);
+            webView.clearCache(true);
+            webView.clearHistory();
+            webView.destroy();
+
+            // 清除 Cookie
+            CookieManager.getInstance().removeAllCookies(null);
+            CookieManager.getInstance().flush();
+
+            // 清除 WebStorage
+            WebStorage.getInstance().deleteAllData();
+
+            // 清除应用缓存目录
+            deleteDir(getCacheDir());
+
+            // 清除 WebView 缓存目录
+            File webviewDir = new File(getFilesDir(), "../app_webview");
+            if (webviewDir.exists()) {
+                deleteDir(webviewDir);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private boolean deleteDir(File dir) {
+        if (dir != null && dir.isDirectory()) {
+            File[] children = dir.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    boolean success = deleteDir(child);
+                    if (!success) {
+                        return false;
+                    }
+                }
+            }
+            return dir.delete();
+        } else if (dir != null && dir.isFile()) {
+            return dir.delete();
+        }
+        return false;
     }
 
     private void loadConfig() {
