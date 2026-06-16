@@ -244,16 +244,61 @@ public class MainActivity extends AppCompatActivity {
             // 获取当前显示的 WebView
             WebView currentWebView = webViews[currentTab];
 
-            if (currentWebView.canGoBack()) {
-                // 在当前 WebView 内返回
-                currentWebView.goBack();
-                return true;
-            } else {
-                // 已经是第一页了，不做任何操作（不退出 APP）
-                return true;
-            }
+            // 先尝试关闭弹窗
+            closePopup(currentWebView);
+
+            return true; // 不退出 APP
         }
         return super.onKeyDown(keyCode, event);
+    }
+
+    /**
+     * 关闭金山文档中的弹窗
+     */
+    private void closePopup(WebView webView) {
+        String js = "(function() {" +
+                "  // 尝试查找并关闭弹窗" +
+                "  var closed = false;" +
+                "" +
+                "  // 方法1: 查找关闭按钮" +
+                "  var closeButtons = document.querySelectorAll('.close-btn, .modal-close, [class*=\"close\"], [aria-label=\"close\"], [aria-label=\"Close\"]');" +
+                "  for (var i = 0; i < closeButtons.length; i++) {" +
+                "    var btn = closeButtons[i];" +
+                "    if (btn.offsetParent !== null) {" + // 检查是否可见
+                "      btn.click();" +
+                "      closed = true;" +
+                "      break;" +
+                "    }" +
+                "  }" +
+                "" +
+                "  // 方法2: 查找遮罩层并点击" +
+                "  if (!closed) {" +
+                "    var masks = document.querySelectorAll('.mask, .overlay, .modal-mask, [class*=\"mask\"], [class*=\"overlay\"]');" +
+                "    for (var i = 0; i < masks.length; i++) {" +
+                "      if (masks[i].offsetParent !== null) {" +
+                "        masks[i].click();" +
+                "        closed = true;" +
+                "        break;" +
+                "      }" +
+                "    }" +
+                "  }" +
+                "" +
+                "  // 方法3: 按 ESC 键" +
+                "  if (!closed) {" +
+                "    document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', keyCode: 27}));" +
+                "  }" +
+                "" +
+                "  return closed;" +
+                "})()";
+
+        webView.evaluateJavascript(js, value -> {
+            // 如果没有弹窗关闭，则执行返回操作
+            if (value != null && value.equals("false")) {
+                if (webView.canGoBack()) {
+                    webView.goBack();
+                }
+            }
+        });
     }
 
     @Override
