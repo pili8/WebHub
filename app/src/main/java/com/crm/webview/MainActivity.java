@@ -1,19 +1,25 @@
 package com.crm.webview;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.net.Uri;
 import android.net.http.SslError;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.SystemClock;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.webkit.CookieManager;
+import android.webkit.GeolocationPermissions;
 import android.webkit.SslErrorHandler;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -23,13 +29,19 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
+
+    private static final int PERMISSION_REQUEST_CODE = 100;
 
     private WebView webView;
     private ProgressBar progressBar;
@@ -52,6 +64,9 @@ public class MainActivity extends AppCompatActivity {
     private List<List<LinkItem>> tabLinks = new ArrayList<>();
 
     private SharedPreferences prefs;
+
+    // 文件上传回调
+    private ValueCallback<Uri[]> filePathCallback;
 
     static class LinkItem {
         String title;
@@ -81,6 +96,7 @@ public class MainActivity extends AppCompatActivity {
         updateUI();
         setupListeners();
         setupWebView();
+        requestPermissions();
         switchTab(0);
     }
 
@@ -144,6 +160,36 @@ public class MainActivity extends AppCompatActivity {
         btnDropdown.setOnClickListener(v -> toggleDropdown());
     }
 
+    private void requestPermissions() {
+        String[] permissions = {
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.CAMERA,
+                Manifest.permission.READ_EXTERNAL_STORAGE
+        };
+
+        List<String> needRequest = new ArrayList<>();
+        for (String permission : permissions) {
+            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                needRequest.add(permission);
+            }
+        }
+
+        if (!needRequest.isEmpty()) {
+            ActivityCompat.requestPermissions(this,
+                    needRequest.toArray(new String[0]),
+                    PERMISSION_REQUEST_CODE);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            // 权限请求结果，WebView 会自动处理
+        }
+    }
+
     private void loadConfig() {
         tabIconsEmoji[0] = prefs.getString("icon1", "📊");
         tabIconsEmoji[1] = prefs.getString("icon2", "📋");
@@ -198,11 +244,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateDropdown() {
         List<LinkItem> links = tabLinks.get(currentTab);
-
-        // 更新标题显示（当前链接名称）
         tvTitle.setText(links.get(currentLinkIndex).title);
 
-        // 多个链接时显示箭头，单个链接时隐藏
         if (links.size() > 1) {
             tvArrow.setVisibility(View.VISIBLE);
             tvArrow.setText(isDropdownOpen ? "▲" : "▼");
@@ -211,7 +254,6 @@ public class MainActivity extends AppCompatActivity {
             isDropdownOpen = false;
         }
 
-        // 更新下拉列表
         updateDropdownList();
     }
 
@@ -252,7 +294,6 @@ public class MainActivity extends AppCompatActivity {
                 loadCurrentLink();
             });
 
-            // 添加分割线
             if (i < links.size() - 1) {
                 View divider = new View(this);
                 divider.setBackgroundColor(Color.parseColor("#E0E0E0"));
@@ -268,7 +309,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void toggleDropdown() {
         List<LinkItem> links = tabLinks.get(currentTab);
-        if (links.size() <= 1) return; // 单个链接时不切换
+        if (links.size() <= 1) return;
 
         isDropdownOpen = !isDropdownOpen;
         updateDropdown();
@@ -299,6 +340,9 @@ public class MainActivity extends AppCompatActivity {
         settings.setLoadWithOverviewMode(true);
         settings.setSupportZoom(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
+
+        // 启用定位
+        settings.setGeolocationEnabled(true);
 
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
@@ -336,7 +380,51 @@ public class MainActivity extends AppCompatActivity {
                     progressBar.setVisibility(View.GONE);
                 }
             }
+
+            // 定位权限请求
+            @Override
+            public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
+                callback.invoke(origin, true, false);
+            }
+
+            // 文件选择
+            @Override
+            public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> callback,
+                                             FileChooserParams fileChooserParams) {
+                if (filePathCallback != null) {
+                    filePathCallback.onReceiveValue(null);
+                }
+                filePathCallback = callback;
+
+                Intent intent = fileChooserParams.createIntent();
+                try {
+                    startActivityForResult(intent, 1001);
+                } catch (Exception e) {
+                    filePathCallback = null;
+                    Toast.makeText(MainActivity.this, "无法打开文件选择器", Toast.LENGTH_SHORT).show();
+                    return false;
+                }
+                return true;
+            }
         });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 1001) {
+            if (filePathCallback != null) {
+                Uri[] results = null;
+                if (resultCode == RESULT_OK && data != null) {
+                    String dataString = data.getDataString();
+                    if (dataString != null) {
+                        results = new Uri[]{Uri.parse(dataString)};
+                    }
+                }
+                filePathCallback.onReceiveValue(results);
+                filePathCallback = null;
+            }
+        }
     }
 
     private boolean isAllowedUrl(String url) {
@@ -355,19 +443,33 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
-            // 如果下拉菜单打开，先关闭
+            // 1. 如果下拉菜单打开，先关闭
             if (isDropdownOpen) {
                 isDropdownOpen = false;
                 updateDropdown();
                 return true;
             }
-            closePopup();
+
+            // 2. 尝试关闭弹窗
+            if (tryClosePopup()) {
+                return true;
+            }
+
+            // 3. 如果有网页历史，返回上一页
+            if (webView.canGoBack()) {
+                webView.goBack();
+                return true;
+            }
+
+            // 4. 都没有则重新加载当前链接
+            loadCurrentLink();
             return true;
         }
         return super.onKeyDown(keyCode, event);
     }
 
-    private void closePopup() {
+    private boolean tryClosePopup() {
+        // 通过点击屏幕顶部区域尝试关闭弹窗
         float x = webView.getWidth() / 2f;
         float y = 15f;
 
@@ -381,6 +483,8 @@ public class MainActivity extends AppCompatActivity {
             webView.dispatchTouchEvent(upEvent);
             upEvent.recycle();
         }, 50);
+
+        return true; // 总是返回 true，后续由网页自行处理
     }
 
     @Override
