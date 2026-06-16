@@ -101,7 +101,7 @@
             android:visibility="gone"
             android:layout_marginStart="4dp" />
 
-        <!-- 拖动手柄 -->
+        <!-- 拖动手柄（折叠状态显示） -->
         <TextView
             android:id="@+id/btnDrag"
             android:layout_width="32dp"
@@ -122,7 +122,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="10dp"
-        android:background="#E8E8E8"
+        android:background="#E3F2FD"
         android:layout_marginStart="4dp"
         android:layout_marginEnd="4dp"
         android:layout_marginTop="4dp"

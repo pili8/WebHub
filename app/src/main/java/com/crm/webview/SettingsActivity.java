@@ -434,11 +434,19 @@ public class SettingsActivity extends AppCompatActivity {
                     return true;
                 });
 
+                // 阻止触摸事件传递到父视图
+                btnDrag.setOnTouchListener((v, event) -> {
+                    v.getParent().requestDisallowInterceptTouchEvent(true);
+                    return false;
+                });
+
                 // 设置拖动监听器
                 tabView.setOnDragListener((v, event) -> {
                     switch (event.getAction()) {
                         case DragEvent.ACTION_DRAG_STARTED:
-                            return true;
+                            // 只接受选项卡类型的拖动
+                            int[] state = (int[]) event.getLocalState();
+                            return state != null && state.length > 1 && state[1] == 0;
                         case DragEvent.ACTION_DRAG_ENTERED:
                             v.setBackgroundColor(Color.parseColor("#E3F2FD"));
                             return true;
@@ -447,12 +455,15 @@ public class SettingsActivity extends AppCompatActivity {
                             return true;
                         case DragEvent.ACTION_DROP:
                             v.setBackgroundColor(Color.WHITE);
-                            int fromIndex = (int) event.getLocalState();
-                            int toIndex = tabIndex;
-                            if (fromIndex != toIndex && fromIndex >= 0 && toIndex >= 0) {
-                                TabData temp = tabsData.remove(fromIndex);
-                                tabsData.add(toIndex, temp);
-                                buildUI();
+                            int[] dropState = (int[]) event.getLocalState();
+                            if (dropState != null && dropState[1] == 0) {
+                                int fromIndex = dropState[0];
+                                int toIndex = tabIndex;
+                                if (fromIndex != toIndex && fromIndex >= 0 && toIndex >= 0) {
+                                    TabData temp = tabsData.remove(fromIndex);
+                                    tabsData.add(toIndex, temp);
+                                    buildUI();
+                                }
                             }
                             return true;
                         case DragEvent.ACTION_DRAG_ENDED:
@@ -501,6 +512,10 @@ public class SettingsActivity extends AppCompatActivity {
                 linksContainer.setVisibility(tab.isExpanded ? View.VISIBLE : View.GONE);
                 btnAddLink.setVisibility(tab.isExpanded ? View.VISIBLE : View.GONE);
                 tvArrow.setText(tab.isExpanded ? "▼" : "▶");
+                // 展开时隐藏拖动按钮，折叠时显示
+                if (btnDrag != null) {
+                    btnDrag.setVisibility(tab.isExpanded ? View.GONE : View.VISIBLE);
+                }
             });
 
             // 添加链接
@@ -574,6 +589,15 @@ public class SettingsActivity extends AppCompatActivity {
         linksContainer.setVisibility(editMode ? View.VISIBLE : View.GONE);
         btnAddLink.setVisibility(editMode ? View.VISIBLE : View.GONE);
         tvArrow.setText(editMode ? "▼" : "▶");
+
+        // 编辑模式时隐藏拖动按钮
+        View sectionView = tab.sectionView;
+        if (sectionView != null) {
+            TextView btnDrag = sectionView.findViewById(R.id.btnDrag);
+            if (btnDrag != null) {
+                btnDrag.setVisibility(editMode ? View.GONE : View.VISIBLE);
+            }
+        }
     }
 
     private void addLinkCard(TabData tab, LinkData link) {
