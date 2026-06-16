@@ -1,6 +1,7 @@
 package com.crm.webview;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
@@ -25,35 +26,48 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class MainActivity extends AppCompatActivity {
 
-    // 默认值
-    private static final String DEFAULT_URL_1 = "https://www.kdocs.cn/wo/sl/v12CEOZt";
-    private static final String DEFAULT_URL_2 = "https://www.kdocs.cn/wo/sl/v14T2gpD";
-    private static final String DEFAULT_URL_3 = "https://www.kdocs.cn/wo/sl/v13iHfr4";
-    private static final String DEFAULT_TITLE_1 = "销售机会";
-    private static final String DEFAULT_TITLE_2 = "最近新增";
-    private static final String DEFAULT_TITLE_3 = "录入线索";
+    // 默认配置
+    private static final String DEFAULT_CONFIG =
+        "tab1|📊|销售机会|销售机会,https://www.kdocs.cn/wo/sl/v12CEOZt\n" +
+        "tab2|📋|最近新增|最近新增,https://www.kdocs.cn/wo/sl/v14T2gpD\n" +
+        "tab3|➕|录入线索|录入线索,https://www.kdocs.cn/wo/sl/v13iHfr4";
 
-    private WebView webViewCard, webViewTable, webViewInput;
-    private WebView[] webViews;
+    private WebView webView;
     private ProgressBar progressBar;
-    private TextView tvTitle;
+    private TextView tvTitle, tvSubMenu, tvMenuIcon;
     private ImageView btnRefresh, btnSettings;
-    private LinearLayout tabCard, tabTable, tabInput;
+    private LinearLayout btnMenu;
+    private LinearLayout tab1, tab2, tab3;
     private LinearLayout[] tabs;
-    private ImageView iconCard, iconTable, iconInput;
-    private ImageView[] icons;
-    private TextView textCard, textTable, textInput;
-    private TextView[] texts;
-    private int currentTab = 0;
-    private boolean[] webViewInitialized = {false, false, false};
+    private TextView iconTab1, iconTab2, iconTab3;
+    private TextView[] tabIcons;
+    private TextView textTab1, textTab2, textTab3;
+    private TextView[] tabTexts;
 
-    // 配置
-    private String[] urls = new String[3];
-    private String[] titles = new String[3];
+    private int currentTab = 0;
+    private int currentLinkIndex = 0; // 当前选项卡下的链接索引
+
+    // 配置数据
+    private String[] tabIconsEmoji = {"📊", "📋", "➕"};
+    private String[] tabTitles = {"销售机会", "最近新增", "录入线索"};
+    private List<List<LinkItem>> tabLinks = new ArrayList<>(); // 每个选项卡的链接列表
 
     private SharedPreferences prefs;
+
+    static class LinkItem {
+        String title;
+        String url;
+
+        LinkItem(String title, String url) {
+            this.title = title;
+            this.url = url;
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,144 +77,196 @@ public class MainActivity extends AppCompatActivity {
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         prefs = getSharedPreferences("app_config", MODE_PRIVATE);
-        loadConfig();
 
         initViews();
-        setupTabClickListeners();
-        setupButtons();
+        loadConfig();
+        setupListeners();
 
-        setupWebView(webViewCard, 0);
-        setupWebView(webViewTable, 1);
-        setupWebView(webViewInput, 2);
-
+        setupWebView();
         switchTab(0);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        webViews[currentTab].onResume();
+        webView.onResume();
 
-        // 从设置页面返回时重新加载配置
+        // 从设置返回时重新加载
+        String oldConfig = getConfigString();
         loadConfig();
-        updateTabTitles();
+        String newConfig = getConfigString();
 
-        // 检查 URL 是否改变，如果改变则重新加载
-        checkAndReloadIfConfigChanged();
+        if (!oldConfig.equals(newConfig)) {
+            updateUI();
+            loadCurrentLink();
+        }
     }
 
-    private String[] lastUrls = new String[3];
-    private String[] lastTitles = new String[3];
-
-    private void checkAndReloadIfConfigChanged() {
-        boolean changed = false;
+    private String getConfigString() {
+        StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 3; i++) {
-            if (!urls[i].equals(lastUrls[i])) {
-                changed = true;
-                webViewInitialized[i] = false;
+            sb.append("tab").append(i + 1).append("|");
+            sb.append(tabIconsEmoji[i]).append("|");
+            sb.append(tabTitles[i]).append("|");
+            for (int j = 0; j < tabLinks.get(i).size(); j++) {
+                LinkItem link = tabLinks.get(i).get(j);
+                sb.append(link.title).append(",").append(link.url);
+                if (j < tabLinks.get(i).size() - 1) sb.append("\n");
             }
+            if (i < 2) sb.append("\n");
         }
-        if (changed) {
-            // 重新加载当前选项卡
-            if (!webViewInitialized[currentTab]) {
-                webViews[currentTab].loadUrl(urls[currentTab]);
-                webViewInitialized[currentTab] = true;
-            }
-        }
-        // 保存当前配置用于比较
-        System.arraycopy(urls, 0, lastUrls, 0, 3);
-        System.arraycopy(titles, 0, lastTitles, 0, 3);
-    }
-
-    private void loadConfig() {
-        urls[0] = prefs.getString("url1", DEFAULT_URL_1);
-        urls[1] = prefs.getString("url2", DEFAULT_URL_2);
-        urls[2] = prefs.getString("url3", DEFAULT_URL_3);
-        titles[0] = prefs.getString("title1", DEFAULT_TITLE_1);
-        titles[1] = prefs.getString("title2", DEFAULT_TITLE_2);
-        titles[2] = prefs.getString("title3", DEFAULT_TITLE_3);
+        return sb.toString();
     }
 
     private void initViews() {
-        webViewCard = findViewById(R.id.webview_card);
-        webViewTable = findViewById(R.id.webview_table);
-        webViewInput = findViewById(R.id.webview_input);
-        webViews = new WebView[]{webViewCard, webViewTable, webViewInput};
-
+        webView = findViewById(R.id.webview_main);
         progressBar = findViewById(R.id.progressBar);
         tvTitle = findViewById(R.id.tvTitle);
+        tvSubMenu = findViewById(R.id.tvSubMenu);
+        tvMenuIcon = findViewById(R.id.tvMenuIcon);
+        btnMenu = findViewById(R.id.btnMenu);
         btnRefresh = findViewById(R.id.btnRefresh);
         btnSettings = findViewById(R.id.btnSettings);
 
-        tabCard = findViewById(R.id.tab_card);
-        tabTable = findViewById(R.id.tab_table);
-        tabInput = findViewById(R.id.tab_input);
-        tabs = new LinearLayout[]{tabCard, tabTable, tabInput};
+        tab1 = findViewById(R.id.tab1);
+        tab2 = findViewById(R.id.tab2);
+        tab3 = findViewById(R.id.tab3);
+        tabs = new LinearLayout[]{tab1, tab2, tab3};
 
-        iconCard = findViewById(R.id.icon_card);
-        iconTable = findViewById(R.id.icon_table);
-        iconInput = findViewById(R.id.icon_input);
-        icons = new ImageView[]{iconCard, iconTable, iconInput};
+        iconTab1 = findViewById(R.id.icon_tab1);
+        iconTab2 = findViewById(R.id.icon_tab2);
+        iconTab3 = findViewById(R.id.icon_tab3);
+        tabIcons = new TextView[]{iconTab1, iconTab2, iconTab3};
 
-        textCard = findViewById(R.id.text_card);
-        textTable = findViewById(R.id.text_table);
-        textInput = findViewById(R.id.text_input);
-        texts = new TextView[]{textCard, textTable, textInput};
+        textTab1 = findViewById(R.id.text_tab1);
+        textTab2 = findViewById(R.id.text_tab2);
+        textTab3 = findViewById(R.id.text_tab3);
+        tabTexts = new TextView[]{textTab1, textTab2, textTab3};
     }
 
-    private void setupTabClickListeners() {
-        tabCard.setOnClickListener(v -> switchTab(0));
-        tabTable.setOnClickListener(v -> switchTab(1));
-        tabInput.setOnClickListener(v -> switchTab(2));
+    private void setupListeners() {
+        tab1.setOnClickListener(v -> switchTab(0));
+        tab2.setOnClickListener(v -> switchTab(1));
+        tab3.setOnClickListener(v -> switchTab(2));
+        btnMenu.setOnClickListener(v -> showSubMenu());
+        btnRefresh.setOnClickListener(v -> webView.reload());
+        btnSettings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
     }
 
-    private void setupButtons() {
-        btnRefresh.setOnClickListener(v -> refreshCurrentPage());
-        btnSettings.setOnClickListener(v -> openSettings());
-    }
+    private void loadConfig() {
+        tabLinks.clear();
+        tabLinks.add(new ArrayList<>());
+        tabLinks.add(new ArrayList<>());
+        tabLinks.add(new ArrayList<>());
 
-    private void refreshCurrentPage() {
-        webViews[currentTab].reload();
-    }
+        String config = prefs.getString("config", DEFAULT_CONFIG);
+        String[] lines = config.split("\n");
 
-    private void openSettings() {
-        Intent intent = new Intent(this, SettingsActivity.class);
-        startActivity(intent);
-    }
+        for (String line : lines) {
+            line = line.trim();
+            if (line.isEmpty()) continue;
 
-    private void updateTabTitles() {
-        for (int i = 0; i < texts.length; i++) {
-            texts[i].setText(titles[i]);
+            String[] parts = line.split("\\|", 4);
+            if (parts.length < 4) continue;
+
+            int tabIndex;
+            try {
+                tabIndex = Integer.parseInt(parts[0].replace("tab", "")) - 1;
+            } catch (Exception e) {
+                continue;
+            }
+            if (tabIndex < 0 || tabIndex > 2) continue;
+
+            tabIconsEmoji[tabIndex] = parts[1];
+            tabTitles[tabIndex] = parts[2];
+
+            // 解析链接列表
+            String[] links = parts[3].split("\n");
+            for (String link : links) {
+                link = link.trim();
+                if (link.isEmpty()) continue;
+                String[] linkParts = link.split(",", 2);
+                if (linkParts.length == 2) {
+                    tabLinks.get(tabIndex).add(new LinkItem(linkParts[0].trim(), linkParts[1].trim()));
+                }
+            }
         }
-        tvTitle.setText(titles[currentTab]);
+
+        // 确保每个选项卡至少有一个链接
+        for (int i = 0; i < 3; i++) {
+            if (tabLinks.get(i).isEmpty()) {
+                tabLinks.get(i).add(new LinkItem(tabTitles[i], "about:blank"));
+            }
+        }
+    }
+
+    private void updateUI() {
+        for (int i = 0; i < 3; i++) {
+            tabIcons[i].setText(tabIconsEmoji[i]);
+            tabTexts[i].setText(tabTitles[i]);
+        }
+        updateSubMenuDisplay();
     }
 
     private void switchTab(int index) {
         currentTab = index;
-        tvTitle.setText(titles[index]);
+        currentLinkIndex = 0; // 切换选项卡时重置为第一个链接
 
-        for (int i = 0; i < tabs.length; i++) {
+        tvTitle.setText(tabTitles[index]);
+
+        // 更新选项卡样式
+        for (int i = 0; i < 3; i++) {
             if (i == index) {
-                icons[i].setColorFilter(Color.parseColor("#1976D2"));
-                texts[i].setTextColor(Color.parseColor("#1976D2"));
+                tabTexts[i].setTextColor(Color.parseColor("#1976D2"));
             } else {
-                icons[i].setColorFilter(Color.parseColor("#666666"));
-                texts[i].setTextColor(Color.parseColor("#666666"));
+                tabTexts[i].setTextColor(Color.parseColor("#666666"));
             }
         }
 
-        for (int i = 0; i < webViews.length; i++) {
-            webViews[i].setVisibility(i == index ? View.VISIBLE : View.GONE);
-        }
+        updateSubMenuDisplay();
+        loadCurrentLink();
+    }
 
-        if (!webViewInitialized[index]) {
-            webViews[index].loadUrl(urls[index]);
-            webViewInitialized[index] = true;
+    private void updateSubMenuDisplay() {
+        List<LinkItem> links = tabLinks.get(currentTab);
+        if (links.size() > 1) {
+            tvSubMenu.setVisibility(View.VISIBLE);
+            tvMenuIcon.setVisibility(View.VISIBLE);
+            tvSubMenu.setText(links.get(currentLinkIndex).title);
+        } else {
+            tvSubMenu.setVisibility(View.GONE);
+            tvMenuIcon.setVisibility(View.GONE);
         }
     }
 
+    private void loadCurrentLink() {
+        List<LinkItem> links = tabLinks.get(currentTab);
+        if (currentLinkIndex < links.size()) {
+            webView.loadUrl(links.get(currentLinkIndex).url);
+        }
+    }
+
+    private void showSubMenu() {
+        List<LinkItem> links = tabLinks.get(currentTab);
+        if (links.size() <= 1) return;
+
+        String[] items = new String[links.size()];
+        for (int i = 0; i < links.size(); i++) {
+            items[i] = links.get(i).title;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(tabTitles[currentTab])
+                .setItems(items, (dialog, which) -> {
+                    currentLinkIndex = which;
+                    updateSubMenuDisplay();
+                    loadCurrentLink();
+                })
+                .show();
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
-    private void setupWebView(WebView webView, int index) {
+    private void setupWebView() {
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
@@ -214,9 +280,8 @@ public class MainActivity extends AppCompatActivity {
         settings.setSupportZoom(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
 
-        CookieManager cookieManager = CookieManager.getInstance();
-        cookieManager.setAcceptCookie(true);
-        cookieManager.setAcceptThirdPartyCookies(webView, true);
+        CookieManager.getInstance().setAcceptCookie(true);
+        CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -227,9 +292,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 super.onPageStarted(view, url, favicon);
-                if (view.getVisibility() == View.VISIBLE) {
-                    progressBar.setVisibility(View.VISIBLE);
-                }
+                progressBar.setVisibility(View.VISIBLE);
             }
 
             @Override
@@ -248,11 +311,9 @@ public class MainActivity extends AppCompatActivity {
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
-                if (view.getVisibility() == View.VISIBLE) {
-                    progressBar.setProgress(newProgress);
-                    if (newProgress >= 100) {
-                        progressBar.setVisibility(View.GONE);
-                    }
+                progressBar.setProgress(newProgress);
+                if (newProgress >= 100) {
+                    progressBar.setVisibility(View.GONE);
                 }
             }
         });
@@ -274,17 +335,13 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
-            WebView currentWebView = webViews[currentTab];
-            closePopup(currentWebView);
+            closePopup();
             return true;
         }
         return super.onKeyDown(keyCode, event);
     }
 
-    private void closePopup(WebView webView) {
-        int[] location = new int[2];
-        webView.getLocationOnScreen(location);
-
+    private void closePopup() {
         float x = webView.getWidth() / 2f;
         float y = 15f;
 
@@ -303,19 +360,15 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        for (WebView webView : webViews) {
-            webView.onPause();
-        }
+        webView.onPause();
         CookieManager.getInstance().flush();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        for (WebView webView : webViews) {
-            if (webView != null) {
-                webView.destroy();
-            }
+        if (webView != null) {
+            webView.destroy();
         }
     }
 }

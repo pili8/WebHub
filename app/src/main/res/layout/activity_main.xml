@@ -13,21 +13,51 @@
         android:elevation="4dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="16dp"
+        android:paddingStart="8dp"
         android:paddingEnd="8dp">
 
-        <!-- 标题 -->
+        <!-- 左侧：下拉菜单按钮 -->
+        <LinearLayout
+            android:id="@+id/btnMenu"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:paddingStart="8dp"
+            android:paddingEnd="12dp"
+            android:background="?attr/selectableItemBackgroundBorderless">
+
+            <TextView
+                android:id="@+id/tvMenuIcon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="▼"
+                android:textColor="@android:color/white"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tvSubMenu"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="子菜单"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:layout_marginStart="4dp" />
+
+        </LinearLayout>
+
+        <!-- 中间：标题 -->
         <TextView
             android:id="@+id/tvTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:gravity="center"
             android:text="CRM"
             android:textColor="@android:color/white"
             android:textSize="18sp"
             android:textStyle="bold" />
 
-        <!-- 刷新按钮 -->
+        <!-- 右侧：刷新按钮 -->
         <ImageView
             android:id="@+id/btnRefresh"
             android:layout_width="44dp"
@@ -38,7 +68,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="刷新" />
 
-        <!-- 设置按钮 -->
+        <!-- 右侧：设置按钮 -->
         <ImageView
             android:id="@+id/btnSettings"
             android:layout_width="44dp"
@@ -68,22 +98,9 @@
         android:layout_weight="1">
 
         <WebView
-            android:id="@+id/webview_card"
+            android:id="@+id/webview_main"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:visibility="visible" />
-
-        <WebView
-            android:id="@+id/webview_table"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:visibility="gone" />
-
-        <WebView
-            android:id="@+id/webview_input"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:visibility="gone" />
+            android:layout_height="match_parent" />
 
     </FrameLayout>
 
@@ -98,7 +115,7 @@
         android:paddingBottom="4dp">
 
         <LinearLayout
-            android:id="@+id/tab_card"
+            android:id="@+id/tab1"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -106,16 +123,15 @@
             android:orientation="vertical"
             android:background="?attr/selectableItemBackground">
 
-            <ImageView
-                android:id="@+id/icon_card"
-                android:layout_width="28dp"
-                android:layout_height="28dp"
-                android:src="@drawable/ic_tab_card"
-                android:scaleType="centerInside"
-                android:contentDescription="选项卡1" />
+            <TextView
+                android:id="@+id/icon_tab1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📊"
+                android:textSize="24sp" />
 
             <TextView
-                android:id="@+id/text_card"
+                android:id="@+id/text_tab1"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="销售机会"
@@ -126,7 +142,7 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/tab_table"
+            android:id="@+id/tab2"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -134,16 +150,15 @@
             android:orientation="vertical"
             android:background="?attr/selectableItemBackground">
 
-            <ImageView
-                android:id="@+id/icon_table"
-                android:layout_width="28dp"
-                android:layout_height="28dp"
-                android:src="@drawable/ic_tab_table"
-                android:scaleType="centerInside"
-                android:contentDescription="选项卡2" />
+            <TextView
+                android:id="@+id/icon_tab2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📋"
+                android:textSize="24sp" />
 
             <TextView
-                android:id="@+id/text_table"
+                android:id="@+id/text_tab2"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="最近新增"
@@ -154,7 +169,7 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/tab_input"
+            android:id="@+id/tab3"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -162,16 +177,15 @@
             android:orientation="vertical"
             android:background="?attr/selectableItemBackground">
 
-            <ImageView
-                android:id="@+id/icon_input"
-                android:layout_width="28dp"
-                android:layout_height="28dp"
-                android:src="@drawable/ic_tab_input"
-                android:scaleType="centerInside"
-                android:contentDescription="选项卡3" />
+            <TextView
+                android:id="@+id/icon_tab3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="➕"
+                android:textSize="24sp" />
 
             <TextView
-                android:id="@+id/text_input"
+                android:id="@+id/text_tab3"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="录入线索"
