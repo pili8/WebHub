@@ -256,44 +256,45 @@ public class MainActivity extends AppCompatActivity {
      * 关闭金山文档中的弹窗
      */
     private void closePopup(WebView webView) {
-        String js = "(function() {" +
-                "  // 尝试查找并关闭弹窗" +
-                "  var closed = false;" +
-                "" +
-                "  // 方法1: 查找关闭按钮" +
-                "  var closeButtons = document.querySelectorAll('.close-btn, .modal-close, [class*=\"close\"], [aria-label=\"close\"], [aria-label=\"Close\"]');" +
-                "  for (var i = 0; i < closeButtons.length; i++) {" +
-                "    var btn = closeButtons[i];" +
-                "    if (btn.offsetParent !== null) {" + // 检查是否可见
-                "      btn.click();" +
-                "      closed = true;" +
-                "      break;" +
+        // 先检查页面上是否有弹窗
+        String checkJs = "(function() {" +
+                "  var modals = document.querySelectorAll('[class*=\"modal\"], [class*=\"dialog\"], [class*=\"popup\"], [class*=\"drawer\"], [class*=\"detail\"]');" +
+                "  for (var i = 0; i < modals.length; i++) {" +
+                "    var el = modals[i];" +
+                "    var style = window.getComputedStyle(el);" +
+                "    if (style.display !== 'none' && style.visibility !== 'hidden' && el.offsetWidth > 0) {" +
+                "      return true;" +
                 "    }" +
                 "  }" +
-                "" +
-                "  // 方法2: 查找遮罩层并点击" +
-                "  if (!closed) {" +
-                "    var masks = document.querySelectorAll('.mask, .overlay, .modal-mask, [class*=\"mask\"], [class*=\"overlay\"]');" +
-                "    for (var i = 0; i < masks.length; i++) {" +
-                "      if (masks[i].offsetParent !== null) {" +
-                "        masks[i].click();" +
-                "        closed = true;" +
-                "        break;" +
-                "      }" +
-                "    }" +
-                "  }" +
-                "" +
-                "  // 方法3: 按 ESC 键" +
-                "  if (!closed) {" +
-                "    document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', keyCode: 27}));" +
-                "  }" +
-                "" +
-                "  return closed;" +
+                "  return false;" +
                 "})()";
 
-        webView.evaluateJavascript(js, value -> {
-            // 如果没有弹窗关闭，则执行返回操作
-            if (value != null && value.equals("false")) {
+        webView.evaluateJavascript(checkJs, hasPopup -> {
+            if (hasPopup != null && hasPopup.equals("true")) {
+                // 有弹窗，尝试关闭
+                String closeJs = "(function() {" +
+                        "  // 尝试 ESC 键" +
+                        "  document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', keyCode: 27, bubbles: true}));" +
+                        "" +
+                        "  // 点击页面左上角空白区域（弹窗外）" +
+                        "  var evt = new MouseEvent('click', {clientX: 10, clientY: 10, bubbles: true});" +
+                        "  document.elementFromPoint(10, 10).dispatchEvent(evt);" +
+                        "" +
+                        "  // 查找并点击关闭按钮" +
+                        "  var btns = document.querySelectorAll('button, [role=\"button\"], .close, [class*=\"close\"]');" +
+                        "  for (var i = 0; i < btns.length; i++) {" +
+                        "    var rect = btns[i].getBoundingClientRect();" +
+                        "    if (rect.width < 60 && rect.height < 60 && (rect.top < 80 || rect.right > window.innerWidth - 80)) {" +
+                        "      btns[i].click();" +
+                        "      return 'closed';" +
+                        "    }" +
+                        "  }" +
+                        "  return 'attempted';" +
+                        "})()";
+
+                webView.evaluateJavascript(closeJs, null);
+            } else {
+                // 没有弹窗，执行返回
                 if (webView.canGoBack()) {
                     webView.goBack();
                 }
