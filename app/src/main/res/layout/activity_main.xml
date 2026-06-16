@@ -102,7 +102,7 @@
         android:gravity="center"
         android:visibility="gone" />
 
-    <!-- WebView 内容区（动态添加） -->
+    <!-- WebView 内容区 -->
     <FrameLayout
         android:id="@+id/webViewContainer"
         android:layout_width="match_parent"
@@ -110,7 +110,17 @@
         android:layout_weight="1"
         android:background="@android:color/white" />
 
-    <!-- 底部选项卡（动态添加） -->
+    <!-- 底部子链接菜单（长按选项卡时显示） -->
+    <LinearLayout
+        android:id="@+id/bottomMenuContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#FFFFFF"
+        android:elevation="8dp"
+        android:visibility="gone" />
+
+    <!-- 底部选项卡 -->
     <LinearLayout
         android:id="@+id/tabContainer"
         android:layout_width="match_parent"
