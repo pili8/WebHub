@@ -5,7 +5,9 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.net.http.SslError;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.SslErrorHandler;
@@ -254,36 +256,33 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * 关闭金山文档中的弹窗
-     * 点击屏幕边缘（弹窗外）来关闭弹窗
+     * 使用 Android 原生触摸事件模拟点击（标题栏下方中间位置）
      */
     private void closePopup(WebView webView) {
-        // 在屏幕边缘多个位置模拟点击
-        String js = "(function() {" +
-                "  // 获取视口尺寸" +
-                "  var w = window.innerWidth;" +
-                "  var h = window.innerHeight;" +
-                "" +
-                "  // 在屏幕边缘点击（弹窗外区域）" +
-                "  var points = [[1, 1], [1, h-1], [w-1, 1], [w-1, h-1], [w/2, 1], [1, h/2]];" +
-                "" +
-                "  for (var i = 0; i < points.length; i++) {" +
-                "    var x = points[i][0];" +
-                "    var y = points[i][1];" +
-                "    var el = document.elementFromPoint(x, y);" +
-                "    if (el && el.tagName !== 'HTML' && el.tagName !== 'BODY') {" +
-                "      el.dispatchEvent(new MouseEvent('mousedown', {clientX: x, clientY: y, bubbles: true, cancelable: true}));" +
-                "      el.dispatchEvent(new MouseEvent('mouseup', {clientX: x, clientY: y, bubbles: true, cancelable: true}));" +
-                "      el.dispatchEvent(new MouseEvent('click', {clientX: x, clientY: y, bubbles: true, cancelable: true}));" +
-                "      return 'clicked_' + x + '_' + y;" +
-                "    }" +
-                "  }" +
-                "  return 'no_element';" +
-                "})()";
+        // 获取 WebView 在屏幕上的位置
+        int[] location = new int[2];
+        webView.getLocationOnScreen(location);
 
-        webView.evaluateJavascript(js, result -> {
-            // 记录结果用于调试
-            android.util.Log.d("WebViewApp", "Close popup result: " + result);
-        });
+        // 计算点击位置：标题栏下方 10-20 像素的中间位置
+        float x = webView.getWidth() / 2f;  // 水平居中
+        float y = 15f;  // 标题栏下方约 15 像素
+
+        // 创建真实的触摸事件
+        long downTime = SystemClock.uptimeMillis();
+
+        // ACTION_DOWN
+        MotionEvent downEvent = MotionEvent.obtain(
+                downTime, downTime, MotionEvent.ACTION_DOWN, x, y, 0);
+        webView.dispatchTouchEvent(downEvent);
+        downEvent.recycle();
+
+        // 短暂延迟后 ACTION_UP
+        webView.postDelayed(() -> {
+            MotionEvent upEvent = MotionEvent.obtain(
+                    downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, x, y, 0);
+            webView.dispatchTouchEvent(upEvent);
+            upEvent.recycle();
+        }, 50);
     }
 
     @Override
