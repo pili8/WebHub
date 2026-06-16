@@ -43,6 +43,17 @@
             android:textColor="#333333"
             android:layout_marginStart="8dp" />
 
+        <TextView
+            android:id="@+id/btnDeleteTab"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:gravity="center"
+            android:text="✕"
+            android:textSize="16sp"
+            android:textColor="#F44336"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:visibility="gone" />
+
     </LinearLayout>
 
     <!-- 编辑区域 -->

@@ -88,10 +88,14 @@ public class SettingsActivity extends AppCompatActivity {
     private void loadConfig() {
         tabsData.clear();
 
-        for (int i = 0; i < 3; i++) {
+        int tabCount = prefs.getInt("tab_count", 3);
+        if (tabCount < 2) tabCount = 2;
+        if (tabCount > 5) tabCount = 5;
+
+        for (int i = 0; i < tabCount; i++) {
             TabData tab = new TabData();
-            tab.icon = prefs.getString("icon" + (i + 1), DEFAULT_TAB_ICONS[i]);
-            tab.title = prefs.getString("title" + (i + 1), DEFAULT_TAB_TITLES[i]);
+            tab.icon = prefs.getString("icon" + (i + 1), i < DEFAULT_TAB_ICONS.length ? DEFAULT_TAB_ICONS[i] : "📌");
+            tab.title = prefs.getString("title" + (i + 1), i < DEFAULT_TAB_TITLES.length ? DEFAULT_TAB_TITLES[i] : "选项卡 " + (i + 1));
 
             // 加载链接
             String linksStr = prefs.getString("links" + (i + 1), "");
@@ -177,6 +181,7 @@ public class SettingsActivity extends AppCompatActivity {
             TextView tvArrow = sectionView.findViewById(R.id.tvArrow);
             LinearLayout linksContainer = sectionView.findViewById(R.id.linksContainer);
             TextView btnAddLink = sectionView.findViewById(R.id.btnAddLink);
+            TextView btnDeleteTab = sectionView.findViewById(R.id.btnDeleteTab);
 
             tvTabIcon.setText(tab.icon);
             tvTabTitle.setText("选项卡 " + (i + 1));
@@ -184,6 +189,18 @@ public class SettingsActivity extends AppCompatActivity {
             etTabTitle.setText(tab.title);
 
             tab.linksContainer = linksContainer;
+
+            // 删除选项卡按钮（至少保留2个）
+            if (tabsData.size() > 2) {
+                btnDeleteTab.setVisibility(View.VISIBLE);
+                int tabIndex = i;
+                btnDeleteTab.setOnClickListener(v -> {
+                    tabsData.remove(tab);
+                    buildUI(); // 重建界面
+                });
+            } else {
+                btnDeleteTab.setVisibility(View.GONE);
+            }
 
             // 展开/收起
             LinearLayout btnToggle = sectionView.findViewById(R.id.btnToggle);
@@ -211,6 +228,29 @@ public class SettingsActivity extends AppCompatActivity {
 
             settingsContainer.addView(sectionView);
         }
+
+        // 添加选项卡按钮（最多5个）
+        if (tabsData.size() < 5) {
+            TextView btnAddTab = new TextView(this);
+            btnAddTab.setText("+ 添加选项卡");
+            btnAddTab.setTextSize(14);
+            btnAddTab.setTextColor(getResources().getColor(R.color.colorPrimary));
+            btnAddTab.setGravity(android.view.Gravity.CENTER);
+            btnAddTab.setPadding(0, dpToPx(16), 0, dpToPx(16));
+            btnAddTab.setBackgroundResource(R.drawable.btn_add_link);
+            btnAddTab.setOnClickListener(v -> {
+                TabData newTab = new TabData();
+                newTab.icon = "📌";
+                newTab.title = "选项卡 " + (tabsData.size() + 1);
+                tabsData.add(newTab);
+                buildUI(); // 重建界面
+            });
+            settingsContainer.addView(btnAddTab);
+        }
+    }
+
+    private int dpToPx(int dp) {
+        return (int) (dp * getResources().getDisplayMetrics().density);
     }
 
     private void addLinkCard(TabData tab, LinkData link, int tabIndex) {
@@ -378,6 +418,9 @@ public class SettingsActivity extends AppCompatActivity {
 
             editor.putString("links" + (i + 1), linksStr.toString());
         }
+
+        // 保存选项卡数量
+        editor.putInt("tab_count", tabsData.size());
 
         // 保存金山文档优化开关状态
         editor.putBoolean("kdocs_optimize", switchKdocsOptimize.isChecked());
