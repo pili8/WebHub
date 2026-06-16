@@ -9,7 +9,9 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.CookieManager;
 import android.webkit.WebStorage;
 import android.widget.AdapterView;
@@ -371,7 +373,10 @@ public class SettingsActivity extends AppCompatActivity {
         }
     }
 
-    private boolean isEditMode = false; // 是否处于编辑模式
+    private boolean isEditMode = false;
+    private View draggingView = null;
+    private float startY = 0;
+    private int dragIndex = -1;
 
     private void buildUI() {
         settingsContainer.removeAllViews();
@@ -406,6 +411,48 @@ public class SettingsActivity extends AppCompatActivity {
                 toggleEditMode(tab, tvTabIcon, tvTabTitle, etTabIcon, etTabTitle,
                         linksContainer, btnAddLink, tvArrow, btnDeleteTab, btnConfirmEdit, false);
             });
+
+            // 拖动排序（选项卡）
+            TextView btnDrag = tabView.findViewById(R.id.btnDrag);
+            if (btnDrag != null) {
+                btnDrag.setOnTouchListener((v, event) -> {
+                    switch (event.getAction()) {
+                        case MotionEvent.ACTION_DOWN:
+                            draggingView = tabView;
+                            startY = event.getRawY();
+                            dragIndex = tabIndex;
+                            tabView.setAlpha(0.7f);
+                            tabView.setScaleX(1.02f);
+                            tabView.setScaleY(1.02f);
+                            return true;
+                        case MotionEvent.ACTION_MOVE:
+                            if (draggingView != null) {
+                                float deltaY = event.getRawY() - startY;
+                                // 计算目标位置
+                                int targetIndex = dragIndex + (int) (deltaY / tabView.getHeight());
+                                targetIndex = Math.max(0, Math.min(targetIndex, tabsData.size() - 1));
+                                if (targetIndex != dragIndex) {
+                                    // 交换数据
+                                    TabData temp = tabsData.remove(dragIndex);
+                                    tabsData.add(targetIndex, temp);
+                                    dragIndex = targetIndex;
+                                    buildUI();
+                                }
+                            }
+                            return true;
+                        case MotionEvent.ACTION_UP:
+                        case MotionEvent.ACTION_CANCEL:
+                            if (draggingView != null) {
+                                draggingView.setAlpha(1.0f);
+                                draggingView.setScaleX(1.0f);
+                                draggingView.setScaleY(1.0f);
+                                draggingView = null;
+                            }
+                            return true;
+                    }
+                    return false;
+                });
+            }
 
             // 更多选项按钮
             if (tabsData.size() > 2) {
@@ -533,6 +580,46 @@ public class SettingsActivity extends AppCompatActivity {
         etLinkTitle.setText(link.title);
         etLinkUrl.setText(link.url);
         link.actionsContainer = actionsContainer;
+
+        // 拖动排序（链接）
+        TextView btnDragLink = cardView.findViewById(R.id.btnDragLink);
+        if (btnDragLink != null) {
+            final int[] linkDragIndex = {-1};
+            final float[] linkStartY = {0};
+
+            btnDragLink.setOnTouchListener((v, event) -> {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        linkDragIndex[0] = tab.links.indexOf(link);
+                        linkStartY[0] = event.getRawY();
+                        cardView.setAlpha(0.7f);
+                        return true;
+                    case MotionEvent.ACTION_MOVE:
+                        if (linkDragIndex[0] >= 0) {
+                            float deltaY = event.getRawY() - linkStartY[0];
+                            int targetIndex = linkDragIndex[0] + (int) (deltaY / cardView.getHeight());
+                            targetIndex = Math.max(0, Math.min(targetIndex, tab.links.size() - 1));
+                            if (targetIndex != linkDragIndex[0]) {
+                                LinkData temp = tab.links.remove(linkDragIndex[0]);
+                                tab.links.add(targetIndex, temp);
+                                linkDragIndex[0] = targetIndex;
+                                // 重建链接列表
+                                tab.linksContainer.removeAllViews();
+                                for (LinkData l : tab.links) {
+                                    addLinkCard(tab, l);
+                                }
+                            }
+                        }
+                        return true;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        cardView.setAlpha(1.0f);
+                        linkDragIndex[0] = -1;
+                        return true;
+                }
+                return false;
+            });
+        }
 
         // 更多选项按钮 (替代直接删除)
         btnDeleteLink.setOnClickListener(v -> {

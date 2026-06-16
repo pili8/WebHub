@@ -14,11 +14,16 @@
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
+        <!-- 拖动手柄 -->
         <TextView
-            android:layout_width="20dp"
-            android:layout_height="wrap_content"
-            android:text="🔗"
-            android:textSize="14sp" />
+            android:id="@+id/btnDragLink"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:gravity="center"
+            android:text="☰"
+            android:textSize="12sp"
+            android:textColor="#CCCCCC"
+            android:background="?attr/selectableItemBackgroundBorderless" />
 
         <EditText
             android:id="@+id/etLinkTitle"
