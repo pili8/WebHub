@@ -396,7 +396,7 @@ public class SettingsActivity extends AppCompatActivity {
                     popup.setOnMenuItemClickListener(item -> {
                         if (item.getItemId() == 1) {
                             // 切换编辑模式
-                            toggleEditMode(tab, tvTabTitle, etTabIcon, etTabTitle, linksContainer, btnAddLink, tvArrow, true);
+                            toggleEditMode(tab, tvTabIcon, tvTabTitle, etTabIcon, etTabTitle, linksContainer, btnAddLink, tvArrow, true);
                         } else if (item.getItemId() == 2) {
                             new AlertDialog.Builder(this)
                                     .setTitle("删除选项卡")
@@ -459,7 +459,7 @@ public class SettingsActivity extends AppCompatActivity {
         }
     }
 
-    private void toggleEditMode(TabData tab, TextView tvTabTitle, EditText etTabIcon, EditText etTabTitle,
+    private void toggleEditMode(TabData tab, TextView tvTabIcon, TextView tvTabTitle, EditText etTabIcon, EditText etTabTitle,
                                 LinearLayout linksContainer, TextView btnAddLink, TextView tvArrow, boolean editMode) {
         if (editMode) {
             // 进入编辑模式：显示输入框，隐藏标题
