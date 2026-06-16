@@ -47,18 +47,6 @@
 
         </LinearLayout>
 
-        <!-- 查看元素按钮 -->
-        <TextView
-            android:id="@+id/btnInspect"
-            android:layout_width="wrap_content"
-            android:layout_height="32dp"
-            android:gravity="center"
-            android:text="🔍"
-            android:textSize="16sp"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless" />
-
         <ImageView
             android:id="@+id/btnRefresh"
             android:layout_width="40dp"
@@ -69,15 +57,16 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="刷新" />
 
-        <ImageView
-            android:id="@+id/btnSettings"
+        <!-- 三个点菜单按钮 -->
+        <TextView
+            android:id="@+id/btnMenu"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:padding="10dp"
-            android:src="@drawable/ic_settings"
-            android:scaleType="centerInside"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="设置" />
+            android:gravity="center"
+            android:text="⋮"
+            android:textSize="20sp"
+            android:textColor="@android:color/white"
+            android:background="?attr/selectableItemBackgroundBorderless" />
 
     </LinearLayout>
 
@@ -107,7 +96,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="#FF9800"
-        android:text="👆 点击页面元素查看标识，再次点击🔍退出"
+        android:text="👆 点击页面元素查看标识，再次点击菜单退出"
         android:textColor="@android:color/white"
         android:textSize="12sp"
         android:padding="8dp"

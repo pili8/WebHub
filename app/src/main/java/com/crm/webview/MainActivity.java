@@ -52,8 +52,8 @@ public class MainActivity extends AppCompatActivity {
 
     private ProgressBar progressBar;
     private TextView tvTitle, tvArrow;
-    private TextView btnInspect;
-    private ImageView btnRefresh, btnSettings;
+    private TextView btnMenu;
+    private ImageView btnRefresh;
     private LinearLayout btnDropdown, dropdownList;
     private TextView inspectBanner;
     private LinearLayout tab1, tab2, tab3;
@@ -143,12 +143,11 @@ public class MainActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progressBar);
         tvTitle = findViewById(R.id.tvTitle);
         tvArrow = findViewById(R.id.tvArrow);
-        btnInspect = findViewById(R.id.btnInspect);
+        btnMenu = findViewById(R.id.btnMenu);
         btnDropdown = findViewById(R.id.btnDropdown);
         dropdownList = findViewById(R.id.dropdownList);
         inspectBanner = findViewById(R.id.inspectBanner);
         btnRefresh = findViewById(R.id.btnRefresh);
-        btnSettings = findViewById(R.id.btnSettings);
 
         tab1 = findViewById(R.id.tab1);
         tab2 = findViewById(R.id.tab2);
@@ -183,24 +182,40 @@ public class MainActivity extends AppCompatActivity {
             return true;
         });
 
-        btnSettings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
         btnDropdown.setOnClickListener(v -> toggleDropdown());
 
-        // 查看元素按钮
-        btnInspect.setOnClickListener(v -> toggleInspectMode());
+        // 菜单按钮
+        btnMenu.setOnClickListener(v -> showPopupMenu());
+    }
+
+    private void showPopupMenu() {
+        android.widget.PopupMenu popup = new android.widget.PopupMenu(this, btnMenu);
+        popup.getMenu().add(0, 1, 0, isInspectMode ? "退出查找元素" : "🔍 查找元素");
+        popup.getMenu().add(0, 2, 0, "⚙️ 设置");
+
+        popup.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == 1) {
+                toggleInspectMode();
+                return true;
+            } else if (item.getItemId() == 2) {
+                startActivity(new Intent(this, SettingsActivity.class));
+                return true;
+            }
+            return false;
+        });
+
+        popup.show();
     }
 
     private void toggleInspectMode() {
         isInspectMode = !isInspectMode;
 
         if (isInspectMode) {
-            btnInspect.setText("✅");
-            btnInspect.setTextColor(Color.parseColor("#4CAF50"));
             inspectBanner.setVisibility(View.VISIBLE);
+            Toast.makeText(this, "已进入查找元素模式", Toast.LENGTH_SHORT).show();
         } else {
-            btnInspect.setText("🔍");
-            btnInspect.setTextColor(Color.WHITE);
             inspectBanner.setVisibility(View.GONE);
+            Toast.makeText(this, "已退出查找元素模式", Toast.LENGTH_SHORT).show();
         }
     }
 
