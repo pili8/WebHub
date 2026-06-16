@@ -16,6 +16,7 @@ import android.net.http.SslError;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.webkit.CookieManager;
@@ -209,92 +210,133 @@ public class MainActivity extends AppCompatActivity {
     private void inspectElementAt(float x, float y) {
         String js = "(function() {" +
                 "  var el = document.elementFromPoint(" + x + ", " + y + ");" +
-                "  if (!el) return '未找到元素';" +
+                "  if (!el) return null;" +
                 "" +
-                "  var info = '';" +
-                "  info += '标签: ' + el.tagName.toLowerCase() + '\\n';" +
-                "" +
-                "  if (el.id) info += 'ID: #' + el.id + '\\n';" +
-                "" +
-                "  if (el.className && typeof el.className === 'string') {" +
-                "    var classes = el.className.trim().split(/\\s+/);" +
-                "    if (classes.length > 0 && classes[0] !== '') {" +
-                "      info += 'Class: .' + classes.join(', .') + '\\n';" +
-                "    }" +
-                "  }" +
-                "" +
+                "  var result = {};" +
+                "  result.tag = el.tagName.toLowerCase();" +
+                "  result.id = el.id || '';" +
+                "  result.classes = (typeof el.className === 'string') ? el.className.trim() : '';" +
                 "  var text = el.textContent || '';" +
-                "  if (text.length > 80) text = text.substring(0, 80) + '...';" +
-                "  if (text.trim()) info += '文本: ' + text.trim();" +
+                "  result.text = text.length > 100 ? text.substring(0, 100) + '...' : text.trim();" +
                 "" +
                 "  el.style.outline = '3px solid #FF5722';" +
                 "  setTimeout(function() { el.style.outline = ''; }, 2000);" +
                 "" +
-                "  return info;" +
+                "  return JSON.stringify(result);" +
                 "})()";
 
         webViews[currentTab].evaluateJavascript(js, value -> {
-            if (value != null && !value.equals("null") && !value.equals("\"未找到元素\"")) {
-                // 去掉 JSON 引号
-                String info = value;
-                if (info.startsWith("\"") && info.endsWith("\"")) {
-                    info = info.substring(1, info.length() - 1);
+            if (value != null && !value.equals("null")) {
+                try {
+                    // 解析 JSON
+                    String json = value;
+                    if (json.startsWith("\"")) {
+                        json = json.substring(1, json.length() - 1);
+                    }
+                    json = json.replace("\\\"", "\"");
+                    json = json.replace("\\\\", "\\");
+
+                    // 简单解析
+                    String tag = extractJsonString(json, "tag");
+                    String id = extractJsonString(json, "id");
+                    String classes = extractJsonString(json, "classes");
+                    String text = extractJsonString(json, "text");
+
+                    showElementInfoDialog(tag, id, classes, text);
+                } catch (Exception e) {
+                    Toast.makeText(this, "解析失败", Toast.LENGTH_SHORT).show();
                 }
-                info = info.replace("\\n", "\n");
-                showElementInfoDialog(info);
             }
         });
     }
 
-    // JavaScript 接口
-    public class JavascriptBridge {
-        @JavascriptInterface
-        public void onElementInfo(String info) {
-            runOnUiThread(() -> showElementInfoDialog(info));
-        }
+    private String extractJsonString(String json, String key) {
+        String search = "\"" + key + "\":\"";
+        int start = json.indexOf(search);
+        if (start == -1) return "";
+        start += search.length();
+        int end = json.indexOf("\"", start);
+        if (end == -1) return "";
+        return json.substring(start, end);
     }
 
-    private void showElementInfoDialog(String info) {
-        // 解析信息，提取可用的选择器
-        StringBuilder selectorInfo = new StringBuilder();
-        StringBuilder copyText = new StringBuilder();
+    private void showElementInfoDialog(String tag, String id, String classes, String text) {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_element_info, null);
 
-        String[] lines = info.split("\n");
-        for (String line : lines) {
-            if (line.startsWith("ID:")) {
-                String id = line.substring(3).trim();
-                selectorInfo.append("选择器: ").append(id).append("\n");
-                copyText.append(id).append("\n");
-            }
-            if (line.startsWith("Class:")) {
-                String classes = line.substring(6).trim();
-                String[] classArr = classes.split(", ");
-                for (String cls : classArr) {
-                    selectorInfo.append("选择器: ").append(cls).append("\n");
-                    copyText.append(cls).append("\n");
-                }
-            }
+        TextView tvTag = dialogView.findViewById(R.id.tvTag);
+        TextView tvId = dialogView.findViewById(R.id.tvId);
+        TextView tvClass = dialogView.findViewById(R.id.tvClass);
+        TextView tvText = dialogView.findViewById(R.id.tvText);
+
+        LinearLayout rowId = dialogView.findViewById(R.id.rowId);
+        LinearLayout rowClass = dialogView.findViewById(R.id.rowClass);
+        LinearLayout rowText = dialogView.findViewById(R.id.rowText);
+
+        TextView btnCopyId = dialogView.findViewById(R.id.btnCopyId);
+        TextView btnCopyClass = dialogView.findViewById(R.id.btnCopyClass);
+        TextView btnCopyAll = dialogView.findViewById(R.id.btnCopyAll);
+        TextView btnClose = dialogView.findViewById(R.id.btnClose);
+
+        // 设置数据
+        tvTag.setText("<" + tag + ">");
+
+        if (id != null && !id.isEmpty()) {
+            rowId.setVisibility(View.VISIBLE);
+            tvId.setText("#" + id);
+            btnCopyId.setVisibility(View.VISIBLE);
+            btnCopyId.setOnClickListener(v -> {
+                copyToClipboard("#" + id);
+                Toast.makeText(this, "已复制: #" + id, Toast.LENGTH_SHORT).show();
+            });
         }
 
-        if (selectorInfo.length() == 0) {
-            selectorInfo.append("该元素没有 id 或 class 属性");
+        if (classes != null && !classes.isEmpty()) {
+            rowClass.setVisibility(View.VISIBLE);
+            // 只显示第一个 class
+            String firstClass = classes.split("\\s+")[0];
+            tvClass.setText("." + firstClass);
+            btnCopyClass.setVisibility(View.VISIBLE);
+            btnCopyClass.setOnClickListener(v -> {
+                copyToClipboard("." + firstClass);
+                Toast.makeText(this, "已复制: ." + firstClass, Toast.LENGTH_SHORT).show();
+            });
         }
 
-        String message = info + "\n\n" + selectorInfo.toString();
+        if (text != null && !text.isEmpty()) {
+            rowText.setVisibility(View.VISIBLE);
+            tvText.setText(text);
+        }
 
-        new AlertDialog.Builder(this)
-                .setTitle("元素信息")
-                .setMessage(message)
-                .setPositiveButton("复制选择器", (dialog, which) -> {
-                    if (copyText.length() > 0) {
-                        ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-                        ClipData clip = ClipData.newPlainText("selector", copyText.toString().trim());
-                        clipboard.setPrimaryClip(clip);
-                        Toast.makeText(this, "已复制: " + copyText.toString().trim(), Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("关闭", null)
-                .show();
+        // 复制全部
+        StringBuilder allInfo = new StringBuilder();
+        allInfo.append("标签: ").append(tag).append("\n");
+        if (id != null && !id.isEmpty()) allInfo.append("ID: #").append(id).append("\n");
+        if (classes != null && !classes.isEmpty()) allInfo.append("Class: .").append(classes.split("\\s+")[0]).append("\n");
+        if (text != null && !text.isEmpty()) allInfo.append("文本: ").append(text);
+
+        btnCopyAll.setOnClickListener(v -> {
+            copyToClipboard(allInfo.toString());
+            Toast.makeText(this, "已复制全部信息", Toast.LENGTH_SHORT).show();
+        });
+
+        // 创建底部弹窗
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(dialogView)
+                .create();
+
+        dialog.getWindow().setGravity(android.view.Gravity.BOTTOM);
+        dialog.getWindow().setLayout(android.view.WindowManager.LayoutParams.MATCH_PARENT,
+                android.view.WindowManager.LayoutParams.WRAP_CONTENT);
+
+        btnClose.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
+    }
+
+    private void copyToClipboard(String text) {
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText("element", text);
+        clipboard.setPrimaryClip(clip);
     }
 
     private void requestPermissions() {
