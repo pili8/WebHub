@@ -9,7 +9,7 @@
     <!-- 操作类型选择 -->
     <Spinner
         android:id="@+id/spinnerAction"
-        android:layout_width="60dp"
+        android:layout_width="55dp"
         android:layout_height="32dp"
         android:background="@drawable/input_bg" />
 
@@ -28,10 +28,39 @@
         android:layout_marginEnd="4dp"
         android:background="@drawable/input_bg" />
 
+    <!-- 延迟输入（仅点击时显示） -->
+    <LinearLayout
+        android:id="@+id/layoutDelay"
+        android:layout_width="wrap_content"
+        android:layout_height="32dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:visibility="gone">
+
+        <EditText
+            android:id="@+id/etDelay"
+            android:layout_width="35dp"
+            android:layout_height="32dp"
+            android:hint="0"
+            android:textSize="11sp"
+            android:inputType="number"
+            android:gravity="center"
+            android:background="@drawable/input_bg" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="秒"
+            android:textSize="10sp"
+            android:textColor="#999999"
+            android:layout_marginStart="2dp" />
+
+    </LinearLayout>
+
     <!-- 新值输入（仅修改时显示） -->
     <EditText
         android:id="@+id/etValue"
-        android:layout_width="70dp"
+        android:layout_width="65dp"
         android:layout_height="32dp"
         android:hint="新值"
         android:textSize="11sp"

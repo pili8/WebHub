@@ -57,6 +57,7 @@ public class SettingsActivity extends AppCompatActivity {
         String type; // hide, click, modify
         String selector;
         String value;
+        int delay = 0; // 延迟秒数（仅点击时有效）
         View actionView;
     }
 
@@ -114,20 +115,35 @@ public class SettingsActivity extends AppCompatActivity {
                     // 解析操作
                     if (!actionsStr.isEmpty()) {
                         String[] actionParts = actionsStr.split("\\|");
-                        for (int j = 0; j < actionParts.length; j += 3) {
-                            if (j + 2 < actionParts.length) {
-                                ActionData action = new ActionData();
-                                action.type = actionParts[j];
-                                action.selector = actionParts[j + 1];
-                                action.value = actionParts[j + 2];
-                                link.actions.add(action);
-                            } else if (j + 1 < actionParts.length) {
-                                ActionData action = new ActionData();
-                                action.type = actionParts[j];
-                                action.selector = actionParts[j + 1];
-                                action.value = "";
-                                link.actions.add(action);
+                        for (int j = 0; j < actionParts.length; ) {
+                            if (j + 1 >= actionParts.length) break;
+
+                            ActionData action = new ActionData();
+                            action.type = actionParts[j];
+                            action.selector = actionParts[j + 1];
+                            action.value = "";
+                            action.delay = 0;
+
+                            if ("click".equals(action.type)) {
+                                // 点击操作：第3个参数是延迟
+                                if (j + 2 < actionParts.length) {
+                                    try {
+                                        action.delay = Integer.parseInt(actionParts[j + 2]);
+                                    } catch (Exception e) {}
+                                }
+                                j += 3;
+                            } else if ("modify".equals(action.type)) {
+                                // 修改操作：第3个参数是新值
+                                if (j + 2 < actionParts.length) {
+                                    action.value = actionParts[j + 2];
+                                }
+                                j += 3;
+                            } else {
+                                // 隐藏操作：只有2个参数
+                                j += 2;
                             }
+
+                            link.actions.add(action);
                         }
                     }
 
@@ -237,6 +253,8 @@ public class SettingsActivity extends AppCompatActivity {
         Spinner spinnerAction = row.findViewById(R.id.spinnerAction);
         EditText etSelector = row.findViewById(R.id.etSelector);
         EditText etValue = row.findViewById(R.id.etValue);
+        LinearLayout layoutDelay = row.findViewById(R.id.layoutDelay);
+        EditText etDelay = row.findViewById(R.id.etDelay);
         TextView btnDelete = row.findViewById(R.id.btnDelete);
 
         // 设置操作类型下拉
@@ -254,13 +272,16 @@ public class SettingsActivity extends AppCompatActivity {
 
         etSelector.setText(action.selector);
         etValue.setText(action.value);
+        etDelay.setText(String.valueOf(action.delay));
 
-        // 根据操作类型显示/隐藏值输入框
+        // 根据操作类型显示/隐藏输入框
+        layoutDelay.setVisibility(actionIndex == 1 ? View.VISIBLE : View.GONE);
         etValue.setVisibility(actionIndex == 2 ? View.VISIBLE : View.GONE);
 
         spinnerAction.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                layoutDelay.setVisibility(position == 1 ? View.VISIBLE : View.GONE);
                 etValue.setVisibility(position == 2 ? View.VISIBLE : View.GONE);
             }
 
@@ -318,6 +339,7 @@ public class SettingsActivity extends AppCompatActivity {
                     Spinner spinner = action.actionView.findViewById(R.id.spinnerAction);
                     EditText etSelector = action.actionView.findViewById(R.id.etSelector);
                     EditText etValue = action.actionView.findViewById(R.id.etValue);
+                    EditText etDelay = action.actionView.findViewById(R.id.etDelay);
 
                     String selector = etSelector.getText().toString().trim();
                     if (selector.isEmpty()) continue;
@@ -329,9 +351,18 @@ public class SettingsActivity extends AppCompatActivity {
                     else type = "modify";
 
                     String value = etValue.getText().toString().trim();
+                    String delayStr = etDelay.getText().toString().trim();
+                    int delay = 0;
+                    try {
+                        delay = Integer.parseInt(delayStr);
+                    } catch (Exception e) {}
 
                     actionsStr.append("|").append(type).append("|").append(selector);
-                    if (pos == 2 && !value.isEmpty()) {
+                    if (pos == 1) {
+                        // 点击操作：保存延迟
+                        actionsStr.append("|").append(delay);
+                    } else if (pos == 2 && !value.isEmpty()) {
+                        // 修改操作：保存新值
                         actionsStr.append("|").append(value);
                     }
                 }

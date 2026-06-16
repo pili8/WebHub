@@ -739,21 +739,32 @@ public class MainActivity extends AppCompatActivity {
             line = line.trim();
             if (line.isEmpty()) continue;
 
-            String[] parts = line.split("\\|", 3);
+            String[] parts = line.split("\\|");
             if (parts.length < 2) continue;
 
             String action = parts[0];
             String selector = parts[1];
-            String value = parts.length > 2 ? parts[2] : "";
 
             selector = selector.replace("'", "\\'");
-            value = value.replace("'", "\\'");
 
             if ("hide".equals(action)) {
                 js.append("document.querySelectorAll('").append(selector).append("').forEach(el=>el.style.display='none');");
             } else if ("click".equals(action)) {
-                js.append("document.querySelectorAll('").append(selector).append("').forEach(el=>el.click());");
+                // 点击操作：支持延迟
+                int delay = 0;
+                if (parts.length > 2) {
+                    try {
+                        delay = Integer.parseInt(parts[2]);
+                    } catch (Exception e) {}
+                }
+                if (delay > 0) {
+                    js.append("setTimeout(function(){document.querySelectorAll('").append(selector).append("').forEach(el=>el.click());},").append(delay * 1000).append(");");
+                } else {
+                    js.append("document.querySelectorAll('").append(selector).append("').forEach(el=>el.click());");
+                }
             } else if ("modify".equals(action)) {
+                String value = parts.length > 2 ? parts[2] : "";
+                value = value.replace("'", "\\'");
                 js.append("document.querySelectorAll('").append(selector).append("').forEach(el=>el.textContent='").append(value).append("');");
             }
         }
