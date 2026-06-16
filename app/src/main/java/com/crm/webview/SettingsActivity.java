@@ -400,6 +400,13 @@ public class SettingsActivity extends AppCompatActivity {
             etTabTitle.setText(tab.title);
             tab.linksContainer = linksContainer;
 
+            // 确认编辑按钮
+            TextView btnConfirmEdit = tabView.findViewById(R.id.btnConfirmEdit);
+            btnConfirmEdit.setOnClickListener(v -> {
+                toggleEditMode(tab, tvTabIcon, tvTabTitle, etTabIcon, etTabTitle,
+                        linksContainer, btnAddLink, tvArrow, btnDeleteTab, btnConfirmEdit, false);
+            });
+
             // 更多选项按钮
             if (tabsData.size() > 2) {
                 btnDeleteTab.setVisibility(View.VISIBLE);
@@ -409,8 +416,9 @@ public class SettingsActivity extends AppCompatActivity {
                     popup.getMenu().add(0, 2, 0, "删除选项卡");
                     popup.setOnMenuItemClickListener(item -> {
                         if (item.getItemId() == 1) {
-                            // 切换编辑模式
-                            toggleEditMode(tab, tvTabIcon, tvTabTitle, etTabIcon, etTabTitle, linksContainer, btnAddLink, tvArrow, true);
+                            // 进入编辑模式
+                            toggleEditMode(tab, tvTabIcon, tvTabTitle, etTabIcon, etTabTitle,
+                                    linksContainer, btnAddLink, tvArrow, btnDeleteTab, btnConfirmEdit, true);
                         } else if (item.getItemId() == 2) {
                             new AlertDialog.Builder(this)
                                     .setTitle("删除选项卡")
@@ -426,6 +434,8 @@ public class SettingsActivity extends AppCompatActivity {
                     });
                     popup.show();
                 });
+            } else {
+                btnDeleteTab.setVisibility(View.GONE);
             }
 
             // 点击标题栏：展开/收起链接列表（不进入编辑模式）
@@ -474,15 +484,18 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void toggleEditMode(TabData tab, TextView tvTabIcon, TextView tvTabTitle, EditText etTabIcon, EditText etTabTitle,
-                                LinearLayout linksContainer, TextView btnAddLink, TextView tvArrow, boolean editMode) {
+                                LinearLayout linksContainer, TextView btnAddLink, TextView tvArrow,
+                                TextView btnDeleteTab, TextView btnConfirmEdit, boolean editMode) {
         if (editMode) {
-            // 进入编辑模式：隐藏图标和标题，显示输入框
+            // 进入编辑模式
             tvTabIcon.setVisibility(View.GONE);
             tvTabTitle.setVisibility(View.GONE);
             etTabIcon.setVisibility(View.VISIBLE);
             etTabTitle.setVisibility(View.VISIBLE);
+            btnDeleteTab.setVisibility(View.GONE);
+            btnConfirmEdit.setVisibility(View.VISIBLE);
         } else {
-            // 退出编辑模式：保存并显示图标和标题
+            // 退出编辑模式
             String icon = etTabIcon.getText().toString().trim();
             String title = etTabTitle.getText().toString().trim();
             if (!icon.isEmpty()) tab.icon = icon;
@@ -495,6 +508,8 @@ public class SettingsActivity extends AppCompatActivity {
             tvTabTitle.setVisibility(View.VISIBLE);
             etTabIcon.setVisibility(View.GONE);
             etTabTitle.setVisibility(View.GONE);
+            btnDeleteTab.setVisibility(tabsData.size() > 2 ? View.VISIBLE : View.GONE);
+            btnConfirmEdit.setVisibility(View.GONE);
         }
 
         // 展开链接列表

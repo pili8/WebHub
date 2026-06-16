@@ -73,6 +73,21 @@
             android:layout_marginStart="8dp"
             android:visibility="gone" />
 
+        <!-- 确认编辑按钮（编辑模式显示） -->
+        <TextView
+            android:id="@+id/btnConfirmEdit"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:gravity="center"
+            android:text="✓ 完成"
+            android:textSize="12sp"
+            android:textColor="#4CAF50"
+            android:background="@drawable/btn_outline_green"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:visibility="gone"
+            android:layout_marginStart="8dp" />
+
         <!-- 更多选项按钮 -->
         <TextView
             android:id="@+id/btnDeleteTab"
