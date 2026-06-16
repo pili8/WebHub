@@ -155,7 +155,22 @@ public class MainActivity extends AppCompatActivity {
         tab1.setOnClickListener(v -> switchTab(0));
         tab2.setOnClickListener(v -> switchTab(1));
         tab3.setOnClickListener(v -> switchTab(2));
+
+        // 点击刷新：使用缓存快速加载
         btnRefresh.setOnClickListener(v -> webView.reload());
+
+        // 长按刷新：强制从网络加载最新数据
+        btnRefresh.setOnLongClickListener(v -> {
+            webView.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
+            webView.reload();
+            // 恢复缓存策略
+            webView.postDelayed(() -> {
+                webView.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+            }, 1000);
+            Toast.makeText(this, "正在刷新最新数据...", Toast.LENGTH_SHORT).show();
+            return true;
+        });
+
         btnSettings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
         btnDropdown.setOnClickListener(v -> toggleDropdown());
     }
@@ -318,7 +333,16 @@ public class MainActivity extends AppCompatActivity {
     private void loadCurrentLink() {
         List<LinkItem> links = tabLinks.get(currentTab);
         if (currentLinkIndex < links.size()) {
-            webView.loadUrl(links.get(currentLinkIndex).url);
+            String url = links.get(currentLinkIndex).url;
+
+            // 先用缓存快速加载
+            webView.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+            webView.loadUrl(url);
+
+            // 延迟后后台刷新（确保缓存版本先显示）
+            webView.postDelayed(() -> {
+                webView.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT);
+            }, 3000);
         }
     }
 
@@ -332,7 +356,15 @@ public class MainActivity extends AppCompatActivity {
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
-        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+
+        // 缓存策略：优先使用缓存，网络不通时也能用
+        settings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+
+        // 设置缓存大小（50MB）
+        settings.setAppCacheEnabled(true);
+        settings.setAppCachePath(getCacheDir().getAbsolutePath());
+        settings.setAppCacheMaxSize(50 * 1024 * 1024);
+
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
         settings.setUserAgentString(settings.getUserAgentString().replace("; wv", ""));
