@@ -475,6 +475,31 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isAllowedUrl(String url) {
         if (url == null) return false;
+
+        // 标准协议：拨打电话、发邮件、发短信
+        if (url.startsWith("tel:")) {
+            Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse(url));
+            if (checkSelfPermission(Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
+                startActivity(intent);
+            } else {
+                // 如果没有权限，用拨号盘（不需要权限）
+                Intent dial = new Intent(Intent.ACTION_DIAL, Uri.parse(url));
+                startActivity(dial);
+            }
+            return false; // 不在 WebView 中加载
+        }
+        if (url.startsWith("mailto:")) {
+            Intent intent = new Intent(Intent.ACTION_SENDTO, Uri.parse(url));
+            startActivity(intent);
+            return false;
+        }
+        if (url.startsWith("sms:")) {
+            Intent intent = new Intent(Intent.ACTION_SENDTO, Uri.parse(url));
+            startActivity(intent);
+            return false;
+        }
+
+        // 金山文档相关域名
         if (url.contains("kdocs.cn")) return true;
         if (url.contains("wps.cn")) return true;
         if (url.contains("wps.com")) return true;
