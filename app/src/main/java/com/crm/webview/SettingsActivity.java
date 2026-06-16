@@ -1,7 +1,13 @@
 package com.crm.webview;
 
+import android.app.AlertDialog;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.webkit.CookieManager;
@@ -19,7 +25,13 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.io.File;
+import java.io.FileWriter;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,14 +42,8 @@ public class SettingsActivity extends AppCompatActivity {
     private SharedPreferences prefs;
 
     private static final String[] ACTION_TYPES = {"隐藏", "点击", "修改"};
-    private static final String[] DEFAULT_TAB_ICONS = {"📊", "📋", "➕"};
-    private static final String[] DEFAULT_TAB_TITLES = {"销售机会", "最近新增", "录入线索"};
-    private static final String[] DEFAULT_LINK_TITLES = {"销售机会", "最近新增", "录入线索"};
-    private static final String[] DEFAULT_LINK_URLS = {
-            "https://www.kdocs.cn/wo/sl/v12CEOZt",
-            "https://www.kdocs.cn/wo/sl/v14T2gpD",
-            "https://www.kdocs.cn/wo/sl/v13iHfr4"
-    };
+    private static final String[] DEFAULT_TAB_ICONS = {"📊", "📋", "➕", "📁", "👤"};
+    private static final String[] DEFAULT_TAB_TITLES = {"销售机会", "最近新增", "录入线索", "选项卡4", "选项卡5"};
 
     private List<TabData> tabsData = new ArrayList<>();
 
@@ -59,10 +65,10 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     static class ActionData {
-        String type; // hide, click, modify
+        String type;
         String selector;
         String value;
-        int delay = 0; // 延迟秒数（仅点击时有效）
+        int delay = 0;
         View actionView;
     }
 
@@ -75,21 +81,10 @@ public class SettingsActivity extends AppCompatActivity {
         settingsContainer = findViewById(R.id.settingsContainer);
         switchKdocsOptimize = findViewById(R.id.switchKdocsOptimize);
 
-        // 加载金山文档优化开关状态
         switchKdocsOptimize.setChecked(prefs.getBoolean("kdocs_optimize", true));
 
-        // 设置清除缓存功能
-        TextView tvCacheSize = findViewById(R.id.tvCacheSize);
-        TextView btnClearCache = findViewById(R.id.btnClearCache);
-
-        // 显示缓存大小
-        updateCacheSize(tvCacheSize);
-
-        btnClearCache.setOnClickListener(v -> {
-            clearAllCache();
-            updateCacheSize(tvCacheSize);
-            Toast.makeText(this, "缓存已清除", Toast.LENGTH_SHORT).show();
-        });
+        setupCache();
+        setupExportImport();
 
         ImageView btnBack = findViewById(R.id.btnBack);
         btnBack.setOnClickListener(v -> finish());
@@ -99,6 +94,135 @@ public class SettingsActivity extends AppCompatActivity {
 
         loadConfig();
         buildUI();
+    }
+
+    private void setupCache() {
+        TextView tvCacheSize = findViewById(R.id.tvCacheSize);
+        TextView btnClearCache = findViewById(R.id.btnClearCache);
+
+        updateCacheSize(tvCacheSize);
+
+        btnClearCache.setOnClickListener(v -> {
+            new AlertDialog.Builder(this)
+                    .setTitle("清除缓存")
+                    .setMessage("确定要清除所有缓存吗？\n这会清除登录状态。")
+                    .setPositiveButton("确定", (dialog, which) -> {
+                        clearAllCache();
+                        updateCacheSize(tvCacheSize);
+                        Toast.makeText(this, "缓存已清除", Toast.LENGTH_SHORT).show();
+                    })
+                    .setNegativeButton("取消", null)
+                    .show();
+        });
+    }
+
+    private void setupExportImport() {
+        TextView btnExport = findViewById(R.id.btnExport);
+        TextView btnImport = findViewById(R.id.btnImport);
+
+        btnExport.setOnClickListener(v -> exportSettings());
+        btnImport.setOnClickListener(v -> importSettings());
+    }
+
+    private void exportSettings() {
+        try {
+            JSONObject json = new JSONObject();
+
+            // 导出通用设置
+            json.put("kdocs_optimize", prefs.getBoolean("kdocs_optimize", true));
+            json.put("tab_count", prefs.getInt("tab_count", 3));
+
+            // 导出选项卡配置
+            JSONArray tabsArray = new JSONArray();
+            for (int i = 0; i < prefs.getInt("tab_count", 3); i++) {
+                JSONObject tab = new JSONObject();
+                tab.put("icon", prefs.getString("icon" + (i + 1), DEFAULT_TAB_ICONS[i]));
+                tab.put("title", prefs.getString("title" + (i + 1), DEFAULT_TAB_TITLES[i]));
+                tab.put("links", prefs.getString("links" + (i + 1), ""));
+                tabsArray.put(tab);
+            }
+            json.put("tabs", tabsArray);
+
+            // 保存到文件
+            String fileName = "WebHub_Config_" + System.currentTimeMillis() + ".json";
+            File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            File file = new File(downloadsDir, fileName);
+
+            FileWriter writer = new FileWriter(file);
+            writer.write(json.toString(2));
+            writer.close();
+
+            Toast.makeText(this, "已导出到: " + file.getAbsolutePath(), Toast.LENGTH_LONG).show();
+
+            // 分享文件
+            Intent shareIntent = new Intent(Intent.ACTION_SEND);
+            shareIntent.setType("application/json");
+            shareIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file));
+            startActivity(Intent.createChooser(shareIntent, "分享配置文件"));
+
+        } catch (Exception e) {
+            Toast.makeText(this, "导出失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void importSettings() {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("application/json");
+        startActivityForResult(intent, 1001);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 1001 && resultCode == RESULT_OK && data != null) {
+            try {
+                Uri uri = data.getData();
+                InputStream is = getContentResolver().openInputStream(uri);
+                InputStreamReader reader = new InputStreamReader(is);
+                StringBuilder sb = new StringBuilder();
+                char[] buffer = new char[1024];
+                int len;
+                while ((len = reader.read(buffer)) != -1) {
+                    sb.append(buffer, 0, len);
+                }
+                reader.close();
+
+                JSONObject json = new JSONObject(sb.toString());
+
+                SharedPreferences.Editor editor = prefs.edit();
+
+                // 导入通用设置
+                if (json.has("kdocs_optimize")) {
+                    editor.putBoolean("kdocs_optimize", json.getBoolean("kdocs_optimize"));
+                }
+                if (json.has("tab_count")) {
+                    editor.putInt("tab_count", json.getInt("tab_count"));
+                }
+
+                // 导入选项卡配置
+                if (json.has("tabs")) {
+                    JSONArray tabsArray = json.getJSONArray("tabs");
+                    for (int i = 0; i < tabsArray.length(); i++) {
+                        JSONObject tab = tabsArray.getJSONObject(i);
+                        editor.putString("icon" + (i + 1), tab.getString("icon"));
+                        editor.putString("title" + (i + 1), tab.getString("title"));
+                        editor.putString("links" + (i + 1), tab.getString("links"));
+                    }
+                }
+
+                editor.apply();
+
+                // 重新加载
+                loadConfig();
+                buildUI();
+                switchKdocsOptimize.setChecked(prefs.getBoolean("kdocs_optimize", true));
+
+                Toast.makeText(this, "导入成功", Toast.LENGTH_SHORT).show();
+
+            } catch (Exception e) {
+                Toast.makeText(this, "导入失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     private void updateCacheSize(TextView textView) {
@@ -115,15 +239,10 @@ public class SettingsActivity extends AppCompatActivity {
     private long getCacheSize() {
         long size = 0;
         try {
-            File cacheDir = getCacheDir();
-            size += getDirSize(cacheDir);
+            size += getDirSize(getCacheDir());
             File webviewDir = new File(getFilesDir(), "../app_webview");
-            if (webviewDir.exists()) {
-                size += getDirSize(webviewDir);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+            if (webviewDir.exists()) size += getDirSize(webviewDir);
+        } catch (Exception e) {}
         return size;
     }
 
@@ -133,11 +252,7 @@ public class SettingsActivity extends AppCompatActivity {
             File[] files = dir.listFiles();
             if (files != null) {
                 for (File file : files) {
-                    if (file.isFile()) {
-                        size += file.length();
-                    } else {
-                        size += getDirSize(file);
-                    }
+                    size += file.isFile() ? file.length() : getDirSize(file);
                 }
             }
         }
@@ -146,30 +261,17 @@ public class SettingsActivity extends AppCompatActivity {
 
     private void clearAllCache() {
         try {
-            // 清除 WebView 缓存
             android.webkit.WebView webView = new android.webkit.WebView(this);
             webView.clearCache(true);
             webView.clearHistory();
             webView.destroy();
-
-            // 清除 Cookie
             CookieManager.getInstance().removeAllCookies(null);
             CookieManager.getInstance().flush();
-
-            // 清除 WebStorage
             WebStorage.getInstance().deleteAllData();
-
-            // 清除应用缓存目录
             deleteDir(getCacheDir());
-
-            // 清除 WebView 缓存目录
             File webviewDir = new File(getFilesDir(), "../app_webview");
-            if (webviewDir.exists()) {
-                deleteDir(webviewDir);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+            if (webviewDir.exists()) deleteDir(webviewDir);
+        } catch (Exception e) {}
     }
 
     private boolean deleteDir(File dir) {
@@ -177,17 +279,11 @@ public class SettingsActivity extends AppCompatActivity {
             File[] children = dir.listFiles();
             if (children != null) {
                 for (File child : children) {
-                    boolean success = deleteDir(child);
-                    if (!success) {
-                        return false;
-                    }
+                    deleteDir(child);
                 }
             }
-            return dir.delete();
-        } else if (dir != null && dir.isFile()) {
-            return dir.delete();
         }
-        return false;
+        return dir != null && dir.delete();
     }
 
     private void loadConfig() {
@@ -199,15 +295,14 @@ public class SettingsActivity extends AppCompatActivity {
 
         for (int i = 0; i < tabCount; i++) {
             TabData tab = new TabData();
-            tab.icon = prefs.getString("icon" + (i + 1), i < DEFAULT_TAB_ICONS.length ? DEFAULT_TAB_ICONS[i] : "📌");
-            tab.title = prefs.getString("title" + (i + 1), i < DEFAULT_TAB_TITLES.length ? DEFAULT_TAB_TITLES[i] : "选项卡 " + (i + 1));
+            tab.icon = prefs.getString("icon" + (i + 1), DEFAULT_TAB_ICONS[i]);
+            tab.title = prefs.getString("title" + (i + 1), DEFAULT_TAB_TITLES[i]);
 
-            // 加载链接
             String linksStr = prefs.getString("links" + (i + 1), "");
             if (linksStr.isEmpty()) {
                 LinkData link = new LinkData();
-                link.title = DEFAULT_LINK_TITLES[i];
-                link.url = DEFAULT_LINK_URLS[i];
+                link.title = DEFAULT_TAB_TITLES[i];
+                link.url = "about:blank";
                 tab.links.add(link);
             } else {
                 String[] lines = linksStr.split("\n");
@@ -220,14 +315,12 @@ public class SettingsActivity extends AppCompatActivity {
                     String titleUrl = parts[0];
                     String actionsStr = parts.length > 1 ? parts[1] : "";
 
-                    // 解析标题和URL
                     String[] titleUrlParts = titleUrl.split(",", 2);
                     if (titleUrlParts.length == 2) {
                         link.title = titleUrlParts[0].trim();
                         link.url = titleUrlParts[1].trim();
                     }
 
-                    // 解析操作
                     if (!actionsStr.isEmpty()) {
                         String[] actionParts = actionsStr.split("\\|");
                         for (int j = 0; j < actionParts.length; ) {
@@ -240,21 +333,14 @@ public class SettingsActivity extends AppCompatActivity {
                             action.delay = 0;
 
                             if ("click".equals(action.type)) {
-                                // 点击操作：第3个参数是延迟
                                 if (j + 2 < actionParts.length) {
-                                    try {
-                                        action.delay = Integer.parseInt(actionParts[j + 2]);
-                                    } catch (Exception e) {}
+                                    try { action.delay = Integer.parseInt(actionParts[j + 2]); } catch (Exception e) {}
                                 }
                                 j += 3;
                             } else if ("modify".equals(action.type)) {
-                                // 修改操作：第3个参数是新值
-                                if (j + 2 < actionParts.length) {
-                                    action.value = actionParts[j + 2];
-                                }
+                                if (j + 2 < actionParts.length) action.value = actionParts[j + 2];
                                 j += 3;
                             } else {
-                                // 隐藏操作：只有2个参数
                                 j += 2;
                             }
 
@@ -275,91 +361,91 @@ public class SettingsActivity extends AppCompatActivity {
 
         for (int i = 0; i < tabsData.size(); i++) {
             TabData tab = tabsData.get(i);
-            View sectionView = LayoutInflater.from(this).inflate(R.layout.item_tab_section, settingsContainer, false);
-            tab.sectionView = sectionView;
+            final int tabIndex = i;
 
-            // 设置选项卡标题
-            TextView tvTabIcon = sectionView.findViewById(R.id.tvTabIcon);
-            TextView tvTabTitle = sectionView.findViewById(R.id.tvTabTitle);
-            EditText etTabIcon = sectionView.findViewById(R.id.etTabIcon);
-            EditText etTabTitle = sectionView.findViewById(R.id.etTabTitle);
-            TextView tvArrow = sectionView.findViewById(R.id.tvArrow);
-            LinearLayout linksContainer = sectionView.findViewById(R.id.linksContainer);
-            TextView btnAddLink = sectionView.findViewById(R.id.btnAddLink);
-            TextView btnDeleteTab = sectionView.findViewById(R.id.btnDeleteTab);
+            // ========== 第一级：选项卡 ==========
+            View tabView = LayoutInflater.from(this).inflate(R.layout.item_tab_level1, settingsContainer, false);
+            tab.sectionView = tabView;
+
+            TextView tvArrow = tabView.findViewById(R.id.tvArrow);
+            TextView tvTabIcon = tabView.findViewById(R.id.tvTabIcon);
+            TextView tvTabTitle = tabView.findViewById(R.id.tvTabTitle);
+            EditText etTabIcon = tabView.findViewById(R.id.etTabIcon);
+            EditText etTabTitle = tabView.findViewById(R.id.etTabTitle);
+            TextView btnDeleteTab = tabView.findViewById(R.id.btnDeleteTab);
+            LinearLayout linksContainer = tabView.findViewById(R.id.linksContainer);
+            TextView btnAddLink = tabView.findViewById(R.id.btnAddLink);
 
             tvTabIcon.setText(tab.icon);
-            tvTabTitle.setText("选项卡 " + (i + 1));
+            tvTabTitle.setText(tab.title);
             etTabIcon.setText(tab.icon);
             etTabTitle.setText(tab.title);
-
             tab.linksContainer = linksContainer;
 
-            // 删除选项卡按钮（至少保留2个）
+            // 删除选项卡
             if (tabsData.size() > 2) {
                 btnDeleteTab.setVisibility(View.VISIBLE);
-                int tabIndex = i;
                 btnDeleteTab.setOnClickListener(v -> {
-                    tabsData.remove(tab);
-                    buildUI(); // 重建界面
+                    new AlertDialog.Builder(this)
+                            .setTitle("删除选项卡")
+                            .setMessage("确定删除「" + tab.title + "」？")
+                            .setPositiveButton("删除", (d, w) -> {
+                                tabsData.remove(tab);
+                                buildUI();
+                            })
+                            .setNegativeButton("取消", null)
+                            .show();
                 });
-            } else {
-                btnDeleteTab.setVisibility(View.GONE);
             }
 
             // 展开/收起
-            LinearLayout btnToggle = sectionView.findViewById(R.id.btnToggle);
-            btnToggle.setOnClickListener(v -> {
+            tabView.findViewById(R.id.btnToggle).setOnClickListener(v -> {
                 tab.isExpanded = !tab.isExpanded;
                 linksContainer.setVisibility(tab.isExpanded ? View.VISIBLE : View.GONE);
                 btnAddLink.setVisibility(tab.isExpanded ? View.VISIBLE : View.GONE);
                 tvArrow.setText(tab.isExpanded ? "▲" : "▼");
             });
 
-            // 添加链接按钮
-            int tabIndex = i;
+            // 添加链接
             btnAddLink.setOnClickListener(v -> {
                 LinkData newLink = new LinkData();
                 newLink.title = "";
                 newLink.url = "";
                 tab.links.add(newLink);
-                addLinkCard(tab, newLink, tabIndex);
+                addLinkCard(tab, newLink);
             });
 
-            // 添加链接卡片
+            // 添加已有链接卡片
             for (LinkData link : tab.links) {
-                addLinkCard(tab, link, i);
+                addLinkCard(tab, link);
             }
 
-            settingsContainer.addView(sectionView);
+            settingsContainer.addView(tabView);
         }
 
-        // 添加选项卡按钮（最多5个）
+        // 添加选项卡按钮
         if (tabsData.size() < 5) {
             TextView btnAddTab = new TextView(this);
             btnAddTab.setText("+ 添加选项卡");
             btnAddTab.setTextSize(14);
-            btnAddTab.setTextColor(getResources().getColor(R.color.colorPrimary));
-            btnAddTab.setGravity(android.view.Gravity.CENTER);
-            btnAddTab.setPadding(0, dpToPx(16), 0, dpToPx(16));
+            btnAddTab.setTextColor(Color.parseColor("#1976D2"));
+            btnAddTab.setGravity(Gravity.CENTER);
+            btnAddTab.setPadding(0, dpToPx(14), 0, dpToPx(14));
             btnAddTab.setBackgroundResource(R.drawable.btn_add_link);
             btnAddTab.setOnClickListener(v -> {
                 TabData newTab = new TabData();
                 newTab.icon = "📌";
-                newTab.title = "选项卡 " + (tabsData.size() + 1);
+                newTab.title = "新选项卡";
                 tabsData.add(newTab);
-                buildUI(); // 重建界面
+                buildUI();
             });
             settingsContainer.addView(btnAddTab);
         }
     }
 
-    private int dpToPx(int dp) {
-        return (int) (dp * getResources().getDisplayMetrics().density);
-    }
-
-    private void addLinkCard(TabData tab, LinkData link, int tabIndex) {
-        View cardView = LayoutInflater.from(this).inflate(R.layout.item_link_card, tab.linksContainer, false);
+    private void addLinkCard(TabData tab, LinkData link) {
+        // ========== 第二级：链接 ==========
+        View cardView = LayoutInflater.from(this).inflate(R.layout.item_tab_level2, tab.linksContainer, false);
         link.cardView = cardView;
 
         EditText etLinkTitle = cardView.findViewById(R.id.etLinkTitle);
@@ -370,13 +456,19 @@ public class SettingsActivity extends AppCompatActivity {
 
         etLinkTitle.setText(link.title);
         etLinkUrl.setText(link.url);
-
         link.actionsContainer = actionsContainer;
 
         // 删除链接
         btnDeleteLink.setOnClickListener(v -> {
-            tab.links.remove(link);
-            tab.linksContainer.removeView(cardView);
+            new AlertDialog.Builder(this)
+                    .setTitle("删除链接")
+                    .setMessage("确定删除「" + (link.title.isEmpty() ? "未命名链接" : link.title) + "」？")
+                    .setPositiveButton("删除", (d, w) -> {
+                        tab.links.remove(link);
+                        tab.linksContainer.removeView(cardView);
+                    })
+                    .setNegativeButton("取消", null)
+                    .show();
         });
 
         // 添加操作
@@ -398,7 +490,8 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void addActionRow(LinkData link, ActionData action) {
-        View row = LayoutInflater.from(this).inflate(R.layout.item_script_action, link.actionsContainer, false);
+        // ========== 第三级：操作 ==========
+        View row = LayoutInflater.from(this).inflate(R.layout.item_tab_level3, link.actionsContainer, false);
         action.actionView = row;
 
         Spinner spinnerAction = row.findViewById(R.id.spinnerAction);
@@ -408,13 +501,11 @@ public class SettingsActivity extends AppCompatActivity {
         EditText etDelay = row.findViewById(R.id.etDelay);
         TextView btnDelete = row.findViewById(R.id.btnDelete);
 
-        // 设置操作类型下拉
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item, ACTION_TYPES);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerAction.setAdapter(adapter);
 
-        // 设置当前值
         int actionIndex = 0;
         if ("hide".equals(action.type)) actionIndex = 0;
         else if ("click".equals(action.type)) actionIndex = 1;
@@ -425,7 +516,6 @@ public class SettingsActivity extends AppCompatActivity {
         etValue.setText(action.value);
         etDelay.setText(String.valueOf(action.delay));
 
-        // 根据操作类型显示/隐藏输入框
         layoutDelay.setVisibility(actionIndex == 1 ? View.VISIBLE : View.GONE);
         etValue.setVisibility(actionIndex == 2 ? View.VISIBLE : View.GONE);
 
@@ -435,12 +525,11 @@ public class SettingsActivity extends AppCompatActivity {
                 layoutDelay.setVisibility(position == 1 ? View.VISIBLE : View.GONE);
                 etValue.setVisibility(position == 2 ? View.VISIBLE : View.GONE);
             }
-
             @Override
             public void onNothingSelected(AdapterView<?> parent) {}
         });
 
-        // 删除按钮
+        // 删除操作
         btnDelete.setOnClickListener(v -> {
             link.actions.remove(action);
             link.actionsContainer.removeView(row);
@@ -468,7 +557,6 @@ public class SettingsActivity extends AppCompatActivity {
             editor.putString("icon" + (i + 1), icon);
             editor.putString("title" + (i + 1), title);
 
-            // 构建链接字符串
             StringBuilder linksStr = new StringBuilder();
             for (LinkData link : tab.links) {
                 EditText etLinkTitle = link.cardView.findViewById(R.id.etLinkTitle);
@@ -482,7 +570,6 @@ public class SettingsActivity extends AppCompatActivity {
                 if (linksStr.length() > 0) linksStr.append("\n");
                 linksStr.append(linkTitle).append(",").append(linkUrl);
 
-                // 构建操作字符串
                 StringBuilder actionsStr = new StringBuilder();
                 for (ActionData action : link.actions) {
                     if (action.actionView == null) continue;
@@ -502,20 +589,12 @@ public class SettingsActivity extends AppCompatActivity {
                     else type = "modify";
 
                     String value = etValue.getText().toString().trim();
-                    String delayStr = etDelay.getText().toString().trim();
                     int delay = 0;
-                    try {
-                        delay = Integer.parseInt(delayStr);
-                    } catch (Exception e) {}
+                    try { delay = Integer.parseInt(etDelay.getText().toString().trim()); } catch (Exception e) {}
 
                     actionsStr.append("|").append(type).append("|").append(selector);
-                    if (pos == 1) {
-                        // 点击操作：保存延迟
-                        actionsStr.append("|").append(delay);
-                    } else if (pos == 2 && !value.isEmpty()) {
-                        // 修改操作：保存新值
-                        actionsStr.append("|").append(value);
-                    }
+                    if (pos == 1) actionsStr.append("|").append(delay);
+                    else if (pos == 2 && !value.isEmpty()) actionsStr.append("|").append(value);
                 }
 
                 linksStr.append(actionsStr);
@@ -524,14 +603,15 @@ public class SettingsActivity extends AppCompatActivity {
             editor.putString("links" + (i + 1), linksStr.toString());
         }
 
-        // 保存选项卡数量
         editor.putInt("tab_count", tabsData.size());
-
-        // 保存金山文档优化开关状态
         editor.putBoolean("kdocs_optimize", switchKdocsOptimize.isChecked());
 
         editor.apply();
         Toast.makeText(this, "设置已保存", Toast.LENGTH_SHORT).show();
         finish();
+    }
+
+    private int dpToPx(int dp) {
+        return (int) (dp * getResources().getDisplayMetrics().density);
     }
 }

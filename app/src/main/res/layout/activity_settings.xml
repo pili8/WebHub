@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#F5F5F5">
+    android:background="#F0F2F5">
 
     <!-- 顶部标题栏 -->
     <LinearLayout
@@ -48,26 +48,27 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="12dp">
 
             <!-- ========== 通用设置区域 ========== -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="通用设置"
-                android:textSize="14sp"
+                android:textSize="13sp"
                 android:textStyle="bold"
-                android:textColor="#666666"
-                android:layout_marginBottom="8dp" />
+                android:textColor="#888888"
+                android:layout_marginBottom="8dp"
+                android:layout_marginStart="4dp" />
 
             <!-- 金山文档优化开关 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/tab_section_bg"
-                android:padding="16dp"
+                android:background="@drawable/card_white"
+                android:padding="14dp"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="12dp">
+                android:layout_marginBottom="8dp">
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -80,16 +81,15 @@
                         android:layout_height="wrap_content"
                         android:text="金山文档优化"
                         android:textSize="15sp"
-                        android:textColor="#333333"
-                        android:textStyle="bold" />
+                        android:textColor="#333333" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="开启后，返回键自动关闭金山文档弹窗"
+                        android:text="返回键自动关闭金山文档弹窗"
                         android:textSize="12sp"
                         android:textColor="#999999"
-                        android:layout_marginTop="4dp" />
+                        android:layout_marginTop="2dp" />
 
                 </LinearLayout>
 
@@ -100,12 +100,12 @@
 
             </LinearLayout>
 
-            <!-- 清除缓存按钮 -->
+            <!-- 清除缓存 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/tab_section_bg"
-                android:padding="16dp"
+                android:background="@drawable/card_white"
+                android:padding="14dp"
                 android:gravity="center_vertical"
                 android:layout_marginBottom="16dp">
 
@@ -120,31 +120,30 @@
                         android:layout_height="wrap_content"
                         android:text="清除缓存"
                         android:textSize="15sp"
-                        android:textColor="#333333"
-                        android:textStyle="bold" />
+                        android:textColor="#333333" />
 
                     <TextView
                         android:id="@+id/tvCacheSize"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="正在计算..."
+                        android:text="计算中..."
                         android:textSize="12sp"
                         android:textColor="#999999"
-                        android:layout_marginTop="4dp" />
+                        android:layout_marginTop="2dp" />
 
                 </LinearLayout>
 
                 <TextView
                     android:id="@+id/btnClearCache"
                     android:layout_width="wrap_content"
-                    android:layout_height="36dp"
+                    android:layout_height="34dp"
                     android:gravity="center"
                     android:text="清除"
                     android:textSize="13sp"
                     android:textColor="#F44336"
                     android:background="@drawable/btn_outline_red"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="16dp" />
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp" />
 
             </LinearLayout>
 
@@ -153,17 +152,67 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="选项卡配置"
-                android:textSize="14sp"
+                android:textSize="13sp"
                 android:textStyle="bold"
-                android:textColor="#666666"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="8dp" />
+                android:textColor="#888888"
+                android:layout_marginBottom="8dp"
+                android:layout_marginStart="4dp" />
 
+            <!-- 选项卡列表容器 -->
             <LinearLayout
                 android:id="@+id/settingsContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical" />
+
+            <!-- ========== 导入导出区域 ========== -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="数据管理"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="#888888"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp"
+                android:layout_marginStart="4dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/card_white"
+                android:orientation="vertical"
+                android:padding="14dp"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:id="@+id/btnExport"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:gravity="center"
+                    android:text="📤 导出设置"
+                    android:textSize="14sp"
+                    android:textColor="#1976D2"
+                    android:background="?attr/selectableItemBackground" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="#F0F0F0"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:id="@+id/btnImport"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:gravity="center"
+                    android:text="📥 导入设置"
+                    android:textSize="14sp"
+                    android:textColor="#4CAF50"
+                    android:background="?attr/selectableItemBackground" />
+
+            </LinearLayout>
 
         </LinearLayout>
 
@@ -173,12 +222,12 @@
     <Button
         android:id="@+id/btnSave"
         android:layout_width="match_parent"
-        android:layout_height="50dp"
+        android:layout_height="48dp"
         android:text="保存设置"
-        android:textSize="16sp"
+        android:textSize="15sp"
         android:background="@drawable/btn_primary"
         android:textColor="@android:color/white"
         android:textAllCaps="false"
-        android:layout_margin="16dp" />
+        android:layout_margin="12dp" />
 
 </LinearLayout>
