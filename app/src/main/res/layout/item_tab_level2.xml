@@ -4,8 +4,8 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:background="@drawable/card_gray"
-    android:padding="10dp"
-    android:layout_marginBottom="6dp">
+    android:padding="12dp"
+    android:layout_marginBottom="8dp">
 
     <!-- 链接标题行 -->
     <LinearLayout
@@ -15,33 +15,34 @@
         android:gravity="center_vertical">
 
         <TextView
-            android:layout_width="18dp"
+            android:layout_width="20dp"
             android:layout_height="wrap_content"
-            android:text="📄"
-            android:textSize="12sp" />
+            android:text="🔗"
+            android:textSize="14sp" />
 
         <EditText
             android:id="@+id/etLinkTitle"
             android:layout_width="0dp"
-            android:layout_height="34dp"
+            android:layout_height="38dp"
             android:layout_weight="1"
             android:hint="链接标题"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:background="@drawable/input_bg_small"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:layout_marginStart="6dp" />
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:layout_marginStart="8dp" />
 
+        <!-- 删除按钮改为长按触发，平时显示更多选项 -->
         <TextView
             android:id="@+id/btnDeleteLink"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:gravity="center"
-            android:text="✕"
-            android:textSize="14sp"
-            android:textColor="#F44336"
+            android:text="⋮"
+            android:textSize="16sp"
+            android:textColor="#757575"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:layout_marginStart="4dp" />
+            android:layout_marginStart="6dp" />
 
     </LinearLayout>
 
@@ -49,32 +50,47 @@
     <EditText
         android:id="@+id/etLinkUrl"
         android:layout_width="match_parent"
-        android:layout_height="32dp"
+        android:layout_height="36dp"
         android:hint="https://..."
-        android:textSize="11sp"
+        android:textSize="12sp"
         android:inputType="textUri"
         android:background="@drawable/input_bg_small"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
-        android:layout_marginTop="6dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:layout_marginTop="8dp"
         android:singleLine="true" />
 
     <!-- 分割线 -->
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#EEEEEE"
-        android:layout_marginTop="10dp"
-        android:layout_marginBottom="8dp" />
+        android:background="#E0E0E0"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="10dp" />
 
     <!-- 操作标题 -->
-    <TextView
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="页面操作"
-        android:textSize="11sp"
-        android:textColor="#BBBBBB"
-        android:layout_marginBottom="6dp" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⚙️ 页面操作"
+            android:textSize="12sp"
+            android:textColor="#757575" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1"
+            android:background="#EEEEEE"
+            android:layout_marginStart="10dp" />
+
+    </LinearLayout>
 
     <!-- 操作列表容器 -->
     <LinearLayout
@@ -87,12 +103,12 @@
     <TextView
         android:id="@+id/btnAddAction"
         android:layout_width="match_parent"
-        android:layout_height="30dp"
+        android:layout_height="36dp"
         android:gravity="center"
-        android:text="+ 添加操作"
-        android:textSize="11sp"
+        android:text="＋ 添加操作"
+        android:textSize="12sp"
         android:textColor="#4CAF50"
         android:background="?attr/selectableItemBackground"
-        android:layout_marginTop="4dp" />
+        android:layout_marginTop="6dp" />
 
 </LinearLayout>

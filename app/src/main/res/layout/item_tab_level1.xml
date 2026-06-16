@@ -4,34 +4,35 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:background="@drawable/card_white"
-    android:layout_marginBottom="10dp">
+    android:layout_marginBottom="12dp"
+    android:elevation="2dp">
 
-    <!-- 选项卡标题栏 -->
+    <!-- 选项卡标题栏 (点击展开/收起) -->
     <LinearLayout
         android:id="@+id/btnToggle"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="52dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="12dp"
-        android:paddingEnd="8dp"
+        android:paddingStart="14dp"
+        android:paddingEnd="12dp"
         android:background="?attr/selectableItemBackground">
 
         <TextView
             android:id="@+id/tvArrow"
-            android:layout_width="20dp"
+            android:layout_width="24dp"
             android:layout_height="wrap_content"
-            android:text="▼"
-            android:textSize="12sp"
+            android:text="▶"
+            android:textSize="10sp"
             android:textColor="#999999"
             android:gravity="center" />
 
         <TextView
             android:id="@+id/tvTabIcon"
-            android:layout_width="32dp"
+            android:layout_width="36dp"
             android:layout_height="wrap_content"
             android:text="📊"
-            android:textSize="20sp"
+            android:textSize="22sp"
             android:gravity="center" />
 
         <TextView
@@ -40,37 +41,42 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="选项卡"
-            android:textSize="14sp"
+            android:textSize="15sp"
             android:textStyle="bold"
             android:textColor="#333333"
-            android:layout_marginStart="6dp" />
+            android:layout_marginStart="8dp" />
 
+        <!-- 删除按钮移到最右侧，增加间距 -->
         <TextView
             android:id="@+id/btnDeleteTab"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
             android:gravity="center"
-            android:text="🗑"
-            android:textSize="16sp"
+            android:text="⋮"
+            android:textSize="18sp"
+            android:textColor="#757575"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:visibility="gone" />
+            android:visibility="gone"
+            android:layout_marginStart="8dp" />
 
     </LinearLayout>
 
-    <!-- 编辑区域 -->
+    <!-- 编辑区域 (展开后显示) -->
     <LinearLayout
+        android:id="@+id/editArea"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
-        android:paddingBottom="10dp"
-        android:gravity="center_vertical">
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="12dp"
+        android:gravity="center_vertical"
+        android:visibility="gone">
 
         <EditText
             android:id="@+id/etTabIcon"
-            android:layout_width="44dp"
-            android:layout_height="36dp"
+            android:layout_width="48dp"
+            android:layout_height="40dp"
             android:hint="📊"
             android:textSize="18sp"
             android:gravity="center"
@@ -80,14 +86,14 @@
         <EditText
             android:id="@+id/etTabTitle"
             android:layout_width="0dp"
-            android:layout_height="36dp"
+            android:layout_height="40dp"
             android:layout_weight="1"
             android:hint="选项卡名称"
-            android:textSize="13sp"
+            android:textSize="14sp"
             android:background="@drawable/input_bg_small"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:layout_marginStart="8dp" />
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:layout_marginStart="10dp" />
 
     </LinearLayout>
 
@@ -97,23 +103,23 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
         android:visibility="gone" />
 
     <!-- 添加链接按钮 -->
     <TextView
         android:id="@+id/btnAddLink"
         android:layout_width="match_parent"
-        android:layout_height="36dp"
+        android:layout_height="40dp"
         android:gravity="center"
-        android:text="+ 添加链接"
-        android:textSize="12sp"
+        android:text="＋ 添加链接"
+        android:textSize="13sp"
         android:textColor="#1976D2"
         android:background="?attr/selectableItemBackground"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginBottom="8dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
+        android:layout_marginBottom="10dp"
         android:visibility="gone" />
 
 </LinearLayout>

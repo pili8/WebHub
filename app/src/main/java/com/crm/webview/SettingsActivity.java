@@ -18,6 +18,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -370,6 +371,7 @@ public class SettingsActivity extends AppCompatActivity {
             TextView tvArrow = tabView.findViewById(R.id.tvArrow);
             TextView tvTabIcon = tabView.findViewById(R.id.tvTabIcon);
             TextView tvTabTitle = tabView.findViewById(R.id.tvTabTitle);
+            View editArea = tabView.findViewById(R.id.editArea);
             EditText etTabIcon = tabView.findViewById(R.id.etTabIcon);
             EditText etTabTitle = tabView.findViewById(R.id.etTabTitle);
             TextView btnDeleteTab = tabView.findViewById(R.id.btnDeleteTab);
@@ -382,28 +384,47 @@ public class SettingsActivity extends AppCompatActivity {
             etTabTitle.setText(tab.title);
             tab.linksContainer = linksContainer;
 
-            // 删除选项卡
+            // 删除选项卡 (显示为更多选项按钮)
             if (tabsData.size() > 2) {
                 btnDeleteTab.setVisibility(View.VISIBLE);
                 btnDeleteTab.setOnClickListener(v -> {
-                    new AlertDialog.Builder(this)
-                            .setTitle("删除选项卡")
-                            .setMessage("确定删除「" + tab.title + "」？")
-                            .setPositiveButton("删除", (d, w) -> {
-                                tabsData.remove(tab);
-                                buildUI();
-                            })
-                            .setNegativeButton("取消", null)
-                            .show();
+                    // 弹出菜单
+                    PopupMenu popup = new PopupMenu(this, v);
+                    popup.getMenu().add(0, 1, 0, "编辑选项卡");
+                    popup.getMenu().add(0, 2, 0, "删除选项卡");
+                    popup.setOnMenuItemClickListener(item -> {
+                        if (item.getItemId() == 1) {
+                            // 展开编辑区域
+                            tab.isExpanded = !tab.isExpanded;
+                            editArea.setVisibility(tab.isExpanded ? View.VISIBLE : View.GONE);
+                            linksContainer.setVisibility(tab.isExpanded ? View.VISIBLE : View.GONE);
+                            btnAddLink.setVisibility(tab.isExpanded ? View.VISIBLE : View.GONE);
+                            tvArrow.setText(tab.isExpanded ? "▼" : "▶");
+                        } else if (item.getItemId() == 2) {
+                            // 确认删除
+                            new AlertDialog.Builder(this)
+                                    .setTitle("删除选项卡")
+                                    .setMessage("确定删除「" + tab.title + "」？\n删除后无法恢复。")
+                                    .setPositiveButton("删除", (d, w) -> {
+                                        tabsData.remove(tab);
+                                        buildUI();
+                                    })
+                                    .setNegativeButton("取消", null)
+                                    .show();
+                        }
+                        return true;
+                    });
+                    popup.show();
                 });
             }
 
-            // 展开/收起
+            // 点击标题栏展开/收起
             tabView.findViewById(R.id.btnToggle).setOnClickListener(v -> {
                 tab.isExpanded = !tab.isExpanded;
+                editArea.setVisibility(tab.isExpanded ? View.VISIBLE : View.GONE);
                 linksContainer.setVisibility(tab.isExpanded ? View.VISIBLE : View.GONE);
                 btnAddLink.setVisibility(tab.isExpanded ? View.VISIBLE : View.GONE);
-                tvArrow.setText(tab.isExpanded ? "▲" : "▼");
+                tvArrow.setText(tab.isExpanded ? "▼" : "▶");
             });
 
             // 添加链接
@@ -426,11 +447,11 @@ public class SettingsActivity extends AppCompatActivity {
         // 添加选项卡按钮
         if (tabsData.size() < 5) {
             TextView btnAddTab = new TextView(this);
-            btnAddTab.setText("+ 添加选项卡");
+            btnAddTab.setText("＋ 添加选项卡");
             btnAddTab.setTextSize(14);
             btnAddTab.setTextColor(Color.parseColor("#1976D2"));
             btnAddTab.setGravity(Gravity.CENTER);
-            btnAddTab.setPadding(0, dpToPx(14), 0, dpToPx(14));
+            btnAddTab.setPadding(0, dpToPx(16), 0, dpToPx(16));
             btnAddTab.setBackgroundResource(R.drawable.btn_add_link);
             btnAddTab.setOnClickListener(v -> {
                 TabData newTab = new TabData();
@@ -458,17 +479,25 @@ public class SettingsActivity extends AppCompatActivity {
         etLinkUrl.setText(link.url);
         link.actionsContainer = actionsContainer;
 
-        // 删除链接
+        // 更多选项按钮 (替代直接删除)
         btnDeleteLink.setOnClickListener(v -> {
-            new AlertDialog.Builder(this)
-                    .setTitle("删除链接")
-                    .setMessage("确定删除「" + (link.title.isEmpty() ? "未命名链接" : link.title) + "」？")
-                    .setPositiveButton("删除", (d, w) -> {
-                        tab.links.remove(link);
-                        tab.linksContainer.removeView(cardView);
-                    })
-                    .setNegativeButton("取消", null)
-                    .show();
+            PopupMenu popup = new PopupMenu(this, v);
+            popup.getMenu().add(0, 1, 0, "删除此链接");
+            popup.setOnMenuItemClickListener(item -> {
+                if (item.getItemId() == 1) {
+                    new AlertDialog.Builder(this)
+                            .setTitle("删除链接")
+                            .setMessage("确定删除「" + (link.title.isEmpty() ? "未命名链接" : link.title) + "」？\n关联的操作也会被删除。")
+                            .setPositiveButton("删除", (d, w) -> {
+                                tab.links.remove(link);
+                                tab.linksContainer.removeView(cardView);
+                            })
+                            .setNegativeButton("取消", null)
+                            .show();
+                }
+                return true;
+            });
+            popup.show();
         });
 
         // 添加操作
@@ -498,6 +527,7 @@ public class SettingsActivity extends AppCompatActivity {
         EditText etSelector = row.findViewById(R.id.etSelector);
         EditText etValue = row.findViewById(R.id.etValue);
         LinearLayout layoutDelay = row.findViewById(R.id.layoutDelay);
+        LinearLayout layoutValue = row.findViewById(R.id.layoutValue);
         EditText etDelay = row.findViewById(R.id.etDelay);
         TextView btnDelete = row.findViewById(R.id.btnDelete);
 
@@ -516,23 +546,31 @@ public class SettingsActivity extends AppCompatActivity {
         etValue.setText(action.value);
         etDelay.setText(String.valueOf(action.delay));
 
+        // 根据类型显示/隐藏相关字段
         layoutDelay.setVisibility(actionIndex == 1 ? View.VISIBLE : View.GONE);
-        etValue.setVisibility(actionIndex == 2 ? View.VISIBLE : View.GONE);
+        layoutValue.setVisibility(actionIndex == 2 ? View.VISIBLE : View.GONE);
 
         spinnerAction.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 layoutDelay.setVisibility(position == 1 ? View.VISIBLE : View.GONE);
-                etValue.setVisibility(position == 2 ? View.VISIBLE : View.GONE);
+                layoutValue.setVisibility(position == 2 ? View.VISIBLE : View.GONE);
             }
             @Override
             public void onNothingSelected(AdapterView<?> parent) {}
         });
 
-        // 删除操作
+        // 删除操作 (需要确认)
         btnDelete.setOnClickListener(v -> {
-            link.actions.remove(action);
-            link.actionsContainer.removeView(row);
+            new AlertDialog.Builder(SettingsActivity.this)
+                    .setTitle("删除操作")
+                    .setMessage("确定删除此操作？")
+                    .setPositiveButton("删除", (d, w) -> {
+                        link.actions.remove(action);
+                        link.actionsContainer.removeView(row);
+                    })
+                    .setNegativeButton("取消", null)
+                    .show();
         });
 
         link.actionsContainer.addView(row);
