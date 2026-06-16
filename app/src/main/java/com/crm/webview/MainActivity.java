@@ -2,6 +2,9 @@ package com.crm.webview;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -17,6 +20,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.GeolocationPermissions;
+import android.webkit.JavascriptInterface;
 import android.webkit.SslErrorHandler;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -42,14 +46,15 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int PERMISSION_REQUEST_CODE = 100;
 
-    // 每个选项卡独立的 WebView
     private WebView webView1, webView2, webView3;
     private WebView[] webViews;
 
     private ProgressBar progressBar;
     private TextView tvTitle, tvArrow;
+    private TextView btnInspect;
     private ImageView btnRefresh, btnSettings;
     private LinearLayout btnDropdown, dropdownList;
+    private TextView inspectBanner;
     private LinearLayout tab1, tab2, tab3;
     private LinearLayout[] tabs;
     private TextView iconTab1, iconTab2, iconTab3;
@@ -60,11 +65,12 @@ public class MainActivity extends AppCompatActivity {
     private int currentTab = 0;
     private int currentLinkIndex = 0;
     private boolean isDropdownOpen = false;
+    private boolean isInspectMode = false;
     private boolean[] tabInitialized = {false, false, false};
 
     private String[] tabIconsEmoji = {"📊", "📋", "➕"};
     private String[] tabTitles = {"销售机会", "最近新增", "录入线索"};
-    private String[] tabActions = {"", "", ""}; // 每个选项卡的操作配置
+    private String[] tabActions = {"", "", ""};
     private List<List<LinkItem>> tabLinks = new ArrayList<>();
 
     private SharedPreferences prefs;
@@ -117,7 +123,7 @@ public class MainActivity extends AppCompatActivity {
         for (int i = 0; i < 3; i++) {
             if (!oldLinks[i].equals(newLinks[i])) {
                 changed = true;
-                tabInitialized[i] = false; // 标记需要重新加载
+                tabInitialized[i] = false;
             }
         }
 
@@ -136,8 +142,10 @@ public class MainActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progressBar);
         tvTitle = findViewById(R.id.tvTitle);
         tvArrow = findViewById(R.id.tvArrow);
+        btnInspect = findViewById(R.id.btnInspect);
         btnDropdown = findViewById(R.id.btnDropdown);
         dropdownList = findViewById(R.id.dropdownList);
+        inspectBanner = findViewById(R.id.inspectBanner);
         btnRefresh = findViewById(R.id.btnRefresh);
         btnSettings = findViewById(R.id.btnSettings);
 
@@ -176,6 +184,133 @@ public class MainActivity extends AppCompatActivity {
 
         btnSettings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
         btnDropdown.setOnClickListener(v -> toggleDropdown());
+
+        // 查看元素按钮
+        btnInspect.setOnClickListener(v -> toggleInspectMode());
+    }
+
+    private void toggleInspectMode() {
+        isInspectMode = !isInspectMode;
+
+        if (isInspectMode) {
+            btnInspect.setText("✅");
+            btnInspect.setTextColor(Color.parseColor("#4CAF50"));
+            inspectBanner.setVisibility(View.VISIBLE);
+            injectInspectScript();
+        } else {
+            btnInspect.setText("🔍");
+            btnInspect.setTextColor(Color.WHITE);
+            inspectBanner.setVisibility(View.GONE);
+            removeInspectScript();
+        }
+    }
+
+    private void injectInspectScript() {
+        String js = "(function() {" +
+                "  if (window._inspectHandler) return;" +
+                "" +
+                "  window._inspectHandler = function(e) {" +
+                "    e.preventDefault();" +
+                "    e.stopPropagation();" +
+                "    var el = e.target;" +
+                "    var info = '';" +
+                "" +
+                "    // 获取标签名" +
+                "    info += '标签: ' + el.tagName.toLowerCase() + '\\n';" +
+                "" +
+                "    // 获取 id" +
+                "    if (el.id) info += 'ID: #' + el.id + '\\n';" +
+                "" +
+                "    // 获取 class" +
+                "    if (el.className && typeof el.className === 'string') {" +
+                "      var classes = el.className.trim().split(/\\s+/);" +
+                "      if (classes.length > 0 && classes[0] !== '') {" +
+                "        info += 'Class: .' + classes.join(', .') + '\\n';" +
+                "      }" +
+                "    }" +
+                "" +
+                "    // 获取文本内容（截取前50字）" +
+                "    var text = el.textContent || '';" +
+                "    if (text.length > 50) text = text.substring(0, 50) + '...';" +
+                "    if (text.trim()) info += '文本: ' + text.trim();" +
+                "" +
+                "    // 高亮元素" +
+                "    el.style.outline = '3px solid #FF5722';" +
+                "    setTimeout(function() { el.style.outline = ''; }, 2000);" +
+                "" +
+                "    // 发送给 APP" +
+                "    if (window.AndroidBridge) {" +
+                "      window.AndroidBridge.onElementInfo(info);" +
+                "    }" +
+                "    return false;" +
+                "  };" +
+                "" +
+                "  document.addEventListener('click', window._inspectHandler, true);" +
+                "})()";
+
+        webViews[currentTab].evaluateJavascript(js, null);
+    }
+
+    private void removeInspectScript() {
+        String js = "(function() {" +
+                "  if (window._inspectHandler) {" +
+                "    document.removeEventListener('click', window._inspectHandler, true);" +
+                "    window._inspectHandler = null;" +
+                "  }" +
+                "})()";
+
+        webViews[currentTab].evaluateJavascript(js, null);
+    }
+
+    // JavaScript 接口
+    public class JavascriptBridge {
+        @JavascriptInterface
+        public void onElementInfo(String info) {
+            runOnUiThread(() -> showElementInfoDialog(info));
+        }
+    }
+
+    private void showElementInfoDialog(String info) {
+        // 解析信息，提取可用的选择器
+        StringBuilder selectorInfo = new StringBuilder();
+        StringBuilder copyText = new StringBuilder();
+
+        String[] lines = info.split("\n");
+        for (String line : lines) {
+            if (line.startsWith("ID:")) {
+                String id = line.substring(3).trim();
+                selectorInfo.append("选择器: ").append(id).append("\n");
+                copyText.append(id).append("\n");
+            }
+            if (line.startsWith("Class:")) {
+                String classes = line.substring(6).trim();
+                String[] classArr = classes.split(", ");
+                for (String cls : classArr) {
+                    selectorInfo.append("选择器: ").append(cls).append("\n");
+                    copyText.append(cls).append("\n");
+                }
+            }
+        }
+
+        if (selectorInfo.length() == 0) {
+            selectorInfo.append("该元素没有 id 或 class 属性");
+        }
+
+        String message = info + "\n\n" + selectorInfo.toString();
+
+        new AlertDialog.Builder(this)
+                .setTitle("元素信息")
+                .setMessage(message)
+                .setPositiveButton("复制选择器", (dialog, which) -> {
+                    if (copyText.length() > 0) {
+                        ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                        ClipData clip = ClipData.newPlainText("selector", copyText.toString().trim());
+                        clipboard.setPrimaryClip(clip);
+                        Toast.makeText(this, "已复制: " + copyText.toString().trim(), Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("关闭", null)
+                .show();
     }
 
     private void requestPermissions() {
@@ -220,7 +355,6 @@ public class MainActivity extends AppCompatActivity {
         tabTitles[1] = prefs.getString("title2", "最近新增");
         tabTitles[2] = prefs.getString("title3", "录入线索");
 
-        // 加载操作配置
         tabActions[0] = prefs.getString("actions1", "");
         tabActions[1] = prefs.getString("actions2", "");
         tabActions[2] = prefs.getString("actions3", "");
@@ -252,22 +386,26 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void switchTab(int index) {
-        // 暂停当前 WebView
         webViews[currentTab].onPause();
+
+        // 退出查看模式
+        if (isInspectMode) {
+            isInspectMode = false;
+            btnInspect.setText("🔍");
+            btnInspect.setTextColor(Color.WHITE);
+            inspectBanner.setVisibility(View.GONE);
+        }
 
         currentTab = index;
         currentLinkIndex = 0;
         isDropdownOpen = false;
 
-        // 切换 WebView 显示（不重新加载）
         for (int i = 0; i < webViews.length; i++) {
             webViews[i].setVisibility(i == index ? View.VISIBLE : View.GONE);
         }
 
-        // 恢复目标 WebView
         webViews[index].onResume();
 
-        // 更新选项卡样式
         for (int i = 0; i < 3; i++) {
             if (i == index) {
                 tabTexts[i].setTextColor(Color.parseColor("#1976D2"));
@@ -276,7 +414,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        // 首次切换时才加载
         if (!tabInitialized[index]) {
             loadCurrentLink();
             tabInitialized[index] = true;
@@ -365,69 +502,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * 执行自定义操作
-     */
-    private void executeCustomScript(WebView webView) {
-        // 找到当前 WebView 对应的选项卡索引
-        int tabIndex = -1;
-        for (int i = 0; i < webViews.length; i++) {
-            if (webViews[i] == webView) {
-                tabIndex = i;
-                break;
-            }
-        }
-
-        if (tabIndex >= 0 && tabIndex < tabActions.length) {
-            String actions = tabActions[tabIndex];
-            if (actions != null && !actions.isEmpty()) {
-                String js = buildScriptFromActions(actions);
-                if (!js.isEmpty()) {
-                    webView.postDelayed(() -> {
-                        webView.evaluateJavascript(js, null);
-                    }, 500);
-                }
-            }
-        }
-    }
-
-    /**
-     * 将操作配置转换为 JavaScript
-     * 格式：action|selector|value
-     */
-    private String buildScriptFromActions(String actions) {
-        StringBuilder js = new StringBuilder();
-        js.append("(function(){");
-
-        String[] lines = actions.split("\n");
-        for (String line : lines) {
-            line = line.trim();
-            if (line.isEmpty()) continue;
-
-            String[] parts = line.split("\\|", 3);
-            if (parts.length < 2) continue;
-
-            String action = parts[0];
-            String selector = parts[1];
-            String value = parts.length > 2 ? parts[2] : "";
-
-            // 转义引号
-            selector = selector.replace("'", "\\'");
-            value = value.replace("'", "\\'");
-
-            if ("hide".equals(action)) {
-                js.append("document.querySelectorAll('").append(selector).append("').forEach(el=>el.style.display='none');");
-            } else if ("click".equals(action)) {
-                js.append("document.querySelectorAll('").append(selector).append("').forEach(el=>el.click());");
-            } else if ("modify".equals(action)) {
-                js.append("document.querySelectorAll('").append(selector).append("').forEach(el=>el.textContent='").append(value).append("');");
-            }
-        }
-
-        js.append("})()");
-        return js.toString();
-    }
-
     private int dpToPx(int dp) {
         return (int) (dp * getResources().getDisplayMetrics().density);
     }
@@ -458,6 +532,9 @@ public class MainActivity extends AppCompatActivity {
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
 
+        // 添加 JavaScript 接口
+        webView.addJavascriptInterface(new JavascriptBridge(), "AndroidBridge");
+
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -480,8 +557,13 @@ public class MainActivity extends AppCompatActivity {
                 }
                 CookieManager.getInstance().flush();
 
-                // 执行自定义脚本
+                // 执行自定义操作
                 executeCustomScript(view);
+
+                // 如果是查看模式，重新注入脚本
+                if (isInspectMode && view == webViews[currentTab]) {
+                    injectInspectScript();
+                }
             }
 
             @Override
@@ -548,17 +630,15 @@ public class MainActivity extends AppCompatActivity {
     private boolean isAllowedUrl(String url) {
         if (url == null) return false;
 
-        // 标准协议：拨打电话、发邮件、发短信
         if (url.startsWith("tel:")) {
             Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse(url));
             if (checkSelfPermission(Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
                 startActivity(intent);
             } else {
-                // 如果没有权限，用拨号盘（不需要权限）
                 Intent dial = new Intent(Intent.ACTION_DIAL, Uri.parse(url));
                 startActivity(dial);
             }
-            return false; // 不在 WebView 中加载
+            return false;
         }
         if (url.startsWith("mailto:")) {
             Intent intent = new Intent(Intent.ACTION_SENDTO, Uri.parse(url));
@@ -571,7 +651,6 @@ public class MainActivity extends AppCompatActivity {
             return false;
         }
 
-        // 金山文档相关域名
         if (url.contains("kdocs.cn")) return true;
         if (url.contains("wps.cn")) return true;
         if (url.contains("wps.com")) return true;
@@ -583,9 +662,68 @@ public class MainActivity extends AppCompatActivity {
         return false;
     }
 
+    private void executeCustomScript(WebView webView) {
+        int tabIndex = -1;
+        for (int i = 0; i < webViews.length; i++) {
+            if (webViews[i] == webView) {
+                tabIndex = i;
+                break;
+            }
+        }
+
+        if (tabIndex >= 0 && tabIndex < tabActions.length) {
+            String actions = tabActions[tabIndex];
+            if (actions != null && !actions.isEmpty()) {
+                String js = buildScriptFromActions(actions);
+                if (!js.isEmpty()) {
+                    webView.postDelayed(() -> {
+                        webView.evaluateJavascript(js, null);
+                    }, 500);
+                }
+            }
+        }
+    }
+
+    private String buildScriptFromActions(String actions) {
+        StringBuilder js = new StringBuilder();
+        js.append("(function(){");
+
+        String[] lines = actions.split("\n");
+        for (String line : lines) {
+            line = line.trim();
+            if (line.isEmpty()) continue;
+
+            String[] parts = line.split("\\|", 3);
+            if (parts.length < 2) continue;
+
+            String action = parts[0];
+            String selector = parts[1];
+            String value = parts.length > 2 ? parts[2] : "";
+
+            selector = selector.replace("'", "\\'");
+            value = value.replace("'", "\\'");
+
+            if ("hide".equals(action)) {
+                js.append("document.querySelectorAll('").append(selector).append("').forEach(el=>el.style.display='none');");
+            } else if ("click".equals(action)) {
+                js.append("document.querySelectorAll('").append(selector).append("').forEach(el=>el.click());");
+            } else if ("modify".equals(action)) {
+                js.append("document.querySelectorAll('").append(selector).append("').forEach(el=>el.textContent='").append(value).append("');");
+            }
+        }
+
+        js.append("})()");
+        return js.toString();
+    }
+
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
+            if (isInspectMode) {
+                toggleInspectMode();
+                return true;
+            }
+
             if (isDropdownOpen) {
                 isDropdownOpen = false;
                 updateDropdown();

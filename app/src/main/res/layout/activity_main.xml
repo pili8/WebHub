@@ -14,7 +14,7 @@
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingStart="16dp"
-        android:paddingEnd="8dp">
+        android:paddingEnd="4dp">
 
         <LinearLayout
             android:id="@+id/btnDropdown"
@@ -32,7 +32,7 @@
                 android:textColor="@android:color/white"
                 android:textSize="17sp"
                 android:textStyle="bold"
-                android:maxWidth="200dp"
+                android:maxWidth="180dp"
                 android:ellipsize="end"
                 android:singleLine="true" />
 
@@ -46,6 +46,18 @@
                 android:visibility="gone" />
 
         </LinearLayout>
+
+        <!-- 查看元素按钮 -->
+        <TextView
+            android:id="@+id/btnInspect"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:gravity="center"
+            android:text="🔍"
+            android:textSize="16sp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless" />
 
         <ImageView
             android:id="@+id/btnRefresh"
@@ -89,7 +101,20 @@
         android:progressDrawable="@drawable/progress_bar"
         android:visibility="gone" />
 
-    <!-- WebView 内容区 - 每个选项卡独立 WebView -->
+    <!-- 提示条（查看元素模式） -->
+    <TextView
+        android:id="@+id/inspectBanner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FF9800"
+        android:text="👆 点击页面元素查看标识，再次点击🔍退出"
+        android:textColor="@android:color/white"
+        android:textSize="12sp"
+        android:padding="8dp"
+        android:gravity="center"
+        android:visibility="gone" />
+
+    <!-- WebView 内容区 -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
