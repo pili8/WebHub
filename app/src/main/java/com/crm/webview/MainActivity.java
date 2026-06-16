@@ -196,70 +196,54 @@ public class MainActivity extends AppCompatActivity {
             btnInspect.setText("✅");
             btnInspect.setTextColor(Color.parseColor("#4CAF50"));
             inspectBanner.setVisibility(View.VISIBLE);
-            injectInspectScript();
         } else {
             btnInspect.setText("🔍");
             btnInspect.setTextColor(Color.WHITE);
             inspectBanner.setVisibility(View.GONE);
-            removeInspectScript();
         }
     }
 
-    private void injectInspectScript() {
+    /**
+     * 在指定坐标处查找元素信息
+     */
+    private void inspectElementAt(float x, float y) {
         String js = "(function() {" +
-                "  if (window._inspectHandler) return;" +
+                "  var el = document.elementFromPoint(" + x + ", " + y + ");" +
+                "  if (!el) return '未找到元素';" +
                 "" +
-                "  window._inspectHandler = function(e) {" +
-                "    e.preventDefault();" +
-                "    e.stopPropagation();" +
-                "    var el = e.target;" +
-                "    var info = '';" +
+                "  var info = '';" +
+                "  info += '标签: ' + el.tagName.toLowerCase() + '\\n';" +
                 "" +
-                "    // 获取标签名" +
-                "    info += '标签: ' + el.tagName.toLowerCase() + '\\n';" +
+                "  if (el.id) info += 'ID: #' + el.id + '\\n';" +
                 "" +
-                "    // 获取 id" +
-                "    if (el.id) info += 'ID: #' + el.id + '\\n';" +
-                "" +
-                "    // 获取 class" +
-                "    if (el.className && typeof el.className === 'string') {" +
-                "      var classes = el.className.trim().split(/\\s+/);" +
-                "      if (classes.length > 0 && classes[0] !== '') {" +
-                "        info += 'Class: .' + classes.join(', .') + '\\n';" +
-                "      }" +
+                "  if (el.className && typeof el.className === 'string') {" +
+                "    var classes = el.className.trim().split(/\\s+/);" +
+                "    if (classes.length > 0 && classes[0] !== '') {" +
+                "      info += 'Class: .' + classes.join(', .') + '\\n';" +
                 "    }" +
-                "" +
-                "    // 获取文本内容（截取前50字）" +
-                "    var text = el.textContent || '';" +
-                "    if (text.length > 50) text = text.substring(0, 50) + '...';" +
-                "    if (text.trim()) info += '文本: ' + text.trim();" +
-                "" +
-                "    // 高亮元素" +
-                "    el.style.outline = '3px solid #FF5722';" +
-                "    setTimeout(function() { el.style.outline = ''; }, 2000);" +
-                "" +
-                "    // 发送给 APP" +
-                "    if (window.AndroidBridge) {" +
-                "      window.AndroidBridge.onElementInfo(info);" +
-                "    }" +
-                "    return false;" +
-                "  };" +
-                "" +
-                "  document.addEventListener('click', window._inspectHandler, true);" +
-                "})()";
-
-        webViews[currentTab].evaluateJavascript(js, null);
-    }
-
-    private void removeInspectScript() {
-        String js = "(function() {" +
-                "  if (window._inspectHandler) {" +
-                "    document.removeEventListener('click', window._inspectHandler, true);" +
-                "    window._inspectHandler = null;" +
                 "  }" +
+                "" +
+                "  var text = el.textContent || '';" +
+                "  if (text.length > 80) text = text.substring(0, 80) + '...';" +
+                "  if (text.trim()) info += '文本: ' + text.trim();" +
+                "" +
+                "  el.style.outline = '3px solid #FF5722';" +
+                "  setTimeout(function() { el.style.outline = ''; }, 2000);" +
+                "" +
+                "  return info;" +
                 "})()";
 
-        webViews[currentTab].evaluateJavascript(js, null);
+        webViews[currentTab].evaluateJavascript(js, value -> {
+            if (value != null && !value.equals("null") && !value.equals("\"未找到元素\"")) {
+                // 去掉 JSON 引号
+                String info = value;
+                if (info.startsWith("\"") && info.endsWith("\"")) {
+                    info = info.substring(1, info.length() - 1);
+                }
+                info = info.replace("\\n", "\n");
+                showElementInfoDialog(info);
+            }
+        });
     }
 
     // JavaScript 接口
@@ -532,8 +516,20 @@ public class MainActivity extends AppCompatActivity {
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
 
-        // 添加 JavaScript 接口
-        webView.addJavascriptInterface(new JavascriptBridge(), "AndroidBridge");
+        // 触摸事件处理（用于查看元素模式）
+        webView.setOnTouchListener((v, event) -> {
+            if (isInspectMode && event.getAction() == MotionEvent.ACTION_DOWN) {
+                float x = event.getX();
+                float y = event.getY();
+                // 转换为网页坐标
+                float density = getResources().getDisplayMetrics().density;
+                float webX = x / density;
+                float webY = y / density;
+                inspectElementAt(webX, webY);
+                return true; // 消耗事件
+            }
+            return false;
+        });
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -559,11 +555,6 @@ public class MainActivity extends AppCompatActivity {
 
                 // 执行自定义操作
                 executeCustomScript(view);
-
-                // 如果是查看模式，重新注入脚本
-                if (isInspectMode && view == webViews[currentTab]) {
-                    injectInspectScript();
-                }
             }
 
             @Override
