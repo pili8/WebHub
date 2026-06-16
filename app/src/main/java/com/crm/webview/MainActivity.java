@@ -432,8 +432,6 @@ public class MainActivity extends AppCompatActivity {
         // 退出查看模式
         if (isInspectMode) {
             isInspectMode = false;
-            btnInspect.setText("🔍");
-            btnInspect.setTextColor(Color.WHITE);
             inspectBanner.setVisibility(View.GONE);
         }
 
