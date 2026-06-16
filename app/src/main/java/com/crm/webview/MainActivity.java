@@ -9,7 +9,6 @@ import android.graphics.Typeface;
 import android.net.http.SslError;
 import android.os.Bundle;
 import android.os.SystemClock;
-import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -20,7 +19,6 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -35,10 +33,9 @@ public class MainActivity extends AppCompatActivity {
 
     private WebView webView;
     private ProgressBar progressBar;
-    private TextView tvTitle;
+    private TextView tvTitle, tvCurrentLink, tvArrow;
     private ImageView btnRefresh, btnSettings;
-    private HorizontalScrollView subLinksBar;
-    private LinearLayout subLinksContainer;
+    private LinearLayout btnDropdown, dropdownList;
     private LinearLayout tab1, tab2, tab3;
     private LinearLayout[] tabs;
     private TextView iconTab1, iconTab2, iconTab3;
@@ -48,6 +45,7 @@ public class MainActivity extends AppCompatActivity {
 
     private int currentTab = 0;
     private int currentLinkIndex = 0;
+    private boolean isDropdownOpen = false;
 
     private String[] tabIconsEmoji = {"📊", "📋", "➕"};
     private String[] tabTitles = {"销售机会", "最近新增", "录入线索"};
@@ -115,8 +113,10 @@ public class MainActivity extends AppCompatActivity {
         webView = findViewById(R.id.webview_main);
         progressBar = findViewById(R.id.progressBar);
         tvTitle = findViewById(R.id.tvTitle);
-        subLinksBar = findViewById(R.id.subLinksBar);
-        subLinksContainer = findViewById(R.id.subLinksContainer);
+        tvCurrentLink = findViewById(R.id.tvCurrentLink);
+        tvArrow = findViewById(R.id.tvArrow);
+        btnDropdown = findViewById(R.id.btnDropdown);
+        dropdownList = findViewById(R.id.dropdownList);
         btnRefresh = findViewById(R.id.btnRefresh);
         btnSettings = findViewById(R.id.btnSettings);
 
@@ -142,6 +142,7 @@ public class MainActivity extends AppCompatActivity {
         tab3.setOnClickListener(v -> switchTab(2));
         btnRefresh.setOnClickListener(v -> webView.reload());
         btnSettings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
+        btnDropdown.setOnClickListener(v -> toggleDropdown());
     }
 
     private void loadConfig() {
@@ -176,12 +177,13 @@ public class MainActivity extends AppCompatActivity {
             tabIcons[i].setText(tabIconsEmoji[i]);
             tabTexts[i].setText(tabTitles[i]);
         }
-        updateSubLinksBar();
+        updateDropdown();
     }
 
     private void switchTab(int index) {
         currentTab = index;
         currentLinkIndex = 0;
+        isDropdownOpen = false;
 
         tvTitle.setText(tabTitles[index]);
 
@@ -193,55 +195,86 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        updateSubLinksBar();
+        updateDropdown();
         loadCurrentLink();
     }
 
-    private void updateSubLinksBar() {
-        subLinksContainer.removeAllViews();
+    private void updateDropdown() {
+        List<LinkItem> links = tabLinks.get(currentTab);
+
+        // 更新当前链接显示
+        tvCurrentLink.setText(links.get(currentLinkIndex).title);
+
+        // 多个链接时显示箭头，单个链接时隐藏
+        if (links.size() > 1) {
+            tvArrow.setVisibility(View.VISIBLE);
+            tvArrow.setText(isDropdownOpen ? "▲" : "▼");
+        } else {
+            tvArrow.setVisibility(View.GONE);
+            isDropdownOpen = false;
+        }
+
+        // 更新下拉列表
+        updateDropdownList();
+    }
+
+    private void updateDropdownList() {
+        dropdownList.removeAllViews();
 
         List<LinkItem> links = tabLinks.get(currentTab);
 
-        // 只有多个链接时才显示子链接栏
-        if (links.size() > 1) {
-            subLinksBar.setVisibility(View.VISIBLE);
-
-            for (int i = 0; i < links.size(); i++) {
-                final int index = i;
-                LinkItem link = links.get(i);
-
-                TextView chip = new TextView(this);
-                chip.setText(link.title);
-                chip.setTextSize(13);
-                chip.setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6));
-
-                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT);
-                params.setMargins(0, 0, dpToPx(8), 0);
-                chip.setLayoutParams(params);
-                chip.setGravity(Gravity.CENTER);
-
-                if (i == currentLinkIndex) {
-                    chip.setBackgroundResource(R.drawable.chip_selected);
-                    chip.setTextColor(Color.parseColor("#1976D2"));
-                    chip.setTypeface(null, Typeface.BOLD);
-                } else {
-                    chip.setBackgroundResource(R.drawable.chip_unselected);
-                    chip.setTextColor(Color.parseColor("#666666"));
-                }
-
-                chip.setOnClickListener(v -> {
-                    currentLinkIndex = index;
-                    updateSubLinksBar();
-                    loadCurrentLink();
-                });
-
-                subLinksContainer.addView(chip);
-            }
-        } else {
-            subLinksBar.setVisibility(View.GONE);
+        if (!isDropdownOpen || links.size() <= 1) {
+            dropdownList.setVisibility(View.GONE);
+            return;
         }
+
+        dropdownList.setVisibility(View.VISIBLE);
+
+        for (int i = 0; i < links.size(); i++) {
+            final int index = i;
+            LinkItem link = links.get(i);
+
+            TextView item = new TextView(this);
+            item.setText(link.title);
+            item.setTextSize(14);
+            item.setPadding(dpToPx(16), dpToPx(12), dpToPx(16), dpToPx(12));
+
+            if (i == currentLinkIndex) {
+                item.setBackgroundColor(Color.parseColor("#E3F2FD"));
+                item.setTextColor(Color.parseColor("#1976D2"));
+                item.setTypeface(null, Typeface.BOLD);
+            } else {
+                item.setBackgroundColor(Color.TRANSPARENT);
+                item.setTextColor(Color.parseColor("#333333"));
+            }
+
+            item.setOnClickListener(v -> {
+                currentLinkIndex = index;
+                isDropdownOpen = false;
+                updateDropdown();
+                loadCurrentLink();
+            });
+
+            // 添加分割线
+            if (i < links.size() - 1) {
+                View divider = new View(this);
+                divider.setBackgroundColor(Color.parseColor("#E0E0E0"));
+                divider.setLayoutParams(new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, 1));
+                dropdownList.addView(item);
+                dropdownList.addView(divider);
+            } else {
+                dropdownList.addView(item);
+            }
+        }
+    }
+
+    private void toggleDropdown() {
+        List<LinkItem> links = tabLinks.get(currentTab);
+        if (links.size() <= 1) return; // 单个链接时不切换
+
+        isDropdownOpen = !isDropdownOpen;
+        updateDropdown();
     }
 
     private void loadCurrentLink() {
@@ -325,6 +358,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
+            // 如果下拉菜单打开，先关闭
+            if (isDropdownOpen) {
+                isDropdownOpen = false;
+                updateDropdown();
+                return true;
+            }
             closePopup();
             return true;
         }
