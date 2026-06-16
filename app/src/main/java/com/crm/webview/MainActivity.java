@@ -360,11 +360,6 @@ public class MainActivity extends AppCompatActivity {
         // 缓存策略：优先使用缓存，网络不通时也能用
         settings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
 
-        // 设置缓存大小（50MB）
-        settings.setAppCacheEnabled(true);
-        settings.setAppCachePath(getCacheDir().getAbsolutePath());
-        settings.setAppCacheMaxSize(50 * 1024 * 1024);
-
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
         settings.setUserAgentString(settings.getUserAgentString().replace("; wv", ""));
