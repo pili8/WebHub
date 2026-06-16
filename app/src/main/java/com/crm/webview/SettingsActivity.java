@@ -357,8 +357,11 @@ public class SettingsActivity extends AppCompatActivity {
         }
     }
 
+    private boolean isEditMode = false; // 是否处于编辑模式
+
     private void buildUI() {
         settingsContainer.removeAllViews();
+        isEditMode = false;
 
         for (int i = 0; i < tabsData.size(); i++) {
             TabData tab = tabsData.get(i);
@@ -371,7 +374,6 @@ public class SettingsActivity extends AppCompatActivity {
             TextView tvArrow = tabView.findViewById(R.id.tvArrow);
             TextView tvTabIcon = tabView.findViewById(R.id.tvTabIcon);
             TextView tvTabTitle = tabView.findViewById(R.id.tvTabTitle);
-            View editArea = tabView.findViewById(R.id.editArea);
             EditText etTabIcon = tabView.findViewById(R.id.etTabIcon);
             EditText etTabTitle = tabView.findViewById(R.id.etTabTitle);
             TextView btnDeleteTab = tabView.findViewById(R.id.btnDeleteTab);
@@ -384,24 +386,18 @@ public class SettingsActivity extends AppCompatActivity {
             etTabTitle.setText(tab.title);
             tab.linksContainer = linksContainer;
 
-            // 删除选项卡 (显示为更多选项按钮)
+            // 更多选项按钮
             if (tabsData.size() > 2) {
                 btnDeleteTab.setVisibility(View.VISIBLE);
                 btnDeleteTab.setOnClickListener(v -> {
-                    // 弹出菜单
                     PopupMenu popup = new PopupMenu(this, v);
                     popup.getMenu().add(0, 1, 0, "编辑选项卡");
                     popup.getMenu().add(0, 2, 0, "删除选项卡");
                     popup.setOnMenuItemClickListener(item -> {
                         if (item.getItemId() == 1) {
-                            // 展开编辑区域
-                            tab.isExpanded = !tab.isExpanded;
-                            editArea.setVisibility(tab.isExpanded ? View.VISIBLE : View.GONE);
-                            linksContainer.setVisibility(tab.isExpanded ? View.VISIBLE : View.GONE);
-                            btnAddLink.setVisibility(tab.isExpanded ? View.VISIBLE : View.GONE);
-                            tvArrow.setText(tab.isExpanded ? "▼" : "▶");
+                            // 切换编辑模式
+                            toggleEditMode(tab, tvTabTitle, etTabIcon, etTabTitle, linksContainer, btnAddLink, tvArrow, true);
                         } else if (item.getItemId() == 2) {
-                            // 确认删除
                             new AlertDialog.Builder(this)
                                     .setTitle("删除选项卡")
                                     .setMessage("确定删除「" + tab.title + "」？\n删除后无法恢复。")
@@ -418,10 +414,9 @@ public class SettingsActivity extends AppCompatActivity {
                 });
             }
 
-            // 点击标题栏展开/收起
+            // 点击标题栏：展开/收起链接列表（不进入编辑模式）
             tabView.findViewById(R.id.btnToggle).setOnClickListener(v -> {
                 tab.isExpanded = !tab.isExpanded;
-                editArea.setVisibility(tab.isExpanded ? View.VISIBLE : View.GONE);
                 linksContainer.setVisibility(tab.isExpanded ? View.VISIBLE : View.GONE);
                 btnAddLink.setVisibility(tab.isExpanded ? View.VISIBLE : View.GONE);
                 tvArrow.setText(tab.isExpanded ? "▼" : "▶");
@@ -462,6 +457,35 @@ public class SettingsActivity extends AppCompatActivity {
             });
             settingsContainer.addView(btnAddTab);
         }
+    }
+
+    private void toggleEditMode(TabData tab, TextView tvTabTitle, EditText etTabIcon, EditText etTabTitle,
+                                LinearLayout linksContainer, TextView btnAddLink, TextView tvArrow, boolean editMode) {
+        if (editMode) {
+            // 进入编辑模式：显示输入框，隐藏标题
+            tvTabTitle.setVisibility(View.GONE);
+            etTabIcon.setVisibility(View.VISIBLE);
+            etTabTitle.setVisibility(View.VISIBLE);
+        } else {
+            // 退出编辑模式：保存并显示标题
+            String icon = etTabIcon.getText().toString().trim();
+            String title = etTabTitle.getText().toString().trim();
+            if (!icon.isEmpty()) tab.icon = icon;
+            if (!title.isEmpty()) tab.title = title;
+
+            tvTabIcon.setText(tab.icon);
+            tvTabTitle.setText(tab.title);
+
+            tvTabTitle.setVisibility(View.VISIBLE);
+            etTabIcon.setVisibility(View.GONE);
+            etTabTitle.setVisibility(View.GONE);
+        }
+
+        // 展开链接列表
+        tab.isExpanded = editMode;
+        linksContainer.setVisibility(editMode ? View.VISIBLE : View.GONE);
+        btnAddLink.setVisibility(editMode ? View.VISIBLE : View.GONE);
+        tvArrow.setText(editMode ? "▼" : "▶");
     }
 
     private void addLinkCard(TabData tab, LinkData link) {
@@ -583,11 +607,9 @@ public class SettingsActivity extends AppCompatActivity {
             TabData tab = tabsData.get(i);
             View sectionView = tab.sectionView;
 
-            EditText etTabIcon = sectionView.findViewById(R.id.etTabIcon);
-            EditText etTabTitle = sectionView.findViewById(R.id.etTabTitle);
-
-            String icon = etTabIcon.getText().toString().trim();
-            String title = etTabTitle.getText().toString().trim();
+            // 使用 tab 对象中的值（可能已被编辑）
+            String icon = tab.icon;
+            String title = tab.title;
 
             if (icon.isEmpty()) icon = DEFAULT_TAB_ICONS[i];
             if (title.isEmpty()) title = DEFAULT_TAB_TITLES[i];

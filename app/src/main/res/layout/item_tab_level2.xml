@@ -68,7 +68,7 @@
         android:layout_marginTop="12dp"
         android:layout_marginBottom="10dp" />
 
-    <!-- 操作标题 -->
+    <!-- 操作标题 + 添加按钮 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -77,18 +77,24 @@
         android:layout_marginBottom="8dp">
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="⚙️ 页面操作"
             android:textSize="12sp"
             android:textColor="#757575" />
 
-        <View
-            android:layout_width="0dp"
-            android:layout_height="1dp"
-            android:layout_weight="1"
-            android:background="#EEEEEE"
-            android:layout_marginStart="10dp" />
+        <TextView
+            android:id="@+id/btnAddAction"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:gravity="center"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:text="＋ 添加"
+            android:textSize="11sp"
+            android:textColor="#4CAF50"
+            android:background="@drawable/btn_outline_green" />
 
     </LinearLayout>
 
@@ -98,17 +104,5 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical" />
-
-    <!-- 添加操作按钮 -->
-    <TextView
-        android:id="@+id/btnAddAction"
-        android:layout_width="match_parent"
-        android:layout_height="36dp"
-        android:gravity="center"
-        android:text="＋ 添加操作"
-        android:textSize="12sp"
-        android:textColor="#4CAF50"
-        android:background="?attr/selectableItemBackground"
-        android:layout_marginTop="6dp" />
 
 </LinearLayout>
