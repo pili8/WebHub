@@ -2,6 +2,7 @@ package com.crm.webview;
 
 import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.net.http.SslError;
 import android.os.Bundle;
 import android.view.KeyEvent;
@@ -14,6 +15,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -22,15 +24,22 @@ import androidx.appcompat.app.AppCompatActivity;
 public class MainActivity extends AppCompatActivity {
 
     // ========================================
-    // 金山多维表分享视图链接
+    // 三个视图的链接
     // ========================================
-    private static final String TARGET_URL = "https://www.kdocs.cn/wo/sl/v14T2gpD";
+    private static final String URL_CARD = "https://www.kdocs.cn/wo/sl/v12CEOZt";   // 销售机会（卡片）
+    private static final String URL_TABLE = "https://www.kdocs.cn/wo/sl/v14T2gpD";  // 最近新增（表格）
+    private static final String URL_INPUT = "https://www.kdocs.cn/wo/sl/v13iHfr4";  // 录入线索（录入）
     // ========================================
+
+    private static final String[] TAB_URLS = {URL_CARD, URL_TABLE, URL_INPUT};
+    private static final String[] TAB_NAMES = {"销售机会", "最近新增", "录入线索"};
 
     private WebView webView;
     private ProgressBar progressBar;
-    private ImageView btnBack;
     private TextView tvTitle;
+    private LinearLayout tabCard, tabTable, tabInput;
+    private LinearLayout[] tabs;
+    private int currentTab = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,21 +52,52 @@ public class MainActivity extends AppCompatActivity {
         // 初始化视图
         webView = findViewById(R.id.webview);
         progressBar = findViewById(R.id.progressBar);
-        btnBack = findViewById(R.id.btnBack);
         tvTitle = findViewById(R.id.tvTitle);
+        tabCard = findViewById(R.id.tab_card);
+        tabTable = findViewById(R.id.tab_table);
+        tabInput = findViewById(R.id.tab_input);
 
-        // 设置标题
-        tvTitle.setText("CRM");
+        tabs = new LinearLayout[]{tabCard, tabTable, tabInput};
 
-        // 设置返回按钮
-        btnBack.setOnClickListener(v -> {
-            if (webView.canGoBack()) {
-                webView.goBack();
-            }
-        });
+        // 设置选项卡点击事件
+        tabCard.setOnClickListener(v -> switchTab(0));
+        tabTable.setOnClickListener(v -> switchTab(1));
+        tabInput.setOnClickListener(v -> switchTab(2));
 
         setupWebView();
-        webView.loadUrl(TARGET_URL);
+
+        // 默认显示第一个选项卡
+        switchTab(0);
+    }
+
+    /**
+     * 切换选项卡
+     */
+    private void switchTab(int index) {
+        currentTab = index;
+
+        // 更新标题
+        tvTitle.setText(TAB_NAMES[index]);
+
+        // 更新选项卡样式
+        for (int i = 0; i < tabs.length; i++) {
+            LinearLayout tab = tabs[i];
+            ImageView icon = (ImageView) tab.getChildAt(0);
+            TextView text = (TextView) tab.getChildAt(1);
+
+            if (i == index) {
+                // 选中状态
+                text.setTextColor(Color.parseColor("#4CAF50"));
+                icon.setColorFilter(Color.parseColor("#4CAF50"));
+            } else {
+                // 未选中状态
+                text.setTextColor(Color.parseColor("#666666"));
+                icon.setColorFilter(Color.parseColor("#666666"));
+            }
+        }
+
+        // 加载对应 URL
+        webView.loadUrl(TAB_URLS[index]);
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -67,7 +107,7 @@ public class MainActivity extends AppCompatActivity {
         // 启用 JavaScript
         settings.setJavaScriptEnabled(true);
 
-        // 启用 DOM 存储（多维表需要）
+        // 启用 DOM 存储
         settings.setDomStorageEnabled(true);
 
         // 启用数据库
@@ -76,7 +116,7 @@ public class MainActivity extends AppCompatActivity {
         // 启用缓存
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
 
-        // 允许文件访问（部分页面需要）
+        // 允许文件访问
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
 
@@ -89,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setLoadWithOverviewMode(true);
         settings.setSupportZoom(false);
 
-        // 混合内容模式（允许 HTTPS 加载 HTTP 资源）
+        // 混合内容模式
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
 
         // 启用 Cookie 持久化
@@ -97,26 +137,12 @@ public class MainActivity extends AppCompatActivity {
         cookieManager.setAcceptCookie(true);
         cookieManager.setAcceptThirdPartyCookies(webView, true);
 
-        // WebViewClient - 控制页面导航
+        // WebViewClient
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
-
-                // 检查是否为允许的 URL
-                if (isAllowedUrl(url)) {
-                    return false; // 允许加载
-                }
-
-                // 阻止跳转到金山文档首页
-                if (isKdocsHomepage(url)) {
-                    // 如果试图跳转到首页，重新加载目标视图
-                    view.loadUrl(TARGET_URL);
-                    return true;
-                }
-
-                // 阻止其他外部链接
-                return true;
+                return !isAllowedUrl(url);
             }
 
             @Override
@@ -129,22 +155,16 @@ public class MainActivity extends AppCompatActivity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 progressBar.setVisibility(View.GONE);
-
-                // 更新返回按钮状态
-                btnBack.setVisibility(view.canGoBack() ? View.VISIBLE : View.GONE);
-
-                // 保存 Cookie
                 CookieManager.getInstance().flush();
             }
 
             @Override
             public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
-                // 对金山域名的证书错误不中断
                 handler.proceed();
             }
         });
 
-        // WebChromeClient - 进度条
+        // WebChromeClient
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
@@ -158,7 +178,6 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * 判断是否为允许加载的 URL
-     * 允许金山文档相关的所有资源，只阻止跳转到首页
      */
     private boolean isAllowedUrl(String url) {
         if (url == null) return false;
@@ -168,12 +187,11 @@ public class MainActivity extends AppCompatActivity {
         if (url.contains("wps.cn")) return true;
         if (url.contains("wps.com")) return true;
 
-        // 允许金山相关的 CDN 和资源
+        // 允许金山相关的 CDN
         if (url.contains("klcdn.com")) return true;
         if (url.contains("wpscdn.com")) return true;
-        if (url.contains("cache.wpscdn.com")) return true;
 
-        // 允许登录和认证相关
+        // 允许登录和认证
         if (url.contains("account.")) return true;
 
         // 允许 JavaScript 和空白页
@@ -185,29 +203,15 @@ public class MainActivity extends AppCompatActivity {
         return false;
     }
 
-    /**
-     * 判断是否为金山文档首页（需要阻止跳转）
-     */
-    private boolean isKdocsHomepage(String url) {
-        if (url == null) return false;
-        // 精确匹配首页 URL
-        return url.equals("https://www.kdocs.cn/")
-                || url.equals("https://www.kdocs.cn")
-                || url.equals("http://www.kdocs.cn/")
-                || url.equals("http://www.kdocs.cn")
-                || url.matches("https://www\\.kdocs\\.cn/\\??.*");
-    }
-
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             if (webView.canGoBack()) {
-                // 有历史记录时执行页面内返回
                 webView.goBack();
                 return true;
             } else {
-                // 无历史记录时，重新加载目标页面（不退出 APP）
-                webView.loadUrl(TARGET_URL);
+                // 重新加载当前选项卡
+                webView.loadUrl(TAB_URLS[currentTab]);
                 return true;
             }
         }
@@ -218,7 +222,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         webView.onPause();
-        // 暂停时保存 Cookie
         CookieManager.getInstance().flush();
     }
 
