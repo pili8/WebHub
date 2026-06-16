@@ -802,7 +802,8 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
 
-            loadCurrentLink();
+            // 没有历史记录，回到桌面（APP 后台运行）
+            moveTaskToBack(true);
             return true;
         }
         return super.onKeyDown(keyCode, event);
