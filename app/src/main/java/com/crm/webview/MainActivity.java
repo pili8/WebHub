@@ -775,21 +775,28 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
+            // 退出查看模式
             if (isInspectMode) {
                 toggleInspectMode();
                 return true;
             }
 
+            // 关闭下拉菜单
             if (isDropdownOpen) {
                 isDropdownOpen = false;
                 updateDropdown();
                 return true;
             }
 
-            if (tryClosePopup()) {
+            // 金山文档优化：如果是金山文档网址且开启优化，模拟点击关闭弹窗
+            boolean kdocsOptimize = prefs.getBoolean("kdocs_optimize", true);
+            String currentUrl = webViews[currentTab].getUrl();
+            if (kdocsOptimize && isKdocsUrl(currentUrl)) {
+                tryClosePopup();
                 return true;
             }
 
+            // 普通返回逻辑
             if (webViews[currentTab].canGoBack()) {
                 webViews[currentTab].goBack();
                 return true;
@@ -799,6 +806,14 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
         return super.onKeyDown(keyCode, event);
+    }
+
+    /**
+     * 判断是否为金山文档网址
+     */
+    private boolean isKdocsUrl(String url) {
+        if (url == null) return false;
+        return url.contains("kdocs.cn") || url.contains("wps.cn") || url.contains("wps.com");
     }
 
     private boolean tryClosePopup() {

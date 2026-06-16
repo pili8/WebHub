@@ -11,6 +11,7 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -22,6 +23,7 @@ import java.util.List;
 public class SettingsActivity extends AppCompatActivity {
 
     private LinearLayout settingsContainer;
+    private Switch switchKdocsOptimize;
     private SharedPreferences prefs;
 
     private static final String[] ACTION_TYPES = {"隐藏", "点击", "修改"};
@@ -68,6 +70,10 @@ public class SettingsActivity extends AppCompatActivity {
 
         prefs = getSharedPreferences("app_config", MODE_PRIVATE);
         settingsContainer = findViewById(R.id.settingsContainer);
+        switchKdocsOptimize = findViewById(R.id.switchKdocsOptimize);
+
+        // 加载金山文档优化开关状态
+        switchKdocsOptimize.setChecked(prefs.getBoolean("kdocs_optimize", true));
 
         ImageView btnBack = findViewById(R.id.btnBack);
         btnBack.setOnClickListener(v -> finish());
@@ -372,6 +378,9 @@ public class SettingsActivity extends AppCompatActivity {
 
             editor.putString("links" + (i + 1), linksStr.toString());
         }
+
+        // 保存金山文档优化开关状态
+        editor.putBoolean("kdocs_optimize", switchKdocsOptimize.isChecked());
 
         editor.apply();
         Toast.makeText(this, "设置已保存", Toast.LENGTH_SHORT).show();
