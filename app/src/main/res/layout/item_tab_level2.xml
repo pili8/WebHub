@@ -14,17 +14,6 @@
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
-        <!-- 拖动手柄 -->
-        <TextView
-            android:id="@+id/btnDragLink"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:gravity="center"
-            android:text="☰"
-            android:textSize="12sp"
-            android:textColor="#CCCCCC"
-            android:background="?attr/selectableItemBackgroundBorderless" />
-
         <EditText
             android:id="@+id/etLinkTitle"
             android:layout_width="0dp"
@@ -34,20 +23,31 @@
             android:textSize="13sp"
             android:background="@drawable/input_bg_small"
             android:paddingStart="10dp"
-            android:paddingEnd="10dp"
-            android:layout_marginStart="8dp" />
+            android:paddingEnd="10dp" />
 
-        <!-- 删除按钮改为长按触发，平时显示更多选项 -->
+        <!-- 更多选项按钮 -->
         <TextView
             android:id="@+id/btnDeleteLink"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
             android:gravity="center"
             android:text="⋮"
             android:textSize="16sp"
             android:textColor="#757575"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:layout_marginStart="6dp" />
+
+        <!-- 拖动手柄 -->
+        <TextView
+            android:id="@+id/btnDragLink"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:gravity="center"
+            android:text="⠿"
+            android:textSize="16sp"
+            android:textColor="#CCCCCC"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_marginStart="2dp" />
 
     </LinearLayout>
 

@@ -374,9 +374,6 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private boolean isEditMode = false;
-    private View draggingView = null;
-    private float startY = 0;
-    private int dragIndex = -1;
 
     private void buildUI() {
         settingsContainer.removeAllViews();
@@ -415,39 +412,51 @@ public class SettingsActivity extends AppCompatActivity {
             // 拖动排序（选项卡）
             TextView btnDrag = tabView.findViewById(R.id.btnDrag);
             if (btnDrag != null) {
-                btnDrag.setOnTouchListener((v, event) -> {
+                btnDrag.setOnLongClickListener(v -> {
+                    // 创建拖动阴影
+                    View.DragShadowBuilder shadow = new View.DragShadowBuilder(tabView) {
+                        @Override
+                        public void onDrawShadow(android.graphics.Canvas canvas) {
+                            tabView.draw(canvas);
+                        }
+
+                        @Override
+                        public void onProvideShadowMetrics(android.graphics.Point outShadowSize, android.graphics.Point outShadowTouchPoint) {
+                            outShadowSize.set(tabView.getWidth(), tabView.getHeight());
+                            outShadowTouchPoint.set(tabView.getWidth() / 2, tabView.getHeight() / 2);
+                        }
+                    };
+
+                    // 开始拖动
+                    tabView.startDrag(null, shadow, new int[]{tabIndex, 0}, 0);
+                    tabView.setAlpha(0.3f);
+                    return true;
+                });
+
+                // 设置拖动监听器
+                tabView.setOnDragListener((v, event) -> {
                     switch (event.getAction()) {
-                        case MotionEvent.ACTION_DOWN:
-                            draggingView = tabView;
-                            startY = event.getRawY();
-                            dragIndex = tabIndex;
-                            tabView.setAlpha(0.7f);
-                            tabView.setScaleX(1.02f);
-                            tabView.setScaleY(1.02f);
+                        case DragEvent.ACTION_DRAG_STARTED:
                             return true;
-                        case MotionEvent.ACTION_MOVE:
-                            if (draggingView != null) {
-                                float deltaY = event.getRawY() - startY;
-                                // 计算目标位置
-                                int targetIndex = dragIndex + (int) (deltaY / tabView.getHeight());
-                                targetIndex = Math.max(0, Math.min(targetIndex, tabsData.size() - 1));
-                                if (targetIndex != dragIndex) {
-                                    // 交换数据
-                                    TabData temp = tabsData.remove(dragIndex);
-                                    tabsData.add(targetIndex, temp);
-                                    dragIndex = targetIndex;
-                                    buildUI();
-                                }
+                        case DragEvent.ACTION_DRAG_ENTERED:
+                            v.setBackgroundColor(Color.parseColor("#E3F2FD"));
+                            return true;
+                        case DragEvent.ACTION_DRAG_EXITED:
+                            v.setBackgroundColor(Color.WHITE);
+                            return true;
+                        case DragEvent.ACTION_DROP:
+                            v.setBackgroundColor(Color.WHITE);
+                            int fromIndex = (int) event.getLocalState();
+                            int toIndex = tabIndex;
+                            if (fromIndex != toIndex && fromIndex >= 0 && toIndex >= 0) {
+                                TabData temp = tabsData.remove(fromIndex);
+                                tabsData.add(toIndex, temp);
+                                buildUI();
                             }
                             return true;
-                        case MotionEvent.ACTION_UP:
-                        case MotionEvent.ACTION_CANCEL:
-                            if (draggingView != null) {
-                                draggingView.setAlpha(1.0f);
-                                draggingView.setScaleX(1.0f);
-                                draggingView.setScaleY(1.0f);
-                                draggingView = null;
-                            }
+                        case DragEvent.ACTION_DRAG_ENDED:
+                            v.setAlpha(1.0f);
+                            v.setBackgroundColor(Color.WHITE);
                             return true;
                     }
                     return false;
@@ -584,25 +593,48 @@ public class SettingsActivity extends AppCompatActivity {
         // 拖动排序（链接）
         TextView btnDragLink = cardView.findViewById(R.id.btnDragLink);
         if (btnDragLink != null) {
-            final int[] linkDragIndex = {-1};
-            final float[] linkStartY = {0};
+            final int linkIndex = tab.links.indexOf(link);
 
-            btnDragLink.setOnTouchListener((v, event) -> {
+            btnDragLink.setOnLongClickListener(v -> {
+                View.DragShadowBuilder shadow = new View.DragShadowBuilder(cardView) {
+                    @Override
+                    public void onDrawShadow(android.graphics.Canvas canvas) {
+                        cardView.draw(canvas);
+                    }
+
+                    @Override
+                    public void onProvideShadowMetrics(android.graphics.Point outShadowSize, android.graphics.Point outShadowTouchPoint) {
+                        outShadowSize.set(cardView.getWidth(), cardView.getHeight());
+                        outShadowTouchPoint.set(cardView.getWidth() / 2, cardView.getHeight() / 2);
+                    }
+                };
+
+                cardView.startDrag(null, shadow, new int[]{linkIndex, 1}, 0);
+                cardView.setAlpha(0.3f);
+                return true;
+            });
+
+            cardView.setOnDragListener((v, event) -> {
                 switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                        linkDragIndex[0] = tab.links.indexOf(link);
-                        linkStartY[0] = event.getRawY();
-                        cardView.setAlpha(0.7f);
+                    case DragEvent.ACTION_DRAG_STARTED:
+                        // 只接受链接类型的拖动
+                        int[] state = (int[]) event.getLocalState();
+                        return state != null && state.length > 1 && state[1] == 1;
+                    case DragEvent.ACTION_DRAG_ENTERED:
+                        v.setBackgroundColor(Color.parseColor("#E3F2FD"));
                         return true;
-                    case MotionEvent.ACTION_MOVE:
-                        if (linkDragIndex[0] >= 0) {
-                            float deltaY = event.getRawY() - linkStartY[0];
-                            int targetIndex = linkDragIndex[0] + (int) (deltaY / cardView.getHeight());
-                            targetIndex = Math.max(0, Math.min(targetIndex, tab.links.size() - 1));
-                            if (targetIndex != linkDragIndex[0]) {
-                                LinkData temp = tab.links.remove(linkDragIndex[0]);
-                                tab.links.add(targetIndex, temp);
-                                linkDragIndex[0] = targetIndex;
+                    case DragEvent.ACTION_DRAG_EXITED:
+                        v.setBackgroundColor(Color.TRANSPARENT);
+                        return true;
+                    case DragEvent.ACTION_DROP:
+                        v.setBackgroundColor(Color.TRANSPARENT);
+                        int[] dropState = (int[]) event.getLocalState();
+                        if (dropState != null && dropState[1] == 1) {
+                            int fromLinkIndex = dropState[0];
+                            int toLinkIndex = linkIndex;
+                            if (fromLinkIndex != toLinkIndex && fromLinkIndex >= 0 && toLinkIndex >= 0) {
+                                LinkData temp = tab.links.remove(fromLinkIndex);
+                                tab.links.add(toLinkIndex, temp);
                                 // 重建链接列表
                                 tab.linksContainer.removeAllViews();
                                 for (LinkData l : tab.links) {
@@ -611,10 +643,9 @@ public class SettingsActivity extends AppCompatActivity {
                             }
                         }
                         return true;
-                    case MotionEvent.ACTION_UP:
-                    case MotionEvent.ACTION_CANCEL:
-                        cardView.setAlpha(1.0f);
-                        linkDragIndex[0] = -1;
+                    case DragEvent.ACTION_DRAG_ENDED:
+                        v.setAlpha(1.0f);
+                        v.setBackgroundColor(Color.TRANSPARENT);
                         return true;
                 }
                 return false;

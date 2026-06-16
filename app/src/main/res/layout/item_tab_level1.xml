@@ -14,20 +14,9 @@
         android:layout_height="52dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="8dp"
-        android:paddingEnd="12dp"
+        android:paddingStart="14dp"
+        android:paddingEnd="8dp"
         android:background="?attr/selectableItemBackground">
-
-        <!-- 拖动手柄 -->
-        <TextView
-            android:id="@+id/btnDrag"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:gravity="center"
-            android:text="☰"
-            android:textSize="14sp"
-            android:textColor="#BBBBBB"
-            android:background="?attr/selectableItemBackgroundBorderless" />
 
         <TextView
             android:id="@+id/tvArrow"
@@ -102,15 +91,27 @@
         <!-- 更多选项按钮 -->
         <TextView
             android:id="@+id/btnDeleteTab"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:gravity="center"
             android:text="⋮"
             android:textSize="18sp"
             android:textColor="#757575"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:visibility="gone"
-            android:layout_marginStart="8dp" />
+            android:layout_marginStart="4dp" />
+
+        <!-- 拖动手柄 -->
+        <TextView
+            android:id="@+id/btnDrag"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:gravity="center"
+            android:text="⠿"
+            android:textSize="18sp"
+            android:textColor="#AAAAAA"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_marginStart="2dp" />
 
     </LinearLayout>
 
@@ -121,9 +122,9 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="10dp"
-        android:background="#F5F5F5"
-        android:layout_marginStart="6dp"
-        android:layout_marginEnd="6dp"
+        android:background="#E8E8E8"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="4dp"
         android:layout_marginTop="4dp"
         android:visibility="gone" />
 
