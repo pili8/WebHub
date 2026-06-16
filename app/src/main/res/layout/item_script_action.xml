@@ -4,53 +4,51 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:layout_marginBottom="8dp"
-    android:padding="8dp"
-    android:background="@drawable/edit_text_bg">
+    android:layout_marginBottom="4dp">
 
     <!-- 操作类型选择 -->
     <Spinner
         android:id="@+id/spinnerAction"
-        android:layout_width="70dp"
-        android:layout_height="36dp"
-        android:background="@drawable/edit_text_bg" />
+        android:layout_width="60dp"
+        android:layout_height="32dp"
+        android:background="@drawable/input_bg" />
 
     <!-- 元素选择器输入 -->
     <EditText
         android:id="@+id/etSelector"
         android:layout_width="0dp"
-        android:layout_height="36dp"
+        android:layout_height="32dp"
         android:layout_weight="1"
         android:hint=".class 或 #id"
-        android:textSize="12sp"
+        android:textSize="11sp"
         android:inputType="text"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
         android:layout_marginStart="4dp"
         android:layout_marginEnd="4dp"
-        android:background="@android:drawable/edit_text" />
+        android:background="@drawable/input_bg" />
 
     <!-- 新值输入（仅修改时显示） -->
     <EditText
         android:id="@+id/etValue"
-        android:layout_width="80dp"
-        android:layout_height="36dp"
+        android:layout_width="70dp"
+        android:layout_height="32dp"
         android:hint="新值"
-        android:textSize="12sp"
+        android:textSize="11sp"
         android:inputType="text"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
         android:visibility="gone"
-        android:background="@android:drawable/edit_text" />
+        android:background="@drawable/input_bg" />
 
     <!-- 删除按钮 -->
     <TextView
         android:id="@+id/btnDelete"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
         android:gravity="center"
         android:text="✕"
-        android:textSize="16sp"
+        android:textSize="12sp"
         android:textColor="#F44336"
         android:background="?attr/selectableItemBackgroundBorderless" />
 

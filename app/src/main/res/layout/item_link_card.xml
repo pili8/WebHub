@@ -4,7 +4,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:background="@drawable/card_bg"
-    android:padding="12dp"
+    android:padding="10dp"
     android:layout_marginBottom="8dp">
 
     <!-- 链接标题和删除按钮 -->
@@ -15,10 +15,10 @@
         android:gravity="center_vertical">
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="20dp"
             android:layout_height="wrap_content"
             android:text="📄"
-            android:textSize="16sp" />
+            android:textSize="14sp" />
 
         <EditText
             android:id="@+id/etLinkTitle"
@@ -26,21 +26,22 @@
             android:layout_height="36dp"
             android:layout_weight="1"
             android:hint="链接标题"
-            android:textSize="14sp"
-            android:background="@android:drawable/edit_text"
+            android:textSize="13sp"
+            android:background="@drawable/input_bg"
             android:paddingStart="8dp"
             android:paddingEnd="8dp"
-            android:layout_marginStart="8dp" />
+            android:layout_marginStart="6dp" />
 
         <TextView
             android:id="@+id/btnDeleteLink"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
             android:gravity="center"
             android:text="✕"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:textColor="#F44336"
-            android:background="?attr/selectableItemBackgroundBorderless" />
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_marginStart="6dp" />
 
     </LinearLayout>
 
@@ -48,30 +49,44 @@
     <EditText
         android:id="@+id/etLinkUrl"
         android:layout_width="match_parent"
-        android:layout_height="36dp"
+        android:layout_height="34dp"
         android:hint="https://..."
-        android:textSize="12sp"
+        android:textSize="11sp"
         android:inputType="textUri"
-        android:background="@android:drawable/edit_text"
+        android:background="@drawable/input_bg"
         android:paddingStart="8dp"
         android:paddingEnd="8dp"
-        android:layout_marginTop="8dp" />
+        android:layout_marginTop="6dp"
+        android:singleLine="true" />
 
-    <!-- 操作列表标题 -->
+    <!-- 操作列表 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginTop="12dp">
+        android:layout_marginTop="10dp">
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1"
+            android:background="#E8E8E8" />
 
         <TextView
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:text=" 页面操作 "
+            android:textSize="11sp"
+            android:textColor="#BBBBBB"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
             android:layout_weight="1"
-            android:text="页面操作："
-            android:textSize="12sp"
-            android:textColor="#999999" />
+            android:background="#E8E8E8" />
 
     </LinearLayout>
 
@@ -81,18 +96,18 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_marginTop="4dp" />
+        android:layout_marginTop="6dp" />
 
     <!-- 添加操作按钮 -->
     <TextView
         android:id="@+id/btnAddAction"
         android:layout_width="match_parent"
-        android:layout_height="32dp"
+        android:layout_height="30dp"
         android:gravity="center"
         android:text="+ 添加操作"
-        android:textSize="12sp"
+        android:textSize="11sp"
         android:textColor="#4CAF50"
-        android:background="@drawable/edit_text_bg"
+        android:background="?attr/selectableItemBackground"
         android:layout_marginTop="4dp" />
 
 </LinearLayout>
