@@ -31,15 +31,9 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    // 默认配置
-    private static final String DEFAULT_CONFIG =
-        "tab1|📊|销售机会|销售机会,https://www.kdocs.cn/wo/sl/v12CEOZt\n" +
-        "tab2|📋|最近新增|最近新增,https://www.kdocs.cn/wo/sl/v14T2gpD\n" +
-        "tab3|➕|录入线索|录入线索,https://www.kdocs.cn/wo/sl/v13iHfr4";
-
     private WebView webView;
     private ProgressBar progressBar;
-    private TextView tvTitle, tvSubMenu, tvMenuIcon;
+    private TextView tvTitle, tvSubMenu;
     private ImageView btnRefresh, btnSettings;
     private LinearLayout btnMenu;
     private LinearLayout tab1, tab2, tab3;
@@ -50,12 +44,12 @@ public class MainActivity extends AppCompatActivity {
     private TextView[] tabTexts;
 
     private int currentTab = 0;
-    private int currentLinkIndex = 0; // 当前选项卡下的链接索引
+    private int currentLinkIndex = 0;
 
     // 配置数据
     private String[] tabIconsEmoji = {"📊", "📋", "➕"};
     private String[] tabTitles = {"销售机会", "最近新增", "录入线索"};
-    private List<List<LinkItem>> tabLinks = new ArrayList<>(); // 每个选项卡的链接列表
+    private List<List<LinkItem>> tabLinks = new ArrayList<>();
 
     private SharedPreferences prefs;
 
@@ -78,10 +72,15 @@ public class MainActivity extends AppCompatActivity {
 
         prefs = getSharedPreferences("app_config", MODE_PRIVATE);
 
+        // 初始化链接列表
+        tabLinks.add(new ArrayList<>());
+        tabLinks.add(new ArrayList<>());
+        tabLinks.add(new ArrayList<>());
+
         initViews();
         loadConfig();
+        updateUI();
         setupListeners();
-
         setupWebView();
         switchTab(0);
     }
@@ -91,31 +90,34 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         webView.onResume();
 
-        // 从设置返回时重新加载
-        String oldConfig = getConfigString();
-        loadConfig();
-        String newConfig = getConfigString();
+        // 保存旧配置用于比较
+        String[] oldLinks = new String[3];
+        oldLinks[0] = prefs.getString("links1", "");
+        oldLinks[1] = prefs.getString("links2", "");
+        oldLinks[2] = prefs.getString("links3", "");
 
-        if (!oldConfig.equals(newConfig)) {
-            updateUI();
+        // 重新加载配置
+        loadConfig();
+        updateUI();
+
+        // 检查配置是否改变
+        String[] newLinks = new String[3];
+        newLinks[0] = prefs.getString("links1", "");
+        newLinks[1] = prefs.getString("links2", "");
+        newLinks[2] = prefs.getString("links3", "");
+
+        boolean changed = false;
+        for (int i = 0; i < 3; i++) {
+            if (!oldLinks[i].equals(newLinks[i])) {
+                changed = true;
+                break;
+            }
+        }
+
+        if (changed) {
+            currentLinkIndex = 0;
             loadCurrentLink();
         }
-    }
-
-    private String getConfigString() {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 3; i++) {
-            sb.append("tab").append(i + 1).append("|");
-            sb.append(tabIconsEmoji[i]).append("|");
-            sb.append(tabTitles[i]).append("|");
-            for (int j = 0; j < tabLinks.get(i).size(); j++) {
-                LinkItem link = tabLinks.get(i).get(j);
-                sb.append(link.title).append(",").append(link.url);
-                if (j < tabLinks.get(i).size() - 1) sb.append("\n");
-            }
-            if (i < 2) sb.append("\n");
-        }
-        return sb.toString();
     }
 
     private void initViews() {
@@ -123,7 +125,6 @@ public class MainActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progressBar);
         tvTitle = findViewById(R.id.tvTitle);
         tvSubMenu = findViewById(R.id.tvSubMenu);
-        tvMenuIcon = findViewById(R.id.tvMenuIcon);
         btnMenu = findViewById(R.id.btnMenu);
         btnRefresh = findViewById(R.id.btnRefresh);
         btnSettings = findViewById(R.id.btnSettings);
@@ -154,46 +155,28 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadConfig() {
-        tabLinks.clear();
-        tabLinks.add(new ArrayList<>());
-        tabLinks.add(new ArrayList<>());
-        tabLinks.add(new ArrayList<>());
+        tabIconsEmoji[0] = prefs.getString("icon1", "📊");
+        tabIconsEmoji[1] = prefs.getString("icon2", "📋");
+        tabIconsEmoji[2] = prefs.getString("icon3", "➕");
 
-        String config = prefs.getString("config", DEFAULT_CONFIG);
-        String[] lines = config.split("\n");
+        tabTitles[0] = prefs.getString("title1", "销售机会");
+        tabTitles[1] = prefs.getString("title2", "最近新增");
+        tabTitles[2] = prefs.getString("title3", "录入线索");
 
-        for (String line : lines) {
-            line = line.trim();
-            if (line.isEmpty()) continue;
-
-            String[] parts = line.split("\\|", 4);
-            if (parts.length < 4) continue;
-
-            int tabIndex;
-            try {
-                tabIndex = Integer.parseInt(parts[0].replace("tab", "")) - 1;
-            } catch (Exception e) {
-                continue;
-            }
-            if (tabIndex < 0 || tabIndex > 2) continue;
-
-            tabIconsEmoji[tabIndex] = parts[1];
-            tabTitles[tabIndex] = parts[2];
-
-            // 解析链接列表
-            String[] links = parts[3].split("\n");
-            for (String link : links) {
-                link = link.trim();
-                if (link.isEmpty()) continue;
-                String[] linkParts = link.split(",", 2);
-                if (linkParts.length == 2) {
-                    tabLinks.get(tabIndex).add(new LinkItem(linkParts[0].trim(), linkParts[1].trim()));
+        // 解析链接
+        for (int i = 0; i < 3; i++) {
+            tabLinks.get(i).clear();
+            String linksStr = prefs.getString("links" + (i + 1), "");
+            String[] lines = linksStr.split("\n");
+            for (String line : lines) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+                String[] parts = line.split(",", 2);
+                if (parts.length == 2) {
+                    tabLinks.get(i).add(new LinkItem(parts[0].trim(), parts[1].trim()));
                 }
             }
-        }
-
-        // 确保每个选项卡至少有一个链接
-        for (int i = 0; i < 3; i++) {
+            // 确保至少有一个链接
             if (tabLinks.get(i).isEmpty()) {
                 tabLinks.get(i).add(new LinkItem(tabTitles[i], "about:blank"));
             }
@@ -210,11 +193,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void switchTab(int index) {
         currentTab = index;
-        currentLinkIndex = 0; // 切换选项卡时重置为第一个链接
+        currentLinkIndex = 0;
 
         tvTitle.setText(tabTitles[index]);
 
-        // 更新选项卡样式
         for (int i = 0; i < 3; i++) {
             if (i == index) {
                 tabTexts[i].setTextColor(Color.parseColor("#1976D2"));
@@ -231,11 +213,10 @@ public class MainActivity extends AppCompatActivity {
         List<LinkItem> links = tabLinks.get(currentTab);
         if (links.size() > 1) {
             tvSubMenu.setVisibility(View.VISIBLE);
-            tvMenuIcon.setVisibility(View.VISIBLE);
             tvSubMenu.setText(links.get(currentLinkIndex).title);
         } else {
-            tvSubMenu.setVisibility(View.GONE);
-            tvMenuIcon.setVisibility(View.GONE);
+            tvSubMenu.setVisibility(View.VISIBLE);
+            tvSubMenu.setText(links.get(0).title);
         }
     }
 

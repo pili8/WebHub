@@ -12,36 +12,37 @@
         android:background="#1976D2"
         android:elevation="4dp"
         android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp">
+        android:orientation="horizontal">
 
         <!-- 左侧：下拉菜单按钮 -->
         <LinearLayout
             android:id="@+id/btnMenu"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
+            android:minWidth="100dp"
             android:gravity="center_vertical"
-            android:paddingStart="8dp"
-            android:paddingEnd="12dp"
-            android:background="?attr/selectableItemBackgroundBorderless">
-
-            <TextView
-                android:id="@+id/tvMenuIcon"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="▼"
-                android:textColor="@android:color/white"
-                android:textSize="14sp" />
+            android:paddingStart="12dp"
+            android:paddingEnd="8dp"
+            android:background="?attr/selectableItemBackground">
 
             <TextView
                 android:id="@+id/tvSubMenu"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="子菜单"
+                android:text=""
                 android:textColor="@android:color/white"
                 android:textSize="14sp"
-                android:layout_marginStart="4dp" />
+                android:maxWidth="120dp"
+                android:ellipsize="end"
+                android:singleLine="true" />
+
+            <TextView
+                android:id="@+id/tvMenuArrow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=" ▼"
+                android:textColor="@android:color/white"
+                android:textSize="12sp" />
 
         </LinearLayout>
 
@@ -51,33 +52,41 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="start"
             android:text="CRM"
             android:textColor="@android:color/white"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:paddingStart="8dp" />
 
-        <!-- 右侧：刷新按钮 -->
-        <ImageView
-            android:id="@+id/btnRefresh"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:padding="10dp"
-            android:src="@drawable/ic_refresh"
-            android:scaleType="centerInside"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="刷新" />
+        <!-- 右侧按钮组 -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:paddingEnd="4dp">
 
-        <!-- 右侧：设置按钮 -->
-        <ImageView
-            android:id="@+id/btnSettings"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:padding="10dp"
-            android:src="@drawable/ic_settings"
-            android:scaleType="centerInside"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="设置" />
+            <ImageView
+                android:id="@+id/btnRefresh"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:padding="12dp"
+                android:src="@drawable/ic_refresh"
+                android:scaleType="centerInside"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="刷新" />
+
+            <ImageView
+                android:id="@+id/btnSettings"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:padding="12dp"
+                android:src="@drawable/ic_settings"
+                android:scaleType="centerInside"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="设置" />
+
+        </LinearLayout>
 
     </LinearLayout>
 

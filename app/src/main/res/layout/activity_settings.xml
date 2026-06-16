@@ -13,14 +13,14 @@
         android:elevation="4dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="8dp"
+        android:paddingStart="4dp"
         android:paddingEnd="16dp">
 
         <ImageView
             android:id="@+id/btnBack"
             android:layout_width="44dp"
             android:layout_height="44dp"
-            android:padding="10dp"
+            android:padding="12dp"
             android:src="@drawable/ic_back"
             android:scaleType="centerInside"
             android:background="?attr/selectableItemBackgroundBorderless"
@@ -40,7 +40,8 @@
     <!-- 设置内容 -->
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -52,23 +53,33 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="每个选项卡可配置多个链接，第一个为默认链接。点击左上角可切换同选项卡下的其他链接。"
+                android:text="每个选项卡可配置多个链接，格式：标题,网址（每行一个）"
                 android:textSize="13sp"
                 android:textColor="#666666"
+                android:padding="12dp"
+                android:background="@drawable/info_bg"
                 android:layout_marginBottom="16dp" />
 
-            <!-- ========== 选项卡1 ========== -->
+            <!-- 选项卡1 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="选项卡 1"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="#1976D2"
+                android:layout_marginBottom="8dp" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center_vertical"
                 android:layout_marginBottom="8dp">
 
                 <EditText
                     android:id="@+id/et_icon1"
-                    android:layout_width="50dp"
-                    android:layout_height="48dp"
+                    android:layout_width="56dp"
+                    android:layout_height="44dp"
                     android:hint="📊"
                     android:textSize="20sp"
                     android:gravity="center"
@@ -78,9 +89,9 @@
                 <EditText
                     android:id="@+id/et_title1"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
+                    android:layout_height="44dp"
                     android:layout_weight="1"
-                    android:hint="选项卡标题"
+                    android:hint="标题"
                     android:textSize="14sp"
                     android:inputType="text"
                     android:background="@drawable/edit_text_bg"
@@ -93,27 +104,35 @@
             <EditText
                 android:id="@+id/et_links1"
                 android:layout_width="match_parent"
-                android:layout_height="100dp"
-                android:hint="链接列表（每行一个）&#10;标题1,https://...&#10;标题2,https://..."
+                android:layout_height="80dp"
+                android:hint="标题1,https://...&#10;标题2,https://..."
                 android:textSize="13sp"
                 android:inputType="textMultiLine"
                 android:gravity="top"
                 android:background="@drawable/edit_text_bg"
-                android:padding="12dp"
+                android:padding="10dp"
                 android:layout_marginBottom="16dp" />
 
-            <!-- ========== 选项卡2 ========== -->
+            <!-- 选项卡2 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="选项卡 2"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="#1976D2"
+                android:layout_marginBottom="8dp" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center_vertical"
                 android:layout_marginBottom="8dp">
 
                 <EditText
                     android:id="@+id/et_icon2"
-                    android:layout_width="50dp"
-                    android:layout_height="48dp"
+                    android:layout_width="56dp"
+                    android:layout_height="44dp"
                     android:hint="📋"
                     android:textSize="20sp"
                     android:gravity="center"
@@ -123,9 +142,9 @@
                 <EditText
                     android:id="@+id/et_title2"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
+                    android:layout_height="44dp"
                     android:layout_weight="1"
-                    android:hint="选项卡标题"
+                    android:hint="标题"
                     android:textSize="14sp"
                     android:inputType="text"
                     android:background="@drawable/edit_text_bg"
@@ -138,27 +157,35 @@
             <EditText
                 android:id="@+id/et_links2"
                 android:layout_width="match_parent"
-                android:layout_height="100dp"
-                android:hint="链接列表（每行一个）&#10;标题1,https://...&#10;标题2,https://..."
+                android:layout_height="80dp"
+                android:hint="标题1,https://...&#10;标题2,https://..."
                 android:textSize="13sp"
                 android:inputType="textMultiLine"
                 android:gravity="top"
                 android:background="@drawable/edit_text_bg"
-                android:padding="12dp"
+                android:padding="10dp"
                 android:layout_marginBottom="16dp" />
 
-            <!-- ========== 选项卡3 ========== -->
+            <!-- 选项卡3 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="选项卡 3"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="#1976D2"
+                android:layout_marginBottom="8dp" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center_vertical"
                 android:layout_marginBottom="8dp">
 
                 <EditText
                     android:id="@+id/et_icon3"
-                    android:layout_width="50dp"
-                    android:layout_height="48dp"
+                    android:layout_width="56dp"
+                    android:layout_height="44dp"
                     android:hint="➕"
                     android:textSize="20sp"
                     android:gravity="center"
@@ -168,9 +195,9 @@
                 <EditText
                     android:id="@+id/et_title3"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
+                    android:layout_height="44dp"
                     android:layout_weight="1"
-                    android:hint="选项卡标题"
+                    android:hint="标题"
                     android:textSize="14sp"
                     android:inputType="text"
                     android:background="@drawable/edit_text_bg"
@@ -183,13 +210,13 @@
             <EditText
                 android:id="@+id/et_links3"
                 android:layout_width="match_parent"
-                android:layout_height="100dp"
-                android:hint="链接列表（每行一个）&#10;标题1,https://...&#10;标题2,https://..."
+                android:layout_height="80dp"
+                android:hint="标题1,https://...&#10;标题2,https://..."
                 android:textSize="13sp"
                 android:inputType="textMultiLine"
                 android:gravity="top"
                 android:background="@drawable/edit_text_bg"
-                android:padding="12dp"
+                android:padding="10dp"
                 android:layout_marginBottom="24dp" />
 
             <!-- 保存按钮 -->
@@ -200,7 +227,8 @@
                 android:text="保存设置"
                 android:textSize="16sp"
                 android:background="@drawable/btn_primary"
-                android:textColor="@android:color/white" />
+                android:textColor="@android:color/white"
+                android:textAllCaps="false" />
 
         </LinearLayout>
 

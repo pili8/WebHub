@@ -11,11 +11,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 public class SettingsActivity extends AppCompatActivity {
 
-    private static final String DEFAULT_CONFIG =
-        "tab1|📊|销售机会|销售机会,https://www.kdocs.cn/wo/sl/v12CEOZt\n" +
-        "tab2|📋|最近新增|最近新增,https://www.kdocs.cn/wo/sl/v14T2gpD\n" +
-        "tab3|➕|录入线索|录入线索,https://www.kdocs.cn/wo/sl/v13iHfr4";
-
     private EditText etIcon1, etTitle1, etLinks1;
     private EditText etIcon2, etTitle2, etLinks2;
     private EditText etIcon3, etTitle3, etLinks3;
@@ -51,45 +46,18 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void loadConfig() {
-        String config = prefs.getString("config", DEFAULT_CONFIG);
-        String[] lines = config.split("\n");
+        // 读取各个字段
+        etIcon1.setText(prefs.getString("icon1", "📊"));
+        etTitle1.setText(prefs.getString("title1", "销售机会"));
+        etLinks1.setText(prefs.getString("links1", "销售机会,https://www.kdocs.cn/wo/sl/v12CEOZt"));
 
-        for (String line : lines) {
-            line = line.trim();
-            if (line.isEmpty()) continue;
+        etIcon2.setText(prefs.getString("icon2", "📋"));
+        etTitle2.setText(prefs.getString("title2", "最近新增"));
+        etLinks2.setText(prefs.getString("links2", "最近新增,https://www.kdocs.cn/wo/sl/v14T2gpD"));
 
-            String[] parts = line.split("\\|", 4);
-            if (parts.length < 4) continue;
-
-            int tabIndex;
-            try {
-                tabIndex = Integer.parseInt(parts[0].replace("tab", ""));
-            } catch (Exception e) {
-                continue;
-            }
-
-            String icon = parts[1];
-            String title = parts[2];
-            String links = parts[3].replace("\\n", "\n");
-
-            switch (tabIndex) {
-                case 1:
-                    etIcon1.setText(icon);
-                    etTitle1.setText(title);
-                    etLinks1.setText(links);
-                    break;
-                case 2:
-                    etIcon2.setText(icon);
-                    etTitle2.setText(title);
-                    etLinks2.setText(links);
-                    break;
-                case 3:
-                    etIcon3.setText(icon);
-                    etTitle3.setText(title);
-                    etLinks3.setText(links);
-                    break;
-            }
-        }
+        etIcon3.setText(prefs.getString("icon3", "➕"));
+        etTitle3.setText(prefs.getString("title3", "录入线索"));
+        etLinks3.setText(prefs.getString("links3", "录入线索,https://www.kdocs.cn/wo/sl/v13iHfr4"));
     }
 
     private void setupListeners() {
@@ -124,16 +92,16 @@ public class SettingsActivity extends AppCompatActivity {
             return;
         }
 
-        // 构建配置字符串
-        StringBuilder config = new StringBuilder();
-        config.append("tab1|").append(icon1).append("|").append(title1).append("|").append(links1);
-        config.append("\n");
-        config.append("tab2|").append(icon2).append("|").append(title2).append("|").append(links2);
-        config.append("\n");
-        config.append("tab3|").append(icon3).append("|").append(title3).append("|").append(links3);
-
         SharedPreferences.Editor editor = prefs.edit();
-        editor.putString("config", config.toString());
+        editor.putString("icon1", icon1);
+        editor.putString("title1", title1);
+        editor.putString("links1", links1);
+        editor.putString("icon2", icon2);
+        editor.putString("title2", title2);
+        editor.putString("links2", links2);
+        editor.putString("icon3", icon3);
+        editor.putString("title3", title3);
+        editor.putString("links3", links3);
         editor.apply();
 
         Toast.makeText(this, "设置已保存", Toast.LENGTH_SHORT).show();
