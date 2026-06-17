@@ -138,6 +138,7 @@ public class MainActivity extends AppCompatActivity {
 
         initViews();
         loadConfig();
+        initHttpRequestPage(); // 在 loadConfig 之后调用
         createTabsAndWebViews();
         setupListeners();
         setupAllWebViews();
@@ -199,8 +200,6 @@ public class MainActivity extends AppCompatActivity {
         // 定时刷新
         tvAutoRefresh = findViewById(R.id.tvAutoRefresh);
 
-        // 初始化 HTTP 请求页面
-        initHttpRequestPage();
         autoRefreshInterval = prefs.getInt("auto_refresh_interval", 0);
         updateAutoRefreshIndicator();
     }
