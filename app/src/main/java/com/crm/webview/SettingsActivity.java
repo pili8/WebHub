@@ -99,7 +99,6 @@ public class SettingsActivity extends AppCompatActivity {
 
         setupCache();
         setupExportImport();
-        setupHttpSettings();
 
         ImageView btnBack = findViewById(R.id.btnBack);
         btnBack.setOnClickListener(v -> finish());
@@ -110,13 +109,6 @@ public class SettingsActivity extends AppCompatActivity {
         loadConfig();
         buildUI();
     }
-
-    private void setupHttpSettings() {
-        View btnHttpSettings = findViewById(R.id.btnHttpSettings);
-        if (btnHttpSettings != null) {
-            btnHttpSettings.setOnClickListener(v -> {
-                startActivity(new Intent(this, HttpConfigActivity.class));
-            });
         }
     }
 
