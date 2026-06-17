@@ -227,15 +227,10 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences httpPrefs = getSharedPreferences("http_configs", MODE_PRIVATE);
         int count = httpPrefs.getInt("count", 0);
 
+        // 如果没有配置，添加测试数据
         if (count == 0) {
-            TextView emptyText = new TextView(this);
-            emptyText.setText("暂无 HTTP 请求\n点击下方按钮添加");
-            emptyText.setTextSize(14);
-            emptyText.setTextColor(Color.parseColor("#999999"));
-            emptyText.setGravity(Gravity.CENTER);
-            emptyText.setPadding(0, dpToPx(40), 0, dpToPx(40));
-            container.addView(emptyText);
-            return;
+            addTestHttpConfigs();
+            count = httpPrefs.getInt("count", 0);
         }
 
         for (int i = 0; i < count; i++) {
@@ -247,6 +242,35 @@ public class MainActivity extends AppCompatActivity {
 
             addHttpCard(container, i, name, url, method, headers, body);
         }
+    }
+
+    private void addTestHttpConfigs() {
+        SharedPreferences httpPrefs = getSharedPreferences("http_configs", MODE_PRIVATE);
+        SharedPreferences.Editor editor = httpPrefs.edit();
+        editor.putInt("count", 3);
+
+        // 测试配置1：GET 请求
+        editor.putString("name_0", "获取用户信息");
+        editor.putString("url_0", "https://jsonplaceholder.typicode.com/users/1");
+        editor.putString("method_0", "GET");
+        editor.putString("headers_0", "Content-Type: application/json");
+        editor.putString("body_0", "");
+
+        // 测试配置2：POST 请求
+        editor.putString("name_1", "创建帖子");
+        editor.putString("url_1", "https://jsonplaceholder.typicode.com/posts");
+        editor.putString("method_1", "POST");
+        editor.putString("headers_1", "Content-Type: application/json");
+        editor.putString("body_1", "{\n  \"title\": \"{{title}}\",\n  \"body\": \"{{body}}\",\n  \"userId\": {{userId}}\n}");
+
+        // 测试配置3：带认证的请求
+        editor.putString("name_2", "获取飞书数据");
+        editor.putString("url_2", "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal");
+        editor.putString("method_2", "POST");
+        editor.putString("headers_2", "Content-Type: application/json");
+        editor.putString("body_2", "{\n  \"app_id\": \"{{app_id}}\",\n  \"app_secret\": \"{{app_secret}}\"\n}");
+
+        editor.apply();
     }
 
     private void addHttpCard(LinearLayout container, int index, String name, String url, String method, String headers, String body) {
@@ -623,7 +647,7 @@ public class MainActivity extends AppCompatActivity {
         refreshMenu.add(1, 53, 0, "每5分钟").setChecked(autoRefreshInterval == 300);
         refreshMenu.setGroupCheckable(1, true, true);
 
-        popup.getMenu().add(0, 6, 0, "📡 HTTP 请求");
+        popup.getMenu().add(0, 6, 0, "📡 HTTP 请求配置");
         popup.getMenu().add(0, 4, 0, "⚙️ 设置");
 
         popup.setOnMenuItemClickListener(item -> {
@@ -642,7 +666,7 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
                 return true;
             } else if (item.getItemId() == 6) {
-                startActivity(new Intent(this, HttpActivity.class));
+                startActivity(new Intent(this, HttpConfigActivity.class));
                 return true;
             } else if (item.getItemId() >= 50 && item.getItemId() <= 53) {
                 // 定时刷新
