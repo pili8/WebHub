@@ -352,11 +352,12 @@ public class MainActivity extends AppCompatActivity {
         popup.getMenu().add(0, 3, 0, isNightMode ? "☀️ 日间模式" : "🌙 夜间模式");
 
         // 定时刷新子菜单
-        android.view.SubMenu refreshMenu = popup.getMenu().addSubMenu(0, 5, 0, "⏱ 定时刷新");
+        String refreshTitle = autoRefreshInterval > 0 ? "⏰ 定时刷新中" : "⏰ 定时刷新";
+        android.view.SubMenu refreshMenu = popup.getMenu().addSubMenu(0, 5, 0, refreshTitle);
         refreshMenu.add(1, 50, 0, "关闭").setChecked(autoRefreshInterval == 0);
-        refreshMenu.add(1, 51, 0, "30秒").setChecked(autoRefreshInterval == 30);
-        refreshMenu.add(1, 52, 0, "1分钟").setChecked(autoRefreshInterval == 60);
-        refreshMenu.add(1, 53, 0, "5分钟").setChecked(autoRefreshInterval == 300);
+        refreshMenu.add(1, 51, 0, "每30秒").setChecked(autoRefreshInterval == 30);
+        refreshMenu.add(1, 52, 0, "每1分钟").setChecked(autoRefreshInterval == 60);
+        refreshMenu.add(1, 53, 0, "每5分钟").setChecked(autoRefreshInterval == 300);
         refreshMenu.setGroupCheckable(1, true, true);
 
         popup.getMenu().add(0, 4, 0, "⚙️ 设置");
