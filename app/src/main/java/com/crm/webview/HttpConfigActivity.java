@@ -1,12 +1,16 @@
 package com.crm.webview;
 
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -14,6 +18,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -25,14 +31,10 @@ import java.util.List;
 
 public class HttpConfigActivity extends AppCompatActivity {
 
-    private EditText etRequestName, etUrl, etBody;
-    private RadioGroup rgMethod;
-    private RadioButton rbGet, rbPost;
-    private LinearLayout headersContainer;
+    private RecyclerView recyclerView;
+    private HttpAdapter adapter;
     private SharedPreferences httpPrefs;
-
-    private List<View> headerViews = new ArrayList<>();
-    private int editIndex = -1; // -1 表示新建，>= 0 表示编辑
+    private List<HttpConfig> configs = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,177 +42,140 @@ public class HttpConfigActivity extends AppCompatActivity {
         setContentView(R.layout.activity_http_config);
 
         httpPrefs = getSharedPreferences("http_configs", MODE_PRIVATE);
-        editIndex = getIntent().getIntExtra("edit_index", -1);
 
         initViews();
-        loadConfig();
+        loadConfigs();
+        setupRecyclerView();
     }
 
     private void initViews() {
-        etRequestName = findViewById(R.id.etRequestName);
-        etUrl = findViewById(R.id.etUrl);
-        etBody = findViewById(R.id.etBody);
-        rgMethod = findViewById(R.id.rgMethod);
-        rbGet = findViewById(R.id.rbGet);
-        rbPost = findViewById(R.id.rbPost);
-        headersContainer = findViewById(R.id.headersContainer);
+        ImageView btnBack = findViewById(R.id.btnBack);
+        btnBack.setOnClickListener(v -> finish());
 
-        findViewById(R.id.btnBack).setOnClickListener(v -> finish());
+        Button btnAdd = findViewById(R.id.btnAdd);
+        btnAdd.setOnClickListener(v -> addNewConfig());
 
-        findViewById(R.id.btnSave).setOnClickListener(v -> saveConfig());
-
-        findViewById(R.id.btnAddHeader).setOnClickListener(v -> addHeader("", ""));
-
-        findViewById(R.id.btnTest).setOnClickListener(v -> testRequest());
+        Button btnTestAll = findViewById(R.id.btnTestAll);
+        btnTestAll.setOnClickListener(v -> testAllRequests());
     }
 
-    private void loadConfig() {
-        if (editIndex >= 0) {
-            // 编辑模式
-            etRequestName.setText(httpPrefs.getString("name_" + editIndex, ""));
-            etUrl.setText(httpPrefs.getString("url_" + editIndex, ""));
-            etBody.setText(httpPrefs.getString("body_" + editIndex, ""));
+    private void loadConfigs() {
+        configs.clear();
+        int count = httpPrefs.getInt("count", 0);
 
-            String method = httpPrefs.getString("method_" + editIndex, "POST");
-            if ("GET".equals(method)) {
-                rbGet.setChecked(true);
-            } else {
-                rbPost.setChecked(true);
-            }
-
-            // 加载请求头
-            String headers = httpPrefs.getString("headers_" + editIndex, "");
-            headersContainer.removeAllViews();
-            headerViews.clear();
-
-            if (headers.isEmpty()) {
-                addHeader("Content-Type", "application/json");
-            } else {
-                String[] lines = headers.split("\n");
-                for (String line : lines) {
-                    String[] parts = line.split(":", 2);
-                    if (parts.length == 2) {
-                        addHeader(parts[0].trim(), parts[1].trim());
-                    }
-                }
-            }
-        } else {
-            // 新建模式
-            addHeader("Content-Type", "application/json");
-        }
-    }
-
-    private void addHeader(String key, String value) {
-        View itemView = LayoutInflater.from(this).inflate(R.layout.item_header, headersContainer, false);
-        EditText etKey = itemView.findViewById(R.id.etKey);
-        EditText etValue = itemView.findViewById(R.id.etValue);
-        TextView btnDelete = itemView.findViewById(R.id.btnDelete);
-
-        etKey.setText(key);
-        etValue.setText(value);
-
-        btnDelete.setOnClickListener(v -> {
-            headersContainer.removeView(itemView);
-            headerViews.remove(itemView);
-        });
-
-        headerViews.add(itemView);
-        headersContainer.addView(itemView);
-    }
-
-    private void saveConfig() {
-        String name = etRequestName.getText().toString().trim();
-        String url = etUrl.getText().toString().trim();
-        String body = etBody.getText().toString().trim();
-        String method = rbGet.isChecked() ? "GET" : "POST";
-
-        if (name.isEmpty()) {
-            Toast.makeText(this, "请输入请求名称", Toast.LENGTH_SHORT).show();
+        // 如果没有配置，添加测试数据
+        if (count == 0) {
+            addTestConfigs();
             return;
         }
 
-        if (url.isEmpty()) {
-            Toast.makeText(this, "请输入请求 URL", Toast.LENGTH_SHORT).show();
-            return;
+        for (int i = 0; i < count; i++) {
+            HttpConfig config = new HttpConfig();
+            config.name = httpPrefs.getString("name_" + i, "");
+            config.url = httpPrefs.getString("url_" + i, "");
+            config.method = httpPrefs.getString("method_" + i, "POST");
+            config.headers = httpPrefs.getString("headers_" + i, "");
+            config.body = httpPrefs.getString("body_" + i, "");
+            config.response = "";
+            configs.add(config);
         }
+    }
 
-        // 收集请求头
-        StringBuilder headers = new StringBuilder();
-        for (View view : headerViews) {
-            EditText etKey = view.findViewById(R.id.etKey);
-            EditText etValue = view.findViewById(R.id.etValue);
-            String key = etKey.getText().toString().trim();
-            String value = etValue.getText().toString().trim();
-            if (!key.isEmpty()) {
-                if (headers.length() > 0) headers.append("\n");
-                headers.append(key).append(": ").append(value);
-            }
-        }
+    private void addTestConfigs() {
+        // 测试配置1：GET 请求
+        HttpConfig config1 = new HttpConfig();
+        config1.name = "获取用户信息";
+        config1.url = "https://jsonplaceholder.typicode.com/users/1";
+        config1.method = "GET";
+        config1.headers = "Content-Type: application/json";
+        config1.body = "";
+        configs.add(config1);
 
-        // 确定保存的索引
-        int saveIndex;
-        if (editIndex >= 0) {
-            saveIndex = editIndex;
-        } else {
-            saveIndex = httpPrefs.getInt("count", 0);
-        }
+        // 测试配置2：POST 请求
+        HttpConfig config2 = new HttpConfig();
+        config2.name = "创建帖子";
+        config2.url = "https://jsonplaceholder.typicode.com/posts";
+        config2.method = "POST";
+        config2.headers = "Content-Type: application/json";
+        config2.body = "{\n  \"title\": \"{{title}}\",\n  \"body\": \"{{body}}\",\n  \"userId\": {{userId}}\n}";
+        configs.add(config2);
 
-        // 保存配置
+        // 测试配置3：带认证的请求
+        HttpConfig config3 = new HttpConfig();
+        config3.name = "获取飞书数据";
+        config3.url = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal";
+        config3.method = "POST";
+        config3.headers = "Content-Type: application/json";
+        config3.body = "{\n  \"app_id\": \"{{app_id}}\",\n  \"app_secret\": \"{{app_secret}}\"\n}";
+        configs.add(config3);
+
+        // 保存测试配置
+        saveConfigs();
+    }
+
+    private void setupRecyclerView() {
+        recyclerView = findViewById(R.id.recyclerView);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        adapter = new HttpAdapter();
+        recyclerView.setAdapter(adapter);
+    }
+
+    private void addNewConfig() {
+        HttpConfig config = new HttpConfig();
+        config.name = "新请求";
+        config.url = "";
+        config.method = "POST";
+        config.headers = "Content-Type: application/json";
+        config.body = "{\n  \"key\": \"{{value}}\"\n}";
+        configs.add(config);
+        saveConfigs();
+        adapter.notifyItemInserted(configs.size() - 1);
+        recyclerView.scrollToPosition(configs.size() - 1);
+    }
+
+    private void saveConfigs() {
         SharedPreferences.Editor editor = httpPrefs.edit();
-        editor.putString("name_" + saveIndex, name);
-        editor.putString("url_" + saveIndex, url);
-        editor.putString("method_" + saveIndex, method);
-        editor.putString("headers_" + saveIndex, headers.toString());
-        editor.putString("body_" + saveIndex, body);
+        editor.putInt("count", configs.size());
 
-        if (editIndex < 0) {
-            editor.putInt("count", saveIndex + 1);
+        for (int i = 0; i < configs.size(); i++) {
+            HttpConfig config = configs.get(i);
+            editor.putString("name_" + i, config.name);
+            editor.putString("url_" + i, config.url);
+            editor.putString("method_" + i, config.method);
+            editor.putString("headers_" + i, config.headers);
+            editor.putString("body_" + i, config.body);
         }
 
         editor.apply();
-
-        Toast.makeText(this, "配置已保存", Toast.LENGTH_SHORT).show();
-        finish();
     }
 
-    private void testRequest() {
-        String url = etUrl.getText().toString().trim();
-        String body = etBody.getText().toString().trim();
-        String method = rbGet.isChecked() ? "GET" : "POST";
+    private void testAllRequests() {
+        Toast.makeText(this, "测试所有请求...", Toast.LENGTH_SHORT).show();
+        for (int i = 0; i < configs.size(); i++) {
+            testRequest(i);
+        }
+    }
 
-        if (url.isEmpty()) {
-            Toast.makeText(this, "请输入请求 URL", Toast.LENGTH_SHORT).show();
+    private void testRequest(int index) {
+        HttpConfig config = configs.get(index);
+        if (config.url.isEmpty()) {
+            config.response = "错误: URL 为空";
+            adapter.notifyItemChanged(index);
             return;
         }
 
-        Toast.makeText(this, "发送测试请求...", Toast.LENGTH_SHORT).show();
-
-        // 收集请求头
-        StringBuilder headers = new StringBuilder();
-        for (View view : headerViews) {
-            EditText etKey = view.findViewById(R.id.etKey);
-            EditText etValue = view.findViewById(R.id.etValue);
-            String key = etKey.getText().toString().trim();
-            String value = etValue.getText().toString().trim();
-            if (!key.isEmpty()) {
-                if (headers.length() > 0) headers.append("\n");
-                headers.append(key).append(": ").append(value);
-            }
-        }
-
-        String finalHeaders = headers.toString();
+        config.response = "请求中...";
+        adapter.notifyItemChanged(index);
 
         new Thread(() -> {
             try {
-                String response = makeRequest(url, method, finalHeaders, body);
-                new Handler(Looper.getMainLooper()).post(() -> {
-                    Toast.makeText(this, "请求成功: " + response.substring(0, Math.min(100, response.length())), Toast.LENGTH_LONG).show();
-                });
+                String response = makeRequest(config.url, config.method, config.headers, config.body);
+                config.response = formatJson(response);
             } catch (Exception e) {
-                new Handler(Looper.getMainLooper()).post(() -> {
-                    Toast.makeText(this, "请求失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                });
+                config.response = "错误: " + e.getMessage();
             }
+
+            runOnUiThread(() -> adapter.notifyItemChanged(index));
         }).start();
     }
 
@@ -221,7 +186,6 @@ public class HttpConfigActivity extends AppCompatActivity {
         conn.setConnectTimeout(10000);
         conn.setReadTimeout(10000);
 
-        // 设置请求头
         if (headers != null && !headers.isEmpty()) {
             String[] lines = headers.split("\n");
             for (String line : lines) {
@@ -232,7 +196,6 @@ public class HttpConfigActivity extends AppCompatActivity {
             }
         }
 
-        // 发送请求体
         if ("POST".equals(method) && body != null && !body.isEmpty()) {
             conn.setDoOutput(true);
             OutputStream os = conn.getOutputStream();
@@ -241,7 +204,6 @@ public class HttpConfigActivity extends AppCompatActivity {
             os.close();
         }
 
-        // 读取响应
         int responseCode = conn.getResponseCode();
         BufferedReader reader;
         if (responseCode >= 200 && responseCode < 300) {
@@ -259,9 +221,131 @@ public class HttpConfigActivity extends AppCompatActivity {
         conn.disconnect();
 
         if (responseCode < 200 || responseCode >= 300) {
-            throw new Exception("HTTP " + responseCode + ": " + response.toString());
+            throw new Exception("HTTP " + responseCode);
         }
 
         return response.toString();
+    }
+
+    private String formatJson(String json) {
+        try {
+            if (json.startsWith("{")) {
+                org.json.JSONObject obj = new org.json.JSONObject(json);
+                return obj.toString(2);
+            } else if (json.startsWith("[")) {
+                org.json.JSONArray arr = new org.json.JSONArray(json);
+                return arr.toString(2);
+            }
+        } catch (Exception e) {
+            // 解析失败
+        }
+        return json;
+    }
+
+    // 配置数据类
+    static class HttpConfig {
+        String name = "";
+        String url = "";
+        String method = "POST";
+        String headers = "";
+        String body = "";
+        String response = "";
+    }
+
+    // RecyclerView Adapter
+    class HttpAdapter extends RecyclerView.Adapter<HttpAdapter.ViewHolder> {
+
+        @Override
+        public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_http_config, parent, false);
+            return new ViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(ViewHolder holder, int position) {
+            HttpConfig config = configs.get(position);
+            holder.bind(config, position);
+        }
+
+        @Override
+        public int getItemCount() {
+            return configs.size();
+        }
+
+        class ViewHolder extends RecyclerView.ViewHolder {
+            EditText etName, etUrl, etHeaders, etBody;
+            RadioGroup rgMethod;
+            RadioButton rbGet, rbPost;
+            Button btnTest, btnSave, btnDelete;
+            TextView tvResponse;
+
+            ViewHolder(View itemView) {
+                super(itemView);
+                etName = itemView.findViewById(R.id.etName);
+                etUrl = itemView.findViewById(R.id.etUrl);
+                etHeaders = itemView.findViewById(R.id.etHeaders);
+                etBody = itemView.findViewById(R.id.etBody);
+                rgMethod = itemView.findViewById(R.id.rgMethod);
+                rbGet = itemView.findViewById(R.id.rbGet);
+                rbPost = itemView.findViewById(R.id.rbPost);
+                btnTest = itemView.findViewById(R.id.btnTest);
+                btnSave = itemView.findViewById(R.id.btnSave);
+                btnDelete = itemView.findViewById(R.id.btnDelete);
+                tvResponse = itemView.findViewById(R.id.tvResponse);
+            }
+
+            void bind(HttpConfig config, int position) {
+                etName.setText(config.name);
+                etUrl.setText(config.url);
+                etHeaders.setText(config.headers);
+                etBody.setText(config.body);
+                tvResponse.setText(config.response);
+
+                if ("GET".equals(config.method)) {
+                    rbGet.setChecked(true);
+                } else {
+                    rbPost.setChecked(true);
+                }
+
+                // 测试按钮
+                btnTest.setOnClickListener(v -> {
+                    updateConfigFromView(config, position);
+                    testRequest(position);
+                });
+
+                // 保存按钮
+                btnSave.setOnClickListener(v -> {
+                    updateConfigFromView(config, position);
+                    saveConfigs();
+                    Toast.makeText(itemView.getContext(), "已保存", Toast.LENGTH_SHORT).show();
+                });
+
+                // 删除按钮
+                btnDelete.setOnClickListener(v -> {
+                    configs.remove(position);
+                    saveConfigs();
+                    notifyItemRemoved(position);
+                    notifyItemRangeChanged(position, configs.size());
+                });
+
+                // 响应颜色
+                if (config.response.startsWith("错误")) {
+                    tvResponse.setTextColor(Color.parseColor("#F44336"));
+                } else if (config.response.equals("请求中...")) {
+                    tvResponse.setTextColor(Color.parseColor("#FF9800"));
+                } else {
+                    tvResponse.setTextColor(Color.parseColor("#4CAF50"));
+                }
+            }
+
+            void updateConfigFromView(HttpConfig config, int position) {
+                config.name = etName.getText().toString().trim();
+                config.url = etUrl.getText().toString().trim();
+                config.method = rbGet.isChecked() ? "GET" : "POST";
+                config.headers = etHeaders.getText().toString().trim();
+                config.body = etBody.getText().toString().trim();
+            }
+        }
     }
 }
