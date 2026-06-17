@@ -97,13 +97,6 @@ public class SettingsActivity extends AppCompatActivity {
             applyDarkTheme();
         }
 
-        // 网页暗色开关：只有 App 暗色开启时才可用
-        View cssRow = (View) switchNightModeCSS.getParent();
-        if (!isNightMode) {
-            cssRow.setAlpha(0.5f);
-            switchNightModeCSS.setEnabled(false);
-        }
-
         setupCache();
         setupExportImport();
 

@@ -264,12 +264,11 @@ public class MainActivity extends AppCompatActivity {
             LinearLayout.LayoutParams tabParams = new LinearLayout.LayoutParams(
                     0, LinearLayout.LayoutParams.MATCH_PARENT, 1);
             tab.setLayoutParams(tabParams);
-            tab.setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4));
 
             // 选项卡图标
             TextView icon = new TextView(this);
             icon.setText(tabIcons[i]);
-            icon.setTextSize(24);
+            icon.setTextSize(22);
             icon.setGravity(Gravity.CENTER);
             LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -279,14 +278,13 @@ public class MainActivity extends AppCompatActivity {
             // 选项卡文字
             TextView text = new TextView(this);
             text.setText(tabTitles[i]);
-            text.setTextSize(11);
+            text.setTextSize(10);
             text.setGravity(Gravity.CENTER);
-            text.setTextColor(i == 0 ? Color.parseColor("#1565C0") : Color.parseColor("#757575"));
-            text.setTypeface(null, i == 0 ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
+            text.setTextColor(i == 0 ? Color.parseColor("#1976D2") : Color.parseColor("#666666"));
             LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT);
-            textParams.topMargin = dpToPx(3);
+            textParams.topMargin = dpToPx(2);
             text.setLayoutParams(textParams);
 
             tab.addView(icon);
