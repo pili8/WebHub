@@ -97,6 +97,10 @@ public class MainActivity extends AppCompatActivity {
     private String[] tabActions = new String[MAX_TABS];
     private List<List<LinkItem>> tabLinks = new ArrayList<>();
 
+    // 选项卡状态缓存
+    private String[] tabUrls = new String[MAX_TABS]; // 每个选项卡当前URL
+    private boolean[] tabLoaded = new boolean[MAX_TABS]; // 是否已加载过
+
     private SharedPreferences prefs;
     private ValueCallback<Uri[]> filePathCallback;
 
@@ -964,10 +968,39 @@ public class MainActivity extends AppCompatActivity {
         List<LinkItem> links = tabLinks.get(currentTab);
         if (currentLinkIndex < links.size() && webView != null) {
             String url = links.get(currentLinkIndex).url;
-            // 检查是否需要加载（空白或不同URL）
+
+            // 保存当前选项卡状态
+            saveCurrentTabState();
+
+            // 检查是否是同一个URL
             String currentUrl = webView.getUrl();
-            if (currentUrl == null || !currentUrl.equals(url)) {
+            if (currentUrl != null && currentUrl.equals(url)) {
+                // 同一个URL，后台刷新
+                webView.reload();
+            } else if (tabUrls[currentTab] != null && tabUrls[currentTab].equals(url) && tabLoaded[currentTab]) {
+                // 已加载过的选项卡，先显示缓存，后台刷新
                 webView.loadUrl(url);
+                webView.postDelayed(() -> {
+                    if (webView != null) {
+                        webView.reload();
+                    }
+                }, 500);
+            } else {
+                // 新URL，直接加载
+                webView.loadUrl(url);
+                tabLoaded[currentTab] = true;
+            }
+
+            // 保存URL
+            tabUrls[currentTab] = url;
+        }
+    }
+
+    private void saveCurrentTabState() {
+        if (webView != null && currentTab >= 0 && currentTab < MAX_TABS) {
+            String url = webView.getUrl();
+            if (url != null) {
+                tabUrls[currentTab] = url;
             }
         }
     }
