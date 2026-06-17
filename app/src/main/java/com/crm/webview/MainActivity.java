@@ -58,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
 
     // 多 WebView（每个选项卡独立）
     private WebView[] webViews = new WebView[MAX_TABS];
+    private boolean[] tabLoaded = new boolean[MAX_TABS]; // 是否已加载过
     private List<LinearLayout> tabViews = new ArrayList<>();
     private List<TextView> tabIconViews = new ArrayList<>();
     private List<TextView> tabTextViews = new ArrayList<>();
@@ -900,8 +901,11 @@ public class MainActivity extends AppCompatActivity {
             newWebView.setVisibility(View.VISIBLE);
         }
 
-        // 加载链接（按需加载）
-        loadCurrentLink();
+        // 只有第一次访问才加载
+        if (!tabLoaded[index]) {
+            loadCurrentLink();
+            tabLoaded[index] = true;
+        }
 
         updateDropdown();
     }
