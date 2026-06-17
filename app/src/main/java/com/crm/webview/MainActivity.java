@@ -515,10 +515,12 @@ public class MainActivity extends AppCompatActivity {
             webViews[i] = null;
         }
 
-        // 只创建第一个 WebView
-        createWebView(0);
+        // 创建选项卡（HTTP + Web）
+        int totalTabs = (isHttpTab ? 1 : 0) + tabCount;
+        if (totalTabs > MAX_TABS) totalTabs = MAX_TABS;
 
-        for (int i = 0; i < tabCount; i++) {
+        for (int i = 0; i < totalTabs; i++) {
+            final int tabIndex = i;
 
             // 创建选项卡
             LinearLayout tab = new LinearLayout(this);
@@ -528,45 +530,60 @@ public class MainActivity extends AppCompatActivity {
                     0, LinearLayout.LayoutParams.MATCH_PARENT, 1);
             tab.setLayoutParams(tabParams);
 
+            // 选项卡图标和标题
+            String icon, title;
+            if (isHttpTab && i == 0) {
+                // HTTP 选项卡
+                icon = "📡";
+                title = "HTTP";
+            } else {
+                // Web 选项卡
+                int webIndex = isHttpTab ? i - 1 : i;
+                icon = tabIcons[webIndex];
+                title = tabTitles[webIndex];
+            }
+
             // 选项卡图标
-            TextView icon = new TextView(this);
-            icon.setText(tabIcons[i]);
-            icon.setTextSize(22);
-            icon.setGravity(Gravity.CENTER);
+            TextView iconView = new TextView(this);
+            iconView.setText(icon);
+            iconView.setTextSize(22);
+            iconView.setGravity(Gravity.CENTER);
             LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT);
-            icon.setLayoutParams(iconParams);
+            iconView.setLayoutParams(iconParams);
 
             // 选项卡文字
-            TextView text = new TextView(this);
-            text.setText(tabTitles[i]);
-            text.setTextSize(10);
-            text.setGravity(Gravity.CENTER);
-            text.setTextColor(i == 0 ? Color.parseColor("#1976D2") : Color.parseColor("#666666"));
+            TextView textView = new TextView(this);
+            textView.setText(title);
+            textView.setTextSize(10);
+            textView.setGravity(Gravity.CENTER);
+            textView.setTextColor(i == 0 ? Color.parseColor("#1976D2") : Color.parseColor("#666666"));
             LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT);
             textParams.topMargin = dpToPx(2);
-            text.setLayoutParams(textParams);
+            textView.setLayoutParams(textParams);
 
-            tab.addView(icon);
-            tab.addView(text);
+            tab.addView(iconView);
+            tab.addView(textView);
             tabContainer.addView(tab);
 
             tabViews.add(tab);
-            tabIconViews.add(icon);
-            tabTextViews.add(text);
+            tabIconViews.add(iconView);
+            tabTextViews.add(textView);
 
             // 点击切换选项卡
-            final int index = i;
-            tab.setOnClickListener(v -> switchTab(index));
+            tab.setOnClickListener(v -> switchTab(tabIndex));
 
-            // 长按显示子链接菜单
-            tab.setOnLongClickListener(v -> {
-                showBottomMenu(index);
-                return true;
-            });
+            // 长按显示子链接菜单（仅Web选项卡）
+            if (!(isHttpTab && tabIndex == 0)) {
+                tab.setOnLongClickListener(v -> {
+                    int webIndex = isHttpTab ? tabIndex - 1 : tabIndex;
+                    showBottomMenu(webIndex);
+                    return true;
+                });
+            }
         }
     }
 
@@ -1131,7 +1148,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void switchTab(int index) {
-        if (index < 0 || index >= tabCount) return;
+        int totalTabs = (isHttpTab ? 1 : 0) + tabCount;
+        if (index < 0 || index >= totalTabs) return;
 
         // 关闭底部菜单
         hideBottomMenu();
@@ -1162,32 +1180,32 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // 判断是否是 HTTP 请求选项卡（第一个选项卡）
-        if (index == 0 && isHttpTab) {
+        if (isHttpTab && index == 0) {
             httpRequestPage.setVisibility(View.VISIBLE);
             loadHttpCards();
         } else {
+            // Web 选项卡
+            int webIndex = isHttpTab ? index - 1 : index;
+
             // 创建 WebView（如果不存在）
-            createWebView(index);
+            createWebView(webIndex);
 
             // 显示当前 WebView
-            WebView newWebView = getCurrentWebView();
+            WebView newWebView = webViews[webIndex];
             if (newWebView != null) {
                 newWebView.setVisibility(View.VISIBLE);
-                // 恢复 WebView（可能被系统暂停）
                 newWebView.onResume();
             }
 
-            // 检查 WebView 是否有效（被系统回收后可能白屏）
-            if (tabLoaded[index] && newWebView != null) {
+            // 检查 WebView 是否有效
+            if (tabLoaded[webIndex] && newWebView != null) {
                 String url = newWebView.getUrl();
                 if (url == null || url.equals("about:blank")) {
-                    // WebView 被回收，重新加载
                     loadCurrentLink();
                 }
-            } else if (!tabLoaded[index]) {
-                // 第一次访问
+            } else if (!tabLoaded[webIndex]) {
                 loadCurrentLink();
-                tabLoaded[index] = true;
+                tabLoaded[webIndex] = true;
             }
         }
 
