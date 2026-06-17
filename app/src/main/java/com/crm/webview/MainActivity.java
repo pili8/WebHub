@@ -1404,12 +1404,14 @@ public class MainActivity extends AppCompatActivity {
             // 关闭底部菜单
             if (isBottomMenuOpen) {
                 hideBottomMenu();
+                Toast.makeText(this, "关闭菜单", Toast.LENGTH_SHORT).show();
                 return true;
             }
 
             // 退出查看模式
             if (isInspectMode) {
                 toggleInspectMode();
+                Toast.makeText(this, "退出查找元素模式", Toast.LENGTH_SHORT).show();
                 return true;
             }
 
@@ -1417,6 +1419,7 @@ public class MainActivity extends AppCompatActivity {
             if (isDropdownOpen) {
                 isDropdownOpen = false;
                 updateDropdown();
+                Toast.makeText(this, "关闭下拉菜单", Toast.LENGTH_SHORT).show();
                 return true;
             }
 
@@ -1426,16 +1429,19 @@ public class MainActivity extends AppCompatActivity {
             String currentUrl = wv != null ? wv.getUrl() : null;
             if (kdocsOptimize && isKdocsUrl(currentUrl)) {
                 tryClosePopup();
+                Toast.makeText(this, "关闭弹窗", Toast.LENGTH_SHORT).show();
                 return true;
             }
 
             // 普通返回逻辑
             if (wv != null && wv.canGoBack()) {
                 wv.goBack();
+                Toast.makeText(this, "返回上一页", Toast.LENGTH_SHORT).show();
                 return true;
             }
 
-            // 没有历史记录，不做任何操作
+            // 没有历史记录
+            Toast.makeText(this, "再按一次退出", Toast.LENGTH_SHORT).show();
             return true;
         }
         return super.onKeyDown(keyCode, event);
