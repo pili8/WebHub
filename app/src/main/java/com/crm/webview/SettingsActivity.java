@@ -109,8 +109,6 @@ public class SettingsActivity extends AppCompatActivity {
         loadConfig();
         buildUI();
     }
-        }
-    }
 
     private void applyDarkTheme() {
         // 设置页面背景
