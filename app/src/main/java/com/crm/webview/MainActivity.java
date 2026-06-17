@@ -135,6 +135,11 @@ public class MainActivity extends AppCompatActivity {
         if (currentTab < webViews.size()) {
             webViews.get(currentTab).onResume();
         }
+
+        // 从设置页面返回时，重新加载夜间模式设置
+        isNightMode = prefs.getBoolean("night_mode", false);
+        isNightModeCSS = prefs.getBoolean("night_mode_css", false);
+        applyAppNightMode();
     }
 
     private void initViews() {
@@ -158,7 +163,7 @@ public class MainActivity extends AppCompatActivity {
 
         // 夜间模式状态
         isNightMode = prefs.getBoolean("night_mode", false);
-        isNightModeCSS = prefs.getBoolean("night_mode_css", true);
+        isNightModeCSS = prefs.getBoolean("night_mode_css", false);
     }
 
     private void loadConfig() {
@@ -309,10 +314,6 @@ public class MainActivity extends AppCompatActivity {
         btnDropdown.setOnClickListener(v -> toggleDropdown());
         btnMenu.setOnClickListener(v -> showPopupMenu());
 
-        // 搜索按钮
-        ImageView btnSearch = findViewById(R.id.btnSearch);
-        btnSearch.setOnClickListener(v -> toggleSearch());
-
         // 搜索取消按钮
         TextView btnSearchCancel = findViewById(R.id.btnSearchCancel);
         btnSearchCancel.setOnClickListener(v -> closeSearch());
@@ -329,19 +330,24 @@ public class MainActivity extends AppCompatActivity {
 
     private void showPopupMenu() {
         android.widget.PopupMenu popup = new android.widget.PopupMenu(this, btnMenu);
-        popup.getMenu().add(0, 1, 0, isInspectMode ? "退出查找元素" : "🔍 查找元素");
-        popup.getMenu().add(0, 2, 0, isNightMode ? "☀️ 日间模式" : "🌙 夜间模式");
-        popup.getMenu().add(0, 3, 0, "⚙️ 设置");
+        popup.getMenu().add(0, 1, 0, "🔍 搜索");
+        popup.getMenu().add(0, 2, 0, isInspectMode ? "退出查找元素" : "🎯 查找元素");
+        popup.getMenu().add(0, 3, 0, isNightMode ? "☀️ 日间模式" : "🌙 夜间模式");
+        popup.getMenu().add(0, 4, 0, "⚙️ 设置");
 
         popup.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == 1) {
-                toggleInspectMode();
+                toggleSearch();
                 return true;
             } else if (item.getItemId() == 2) {
-                toggleNightMode();
+                toggleInspectMode();
                 return true;
             } else if (item.getItemId() == 3) {
+                toggleNightMode();
+                return true;
+            } else if (item.getItemId() == 4) {
                 Intent intent = new Intent(this, SettingsActivity.class);
+                intent.putExtra("night_mode", isNightMode);
                 intent.putExtra("night_mode", isNightMode);
                 startActivity(intent);
                 return true;
@@ -606,24 +612,29 @@ public class MainActivity extends AppCompatActivity {
     // 应用 App 暗色
     private void applyAppNightMode() {
         if (isNightMode) {
-            // App 界面变暗
+            // 标题栏变暗
+            findViewById(R.id.toolbar).setBackgroundColor(Color.parseColor("#1E1E1E"));
+            // 底部选项卡变暗
             tabContainer.setBackgroundColor(Color.parseColor("#1E1E1E"));
             bottomMenuContainer.setBackgroundColor(Color.parseColor("#1E1E1E"));
+            // WebView 背景变暗
             webViewContainer.setBackgroundColor(Color.parseColor("#121212"));
 
-            // 如果网页暗色开启，应用 CSS
+            // 如果网页暗色开关开启，注入 CSS
             if (isNightModeCSS) {
                 for (WebView webView : webViews) {
                     injectNightModeCSS(webView);
                 }
             }
         } else {
-            // App 界面恢复正常
+            // 标题栏恢复
+            findViewById(R.id.toolbar).setBackgroundColor(Color.parseColor("#1976D2"));
+            // 底部恢复
             tabContainer.setBackgroundColor(Color.WHITE);
             bottomMenuContainer.setBackgroundColor(Color.WHITE);
             webViewContainer.setBackgroundColor(Color.WHITE);
 
-            // 关闭网页暗色 CSS
+            // 移除网页暗色 CSS
             for (WebView webView : webViews) {
                 removeNightModeCSS(webView);
             }

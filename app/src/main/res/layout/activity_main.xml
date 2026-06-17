@@ -7,6 +7,7 @@
 
     <!-- 顶部标题栏 -->
     <LinearLayout
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:background="#1976D2"
@@ -46,16 +47,6 @@
                 android:visibility="gone" />
 
         </LinearLayout>
-
-        <ImageView
-            android:id="@+id/btnSearch"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:padding="10dp"
-            android:src="@android:drawable/ic_menu_search"
-            android:scaleType="centerInside"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="搜索" />
 
         <ImageView
             android:id="@+id/btnRefresh"
