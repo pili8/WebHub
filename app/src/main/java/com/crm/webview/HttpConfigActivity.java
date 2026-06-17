@@ -29,16 +29,18 @@ public class HttpConfigActivity extends AppCompatActivity {
     private RadioGroup rgMethod;
     private RadioButton rbGet, rbPost;
     private LinearLayout headersContainer;
-    private SharedPreferences prefs;
+    private SharedPreferences httpPrefs;
 
     private List<View> headerViews = new ArrayList<>();
+    private int editIndex = -1; // -1 表示新建，>= 0 表示编辑
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_http_config);
 
-        prefs = getSharedPreferences("http_config", MODE_PRIVATE);
+        httpPrefs = getSharedPreferences("http_configs", MODE_PRIVATE);
+        editIndex = getIntent().getIntExtra("edit_index", -1);
 
         initViews();
         loadConfig();
@@ -63,32 +65,38 @@ public class HttpConfigActivity extends AppCompatActivity {
     }
 
     private void loadConfig() {
-        etRequestName.setText(prefs.getString("request_name", "HTTP 请求"));
-        etUrl.setText(prefs.getString("request_url", ""));
-        etBody.setText(prefs.getString("request_body", ""));
+        if (editIndex >= 0) {
+            // 编辑模式
+            etRequestName.setText(httpPrefs.getString("name_" + editIndex, ""));
+            etUrl.setText(httpPrefs.getString("url_" + editIndex, ""));
+            etBody.setText(httpPrefs.getString("body_" + editIndex, ""));
 
-        String method = prefs.getString("request_method", "POST");
-        if ("GET".equals(method)) {
-            rbGet.setChecked(true);
-        } else {
-            rbPost.setChecked(true);
-        }
+            String method = httpPrefs.getString("method_" + editIndex, "POST");
+            if ("GET".equals(method)) {
+                rbGet.setChecked(true);
+            } else {
+                rbPost.setChecked(true);
+            }
 
-        // 加载请求头
-        String headers = prefs.getString("request_headers", "");
-        headersContainer.removeAllViews();
-        headerViews.clear();
+            // 加载请求头
+            String headers = httpPrefs.getString("headers_" + editIndex, "");
+            headersContainer.removeAllViews();
+            headerViews.clear();
 
-        if (headers.isEmpty()) {
-            addHeader("Content-Type", "application/json");
-        } else {
-            String[] lines = headers.split("\n");
-            for (String line : lines) {
-                String[] parts = line.split(":", 2);
-                if (parts.length == 2) {
-                    addHeader(parts[0].trim(), parts[1].trim());
+            if (headers.isEmpty()) {
+                addHeader("Content-Type", "application/json");
+            } else {
+                String[] lines = headers.split("\n");
+                for (String line : lines) {
+                    String[] parts = line.split(":", 2);
+                    if (parts.length == 2) {
+                        addHeader(parts[0].trim(), parts[1].trim());
+                    }
                 }
             }
+        } else {
+            // 新建模式
+            addHeader("Content-Type", "application/json");
         }
     }
 
@@ -139,13 +147,26 @@ public class HttpConfigActivity extends AppCompatActivity {
             }
         }
 
+        // 确定保存的索引
+        int saveIndex;
+        if (editIndex >= 0) {
+            saveIndex = editIndex;
+        } else {
+            saveIndex = httpPrefs.getInt("count", 0);
+        }
+
         // 保存配置
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.putString("request_name", name);
-        editor.putString("request_url", url);
-        editor.putString("request_method", method);
-        editor.putString("request_headers", headers.toString());
-        editor.putString("request_body", body);
+        SharedPreferences.Editor editor = httpPrefs.edit();
+        editor.putString("name_" + saveIndex, name);
+        editor.putString("url_" + saveIndex, url);
+        editor.putString("method_" + saveIndex, method);
+        editor.putString("headers_" + saveIndex, headers.toString());
+        editor.putString("body_" + saveIndex, body);
+
+        if (editIndex < 0) {
+            editor.putInt("count", saveIndex + 1);
+        }
+
         editor.apply();
 
         Toast.makeText(this, "配置已保存", Toast.LENGTH_SHORT).show();
