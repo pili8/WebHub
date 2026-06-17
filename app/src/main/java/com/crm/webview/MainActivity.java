@@ -213,6 +213,9 @@ public class MainActivity extends AppCompatActivity {
         btnAddHttp.setOnClickListener(v -> {
             startActivity(new Intent(this, HttpConfigActivity.class));
         });
+
+        // 加载卡片
+        loadHttpCards();
     }
 
     private void loadHttpCards() {
