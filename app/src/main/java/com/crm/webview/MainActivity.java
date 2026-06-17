@@ -1046,10 +1046,9 @@ public class MainActivity extends AppCompatActivity {
                 if (currentTab < webViews.size() && view == webViews.get(currentTab)) {
                     progressBar.setVisibility(View.GONE);
                 }
-                CookieManager.getInstance().flush();
+                // 执行自定义操作
                 executeCustomScript(view);
-
-                // 网页暗色（从属于 App 暗色模式）
+                // 夜间模式 CSS
                 if (isNightMode && isNightModeCSS) {
                     injectNightModeCSS(view);
                 }
