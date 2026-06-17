@@ -91,6 +91,19 @@ public class SettingsActivity extends AppCompatActivity {
         switchKdocsOptimize.setChecked(prefs.getBoolean("kdocs_optimize", true));
         switchNightModeCSS.setChecked(prefs.getBoolean("night_mode_css", false));
 
+        // 检查是否夜间模式
+        boolean isNightMode = prefs.getBoolean("night_mode", false);
+        if (isNightMode) {
+            applyDarkTheme();
+        }
+
+        // 网页暗色开关：只有 App 暗色开启时才可用
+        View cssRow = (View) switchNightModeCSS.getParent();
+        if (!isNightMode) {
+            cssRow.setAlpha(0.5f);
+            switchNightModeCSS.setEnabled(false);
+        }
+
         setupCache();
         setupExportImport();
 
@@ -102,6 +115,15 @@ public class SettingsActivity extends AppCompatActivity {
 
         loadConfig();
         buildUI();
+    }
+
+    private void applyDarkTheme() {
+        // 设置页面背景
+        View rootView = findViewById(android.R.id.content);
+        rootView.setBackgroundColor(Color.parseColor("#121212"));
+
+        // 标题栏
+        findViewById(R.id.settingsToolbar).setBackgroundColor(Color.parseColor("#1E1E1E"));
     }
 
     private void setupCache() {

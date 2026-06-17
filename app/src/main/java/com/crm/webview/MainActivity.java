@@ -330,7 +330,7 @@ public class MainActivity extends AppCompatActivity {
     private void showPopupMenu() {
         android.widget.PopupMenu popup = new android.widget.PopupMenu(this, btnMenu);
         popup.getMenu().add(0, 1, 0, isInspectMode ? "退出查找元素" : "🔍 查找元素");
-        popup.getMenu().add(0, 2, 0, "🌙 " + (isNightMode ? "日间模式" : "夜间模式"));
+        popup.getMenu().add(0, 2, 0, isNightMode ? "☀️ 日间模式" : "🌙 夜间模式");
         popup.getMenu().add(0, 3, 0, "⚙️ 设置");
 
         popup.setOnMenuItemClickListener(item -> {
@@ -341,7 +341,9 @@ public class MainActivity extends AppCompatActivity {
                 toggleNightMode();
                 return true;
             } else if (item.getItemId() == 3) {
-                startActivity(new Intent(this, SettingsActivity.class));
+                Intent intent = new Intent(this, SettingsActivity.class);
+                intent.putExtra("night_mode", isNightMode);
+                startActivity(intent);
                 return true;
             }
             return false;
@@ -593,48 +595,35 @@ public class MainActivity extends AppCompatActivity {
 
     // ========== 夜间模式 ==========
 
-    // App 暗色模式
+    // App 暗色模式（主开关）
     private void toggleNightMode() {
         isNightMode = !isNightMode;
         prefs.edit().putBoolean("night_mode", isNightMode).apply();
         applyAppNightMode();
-        Toast.makeText(this, isNightMode ? "App暗色已开启" : "App暗色已关闭", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, isNightMode ? "夜间模式已开启" : "夜间模式已关闭", Toast.LENGTH_SHORT).show();
     }
 
-    // 网页暗色模式
-    private void toggleNightModeCSS() {
-        isNightModeCSS = !isNightModeCSS;
-        prefs.edit().putBoolean("night_mode_css", isNightModeCSS).apply();
-        applyWebNightMode();
-        Toast.makeText(this, isNightModeCSS ? "网页暗色已开启" : "网页暗色已关闭", Toast.LENGTH_SHORT).show();
-    }
-
-    // 应用 App 暗色（只改 App 界面）
+    // 应用 App 暗色
     private void applyAppNightMode() {
         if (isNightMode) {
-            // 顶部标题栏
-            findViewById(R.id.searchBar).setBackgroundColor(Color.parseColor("#1E1E1E"));
-            // 底部选项卡
+            // App 界面变暗
             tabContainer.setBackgroundColor(Color.parseColor("#1E1E1E"));
-            // 底部菜单
             bottomMenuContainer.setBackgroundColor(Color.parseColor("#1E1E1E"));
-            // 背景
             webViewContainer.setBackgroundColor(Color.parseColor("#121212"));
+
+            // 如果网页暗色开启，应用 CSS
+            if (isNightModeCSS) {
+                for (WebView webView : webViews) {
+                    injectNightModeCSS(webView);
+                }
+            }
         } else {
-            // 恢复正常
+            // App 界面恢复正常
             tabContainer.setBackgroundColor(Color.WHITE);
             bottomMenuContainer.setBackgroundColor(Color.WHITE);
             webViewContainer.setBackgroundColor(Color.WHITE);
-        }
-    }
 
-    // 应用网页暗色（只改网页 CSS）
-    private void applyWebNightMode() {
-        if (isNightModeCSS) {
-            for (WebView webView : webViews) {
-                injectNightModeCSS(webView);
-            }
-        } else {
+            // 关闭网页暗色 CSS
             for (WebView webView : webViews) {
                 removeNightModeCSS(webView);
             }
@@ -979,8 +968,8 @@ public class MainActivity extends AppCompatActivity {
                 CookieManager.getInstance().flush();
                 executeCustomScript(view);
 
-                // 网页暗色（独立开关）
-                if (isNightModeCSS) {
+                // 网页暗色（从属于 App 暗色模式）
+                if (isNightMode && isNightModeCSS) {
                     injectNightModeCSS(view);
                 }
             }

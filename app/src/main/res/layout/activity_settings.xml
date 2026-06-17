@@ -7,6 +7,7 @@
 
     <!-- 顶部标题栏 -->
     <LinearLayout
+        android:id="@+id/settingsToolbar"
         android:layout_width="match_parent"
         android:layout_height="50dp"
         android:background="#1976D2"
