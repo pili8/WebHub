@@ -1365,10 +1365,9 @@ public class MainActivity extends AppCompatActivity {
                 if (actions != null && !actions.isEmpty()) {
                     String js = buildScriptFromActions(actions);
                     if (!js.isEmpty()) {
-                        // 金山文档是SPA，需要更长延迟等待渲染完成
                         webView.postDelayed(() -> {
                             webView.evaluateJavascript(js, null);
-                        }, 2000);
+                        }, 500);
                     }
                 }
             }
