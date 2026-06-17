@@ -55,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
     private FrameLayout webViewContainer;
     private LinearLayout tabContainer;
     private LinearLayout bottomMenuContainer;
+    private androidx.swiperefreshlayout.widget.SwipeRefreshLayout swipeRefresh;
 
     // 多 WebView（每个选项卡独立）
     private WebView[] webViews = new WebView[MAX_TABS];
@@ -167,6 +168,16 @@ public class MainActivity extends AppCompatActivity {
         dropdownList = findViewById(R.id.dropdownList);
         inspectBanner = findViewById(R.id.inspectBanner);
         btnRefresh = findViewById(R.id.btnRefresh);
+
+        // 下拉刷新
+        swipeRefresh = findViewById(R.id.swipeRefresh);
+        swipeRefresh.setColorSchemeColors(Color.parseColor("#1976D2"));
+        swipeRefresh.setOnRefreshListener(() -> {
+            WebView wv = getCurrentWebView();
+            if (wv != null) {
+                wv.reload();
+            }
+        });
 
         // 搜索相关
         searchBar = findViewById(R.id.searchBar);
@@ -1090,9 +1101,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                if (webView != null && view == webView) {
-                    progressBar.setVisibility(View.GONE);
+                // 停止下拉刷新动画
+                if (swipeRefresh != null) {
+                    swipeRefresh.setRefreshing(false);
                 }
+                progressBar.setVisibility(View.GONE);
                 // 执行自定义操作
                 executeCustomScript(view);
                 // 夜间模式 CSS
