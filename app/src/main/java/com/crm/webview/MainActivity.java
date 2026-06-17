@@ -154,13 +154,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        // 清理定时器
-        autoRefreshHandler.removeCallbacks(autoRefreshRunnable);
-    }
-
     private void initViews() {
         webViewContainer = findViewById(R.id.webViewContainer);
         tabContainer = findViewById(R.id.tabContainer);
