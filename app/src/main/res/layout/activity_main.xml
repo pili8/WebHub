@@ -9,13 +9,13 @@
     <LinearLayout
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:background="#1976D2"
+        android:layout_height="52dp"
+        android:background="#1565C0"
         android:elevation="4dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingStart="16dp"
-        android:paddingEnd="4dp">
+        android:paddingEnd="8dp">
 
         <LinearLayout
             android:id="@+id/btnDropdown"
@@ -31,9 +31,9 @@
                 android:layout_height="wrap_content"
                 android:text="WebHub"
                 android:textColor="@android:color/white"
-                android:textSize="17sp"
+                android:textSize="18sp"
                 android:textStyle="bold"
-                android:maxWidth="180dp"
+                android:maxWidth="200dp"
                 android:ellipsize="end"
                 android:singleLine="true" />
 
@@ -42,16 +42,26 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text=" ▼"
-                android:textColor="#B3FFFFFF"
-                android:textSize="12sp"
+                android:textColor="#80FFFFFF"
+                android:textSize="11sp"
                 android:visibility="gone" />
 
         </LinearLayout>
 
+        <!-- 定时刷新指示器 -->
+        <TextView
+            android:id="@+id/tvAutoRefresh"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔄"
+            android:textSize="14sp"
+            android:visibility="gone"
+            android:layout_marginEnd="4dp" />
+
         <ImageView
             android:id="@+id/btnRefresh"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
             android:padding="10dp"
             android:src="@drawable/ic_refresh"
             android:scaleType="centerInside"
@@ -60,11 +70,11 @@
 
         <TextView
             android:id="@+id/btnMenu"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
             android:gravity="center"
             android:text="⋮"
-            android:textSize="20sp"
+            android:textSize="22sp"
             android:textColor="@android:color/white"
             android:background="?attr/selectableItemBackgroundBorderless" />
 
@@ -208,9 +218,11 @@
     <LinearLayout
         android:id="@+id/tabContainer"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:background="#FFFFFF"
+        android:layout_height="60dp"
+        android:background="#FAFAFA"
         android:elevation="8dp"
-        android:orientation="horizontal" />
+        android:orientation="horizontal"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp" />
 
 </LinearLayout>

@@ -78,6 +78,12 @@ public class MainActivity extends AppCompatActivity {
     private boolean isNightMode = false;
     private boolean isNightModeCSS = true; // 网页也应用夜间模式
 
+    // 定时刷新相关
+    private android.os.Handler autoRefreshHandler = new android.os.Handler();
+    private Runnable autoRefreshRunnable;
+    private int autoRefreshInterval = 0; // 0=关闭, 30=30秒, 60=1分钟, 300=5分钟
+    private TextView tvAutoRefresh;
+
     // 搜索相关
     private LinearLayout searchBar;
     private EditText etSearch;
@@ -140,6 +146,19 @@ public class MainActivity extends AppCompatActivity {
         isNightMode = prefs.getBoolean("night_mode", false);
         isNightModeCSS = prefs.getBoolean("night_mode_css", false);
         applyAppNightMode();
+
+        // 恢复定时刷新
+        autoRefreshInterval = prefs.getInt("auto_refresh_interval", 0);
+        if (autoRefreshInterval > 0) {
+            setAutoRefresh(autoRefreshInterval);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // 清理定时器
+        autoRefreshHandler.removeCallbacks(autoRefreshRunnable);
     }
 
     private void initViews() {
@@ -164,6 +183,11 @@ public class MainActivity extends AppCompatActivity {
         // 夜间模式状态
         isNightMode = prefs.getBoolean("night_mode", false);
         isNightModeCSS = prefs.getBoolean("night_mode_css", false);
+
+        // 定时刷新
+        tvAutoRefresh = findViewById(R.id.tvAutoRefresh);
+        autoRefreshInterval = prefs.getInt("auto_refresh_interval", 0);
+        updateAutoRefreshIndicator();
     }
 
     private void loadConfig() {
@@ -247,11 +271,12 @@ public class MainActivity extends AppCompatActivity {
             LinearLayout.LayoutParams tabParams = new LinearLayout.LayoutParams(
                     0, LinearLayout.LayoutParams.MATCH_PARENT, 1);
             tab.setLayoutParams(tabParams);
+            tab.setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4));
 
             // 选项卡图标
             TextView icon = new TextView(this);
             icon.setText(tabIcons[i]);
-            icon.setTextSize(22);
+            icon.setTextSize(24);
             icon.setGravity(Gravity.CENTER);
             LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -261,13 +286,14 @@ public class MainActivity extends AppCompatActivity {
             // 选项卡文字
             TextView text = new TextView(this);
             text.setText(tabTitles[i]);
-            text.setTextSize(10);
+            text.setTextSize(11);
             text.setGravity(Gravity.CENTER);
-            text.setTextColor(i == 0 ? Color.parseColor("#1976D2") : Color.parseColor("#666666"));
+            text.setTextColor(i == 0 ? Color.parseColor("#1565C0") : Color.parseColor("#757575"));
+            text.setTypeface(null, i == 0 ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
             LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT);
-            textParams.topMargin = dpToPx(2);
+            textParams.topMargin = dpToPx(3);
             text.setLayoutParams(textParams);
 
             tab.addView(icon);
@@ -333,6 +359,15 @@ public class MainActivity extends AppCompatActivity {
         popup.getMenu().add(0, 1, 0, "🔍 搜索");
         popup.getMenu().add(0, 2, 0, isInspectMode ? "退出查找元素" : "🎯 查找元素");
         popup.getMenu().add(0, 3, 0, isNightMode ? "☀️ 日间模式" : "🌙 夜间模式");
+
+        // 定时刷新子菜单
+        android.view.SubMenu refreshMenu = popup.getMenu().addSubMenu(0, 5, 0, "⏱ 定时刷新");
+        refreshMenu.add(1, 50, 0, "关闭").setChecked(autoRefreshInterval == 0);
+        refreshMenu.add(1, 51, 0, "30秒").setChecked(autoRefreshInterval == 30);
+        refreshMenu.add(1, 52, 0, "1分钟").setChecked(autoRefreshInterval == 60);
+        refreshMenu.add(1, 53, 0, "5分钟").setChecked(autoRefreshInterval == 300);
+        refreshMenu.setGroupCheckable(1, true, true);
+
         popup.getMenu().add(0, 4, 0, "⚙️ 设置");
 
         popup.setOnMenuItemClickListener(item -> {
@@ -348,14 +383,57 @@ public class MainActivity extends AppCompatActivity {
             } else if (item.getItemId() == 4) {
                 Intent intent = new Intent(this, SettingsActivity.class);
                 intent.putExtra("night_mode", isNightMode);
-                intent.putExtra("night_mode", isNightMode);
                 startActivity(intent);
+                return true;
+            } else if (item.getItemId() >= 50 && item.getItemId() <= 53) {
+                // 定时刷新
+                int[] intervals = {0, 30, 60, 300};
+                int index = item.getItemId() - 50;
+                setAutoRefresh(intervals[index]);
                 return true;
             }
             return false;
         });
 
         popup.show();
+    }
+
+    // ========== 定时刷新 ==========
+
+    private void setAutoRefresh(int interval) {
+        autoRefreshInterval = interval;
+        prefs.edit().putInt("auto_refresh_interval", interval).apply();
+
+        // 停止之前的定时器
+        autoRefreshHandler.removeCallbacks(autoRefreshRunnable);
+
+        if (interval > 0) {
+            // 启动定时刷新
+            autoRefreshRunnable = () -> {
+                if (currentTab < webViews.size()) {
+                    webViews.get(currentTab).reload();
+                }
+                autoRefreshHandler.postDelayed(autoRefreshRunnable, interval * 1000L);
+            };
+            autoRefreshHandler.postDelayed(autoRefreshRunnable, interval * 1000L);
+            Toast.makeText(this, "定时刷新: " + formatInterval(interval), Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "定时刷新已关闭", Toast.LENGTH_SHORT).show();
+        }
+
+        updateAutoRefreshIndicator();
+    }
+
+    private String formatInterval(int seconds) {
+        if (seconds < 60) return seconds + "秒";
+        if (seconds < 3600) return (seconds / 60) + "分钟";
+        return (seconds / 3600) + "小时";
+    }
+
+    private void updateAutoRefreshIndicator() {
+        if (tvAutoRefresh != null) {
+            tvAutoRefresh.setVisibility(autoRefreshInterval > 0 ? View.VISIBLE : View.GONE);
+        }
     }
 
     // ========== 搜索功能 ==========
