@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F5F5F5">
+
+    <!-- 顶部标题栏 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:background="#1565C0"
+        android:elevation="4dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="12dp">
+
+        <ImageView
+            android:id="@+id/btnBack"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:padding="12dp"
+            android:src="@drawable/ic_back"
+            android:scaleType="centerInside"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="返回" />
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="HTTP 请求"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginStart="12dp" />
+
+        <ImageView
+            android:id="@+id/btnSettings"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:padding="10dp"
+            android:src="@drawable/ic_settings"
+            android:scaleType="centerInside"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="设置" />
+
+    </LinearLayout>
+
+    <!-- 请求标题 -->
+    <TextView
+        android:id="@+id/tvRequestName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="获取销售数据"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        android:padding="16dp"
+        android:gravity="center" />
+
+    <!-- 输入参数区域 -->
+    <LinearLayout
+        android:id="@+id/paramsContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="@drawable/card_white"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- 发送按钮 -->
+    <Button
+        android:id="@+id/btnSend"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="发送请求"
+        android:textSize="16sp"
+        android:background="@drawable/btn_primary"
+        android:textColor="@android:color/white"
+        android:textAllCaps="false"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- 响应结果 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="响应结果"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="8dp" />
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/card_white"
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/tvResponse"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="等待请求..."
+                android:textSize="13sp"
+                android:textColor="#333333"
+                android:fontFamily="monospace"
+                android:lineSpacingExtra="4dp" />
+
+        </ScrollView>
+
+    </LinearLayout>
+
+</LinearLayout>

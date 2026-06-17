@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F5F5F5">
+
+    <!-- 顶部标题栏 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:background="#1565C0"
+        android:elevation="4dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="4dp"
+        android:paddingEnd="16dp">
+
+        <ImageView
+            android:id="@+id/btnBack"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:padding="12dp"
+            android:src="@drawable/ic_back"
+            android:scaleType="centerInside"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="返回" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="HTTP 请求设置"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/btnSave"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:gravity="center"
+            android:text="保存"
+            android:textSize="14sp"
+            android:textColor="@android:color/white"
+            android:background="@drawable/btn_outline"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp" />
+
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- 请求名称 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="请求名称"
+                android:textSize="14sp"
+                android:textColor="#666666"
+                android:layout_marginBottom="8dp" />
+
+            <EditText
+                android:id="@+id/etRequestName"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:hint="例如：获取销售数据"
+                android:textSize="14sp"
+                android:background="@drawable/input_bg"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:layout_marginBottom="16dp" />
+
+            <!-- 请求 URL -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="请求 URL"
+                android:textSize="14sp"
+                android:textColor="#666666"
+                android:layout_marginBottom="8dp" />
+
+            <EditText
+                android:id="@+id/etUrl"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:hint="https://api.example.com/data"
+                android:textSize="14sp"
+                android:inputType="textUri"
+                android:background="@drawable/input_bg"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:layout_marginBottom="16dp" />
+
+            <!-- 请求方法 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="请求方法"
+                android:textSize="14sp"
+                android:textColor="#666666"
+                android:layout_marginBottom="8dp" />
+
+            <RadioGroup
+                android:id="@+id/rgMethod"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
+
+                <RadioButton
+                    android:id="@+id/rbGet"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="GET"
+                    android:textSize="14sp"
+                    android:button="@null"
+                    android:gravity="center"
+                    android:padding="10dp"
+                    android:background="@drawable/btn_outline"
+                    android:layout_marginEnd="8dp" />
+
+                <RadioButton
+                    android:id="@+id/rbPost"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="POST"
+                    android:textSize="14sp"
+                    android:button="@null"
+                    android:gravity="center"
+                    android:padding="10dp"
+                    android:background="@drawable/btn_primary"
+                    android:checked="true" />
+
+            </RadioGroup>
+
+            <!-- 请求头 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="请求头 (Header)"
+                android:textSize="14sp"
+                android:textColor="#666666"
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:id="@+id/headersContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/btnAddHeader"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:gravity="center"
+                android:text="+ 添加请求头"
+                android:textSize="13sp"
+                android:textColor="#1976D2"
+                android:background="@drawable/btn_outline"
+                android:layout_marginBottom="16dp" />
+
+            <!-- 请求体 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="请求体 (Body) - JSON"
+                android:textSize="14sp"
+                android:textColor="#666666"
+                android:layout_marginBottom="8dp" />
+
+            <EditText
+                android:id="@+id/etBody"
+                android:layout_width="match_parent"
+                android:layout_height="150dp"
+                android:hint='{\n  "key": "value"\n}'
+                android:textSize="13sp"
+                android:inputType="textMultiLine"
+                android:gravity="top"
+                android:background="@drawable/input_bg"
+                android:padding="12dp"
+                android:fontFamily="monospace"
+                android:layout_marginBottom="16dp" />
+
+            <!-- 参数说明 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="💡 提示：在请求体中使用 {{参数名}} 作为占位符，首页会显示输入框"
+                android:textSize="12sp"
+                android:textColor="#FF9800"
+                android:layout_marginBottom="16dp" />
+
+            <!-- 测试请求 -->
+            <Button
+                android:id="@+id/btnTest"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:text="测试请求"
+                android:textSize="14sp"
+                android:background="@drawable/btn_outline"
+                android:textColor="#1976D2"
+                android:textAllCaps="false" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:layout_marginBottom="12dp">
+
+    <TextView
+        android:id="@+id/tvParamName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="参数名"
+        android:textSize="13sp"
+        android:textColor="#666666"
+        android:layout_marginBottom="4dp" />
+
+    <EditText
+        android:id="@+id/etParamValue"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:hint="输入值"
+        android:textSize="14sp"
+        android:background="@drawable/input_bg"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp" />
+
+</LinearLayout>

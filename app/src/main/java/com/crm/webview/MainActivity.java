@@ -382,6 +382,7 @@ public class MainActivity extends AppCompatActivity {
         refreshMenu.add(1, 53, 0, "每5分钟").setChecked(autoRefreshInterval == 300);
         refreshMenu.setGroupCheckable(1, true, true);
 
+        popup.getMenu().add(0, 6, 0, "📡 HTTP 请求");
         popup.getMenu().add(0, 4, 0, "⚙️ 设置");
 
         popup.setOnMenuItemClickListener(item -> {
@@ -398,6 +399,9 @@ public class MainActivity extends AppCompatActivity {
                 Intent intent = new Intent(this, SettingsActivity.class);
                 intent.putExtra("night_mode", isNightMode);
                 startActivity(intent);
+                return true;
+            } else if (item.getItemId() == 6) {
+                startActivity(new Intent(this, HttpActivity.class));
                 return true;
             } else if (item.getItemId() >= 50 && item.getItemId() <= 53) {
                 // 定时刷新
