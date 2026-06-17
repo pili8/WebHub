@@ -136,17 +136,18 @@ public class HttpActivity extends AppCompatActivity {
         tvResponse.setTextColor(Color.parseColor("#666666"));
 
         // 替换参数
-        String finalBody = requestBody;
+        String bodyToSend = requestBody;
         for (int i = 0; i < paramNames.size(); i++) {
             if (i < paramInputs.size()) {
                 String value = paramInputs.get(i).getText().toString().trim();
-                finalBody = finalBody.replace("{{" + paramNames.get(i) + "}}", value);
+                bodyToSend = bodyToSend.replace("{{" + paramNames.get(i) + "}}", value);
             }
         }
 
-        String finalUrl = requestUrl;
-        String finalMethod = requestMethod;
-        String finalHeaders = requestHeaders;
+        final String finalUrl = requestUrl;
+        final String finalMethod = requestMethod;
+        final String finalHeaders = requestHeaders;
+        final String finalBody = bodyToSend;
 
         new Thread(() -> {
             try {
