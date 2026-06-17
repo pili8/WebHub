@@ -5,11 +5,11 @@ android {
     compileSdkVersion 33
 
     defaultConfig {
-        applicationId "com.crm.webview"
+        applicationId "com.crm.webview.test"
         minSdkVersion 21
         targetSdkVersion 33
         versionCode 1
-        versionName "1.0"
+        versionName "2.0-test"
     }
 
     signingConfigs {

@@ -56,8 +56,8 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout tabContainer;
     private LinearLayout bottomMenuContainer;
 
-    // 单 WebView（浏览器模式）
-    private WebView webView;
+    // 多 WebView（每个选项卡独立）
+    private WebView[] webViews = new WebView[MAX_TABS];
     private List<LinearLayout> tabViews = new ArrayList<>();
     private List<TextView> tabIconViews = new ArrayList<>();
     private List<TextView> tabTextViews = new ArrayList<>();
@@ -137,8 +137,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (webView != null) {
-            webView.onResume();
+        WebView wv = getCurrentWebView();
+        if (wv != null) {
+            wv.onResume();
         }
 
         // 从设置页面返回时，重新加载夜间模式设置
@@ -244,13 +245,13 @@ public class MainActivity extends AppCompatActivity {
         tabIconViews.clear();
         tabTextViews.clear();
 
-        // 创建单个 WebView（浏览器模式）
-        webView = new WebView(this);
-        FrameLayout.LayoutParams wvParams = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT);
-        webView.setLayoutParams(wvParams);
-        webViewContainer.addView(webView);
+        // 初始化 WebView 数组
+        for (int i = 0; i < MAX_TABS; i++) {
+            webViews[i] = null;
+        }
+
+        // 只创建第一个 WebView
+        createWebView(0);
 
         for (int i = 0; i < tabCount; i++) {
 
@@ -304,20 +305,43 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @SuppressLint("SetJavaScriptEnabled")
+    private void createWebView(int index) {
+        if (webViews[index] != null) return; // 已创建
+
+        WebView webView = new WebView(this);
+        FrameLayout.LayoutParams wvParams = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT);
+        webView.setLayoutParams(wvParams);
+        webView.setVisibility(index == currentTab ? View.VISIBLE : View.GONE);
+        webViewContainer.addView(webView);
+        webViews[index] = webView;
+
+        // 设置 WebView
+        setupWebView(webView);
+    }
+
+    private WebView getCurrentWebView() {
+        return webViews[currentTab];
+    }
+
     private void setupListeners() {
         btnRefresh.setOnClickListener(v -> {
-            if (webView != null) {
-                webView.reload();
+            WebView wv = getCurrentWebView();
+            if (wv != null) {
+                wv.reload();
             }
         });
 
         btnRefresh.setOnLongClickListener(v -> {
-            if (webView != null) {
-                webView.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
-                webView.reload();
-                webView.postDelayed(() -> {
-                    if (webView != null) {
-                        webView.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+            WebView wv = getCurrentWebView();
+            if (wv != null) {
+                wv.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
+                wv.reload();
+                wv.postDelayed(() -> {
+                    if (wv != null) {
+                        wv.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
                     }
                 }, 1000);
             }
@@ -399,8 +423,9 @@ public class MainActivity extends AppCompatActivity {
         if (interval > 0) {
             // 启动定时刷新
             autoRefreshRunnable = () -> {
-                if (webView != null) {
-                    webView.reload();
+                WebView wv = getCurrentWebView();
+                if (wv != null) {
+                    wv.reload();
                 }
                 autoRefreshHandler.postDelayed(autoRefreshRunnable, interval * 1000L);
             };
@@ -688,8 +713,12 @@ public class MainActivity extends AppCompatActivity {
             webViewContainer.setBackgroundColor(Color.parseColor("#121212"));
 
             // 如果网页暗色开关开启，注入 CSS
-            if (isNightModeCSS && webView != null) {
-                injectNightModeCSS(webView);
+            if (isNightModeCSS) {
+                for (int i = 0; i < MAX_TABS; i++) {
+                    if (webViews[i] != null) {
+                        injectNightModeCSS(webViews[i]);
+                    }
+                }
             }
         } else {
             // 标题栏恢复
@@ -700,8 +729,10 @@ public class MainActivity extends AppCompatActivity {
             webViewContainer.setBackgroundColor(Color.WHITE);
 
             // 移除网页暗色 CSS
-            if (webView != null) {
-                removeNightModeCSS(webView);
+            for (int i = 0; i < MAX_TABS; i++) {
+                if (webViews[i] != null) {
+                    removeNightModeCSS(webViews[i]);
+                }
             }
         }
     }
@@ -841,6 +872,12 @@ public class MainActivity extends AppCompatActivity {
             inspectBanner.setVisibility(View.GONE);
         }
 
+        // 隐藏当前 WebView
+        WebView oldWebView = getCurrentWebView();
+        if (oldWebView != null) {
+            oldWebView.setVisibility(View.GONE);
+        }
+
         currentTab = index;
         currentLinkIndex = 0;
         isDropdownOpen = false;
@@ -852,6 +889,15 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 tabTextViews.get(i).setTextColor(Color.parseColor("#666666"));
             }
+        }
+
+        // 创建 WebView（如果不存在）
+        createWebView(index);
+
+        // 显示当前 WebView
+        WebView newWebView = getCurrentWebView();
+        if (newWebView != null) {
+            newWebView.setVisibility(View.VISIBLE);
         }
 
         // 加载链接（按需加载）
@@ -868,9 +914,10 @@ public class MainActivity extends AppCompatActivity {
         currentLinkIndex = linkIndex;
 
         // 加载链接
-        if (webView != null) {
+        WebView wv = getCurrentWebView();
+        if (wv != null) {
             LinkItem link = links.get(linkIndex);
-            webView.loadUrl(link.url);
+            wv.loadUrl(link.url);
             tvTitle.setText(link.title);
         }
 
@@ -962,10 +1009,10 @@ public class MainActivity extends AppCompatActivity {
     private void loadCurrentLink() {
         if (tabLinks.size() <= currentTab) return;
         List<LinkItem> links = tabLinks.get(currentTab);
-        if (currentLinkIndex < links.size() && webView != null) {
+        WebView wv = getCurrentWebView();
+        if (currentLinkIndex < links.size() && wv != null) {
             String url = links.get(currentLinkIndex).url;
-            // 加载URL（WebView自动用缓存，LOAD_CACHE_ELSE_NETWORK模式）
-            webView.loadUrl(url);
+            wv.loadUrl(url);
         }
     }
 
@@ -975,7 +1022,12 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("SetJavaScriptEnabled")
     private void setupAllWebViews() {
-        setupWebView(webView);
+        // 只设置已创建的 WebView
+        for (int i = 0; i < MAX_TABS; i++) {
+            if (webViews[i] != null) {
+                setupWebView(webViews[i]);
+            }
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -1080,7 +1132,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void inspectElementAt(float x, float y) {
-        if (webView == null) return;
+        WebView wv = getCurrentWebView();
+        if (wv == null) return;
 
         String js = "(function() {" +
                 "  var el = document.elementFromPoint(" + x + ", " + y + ");" +
@@ -1096,7 +1149,7 @@ public class MainActivity extends AppCompatActivity {
                 "  return JSON.stringify(result);" +
                 "})()";
 
-        webView.evaluateJavascript(js, value -> {
+        wv.evaluateJavascript(js, value -> {
             if (value != null && !value.equals("null")) {
                 try {
                     String json = value;
@@ -1365,15 +1418,16 @@ public class MainActivity extends AppCompatActivity {
 
             // 金山文档优化
             boolean kdocsOptimize = prefs.getBoolean("kdocs_optimize", true);
-            String currentUrl = webView != null ? webView.getUrl() : null;
+            WebView wv = getCurrentWebView();
+            String currentUrl = wv != null ? wv.getUrl() : null;
             if (kdocsOptimize && isKdocsUrl(currentUrl)) {
                 tryClosePopup();
                 return true;
             }
 
             // 普通返回逻辑
-            if (webView != null && webView.canGoBack()) {
-                webView.goBack();
+            if (wv != null && wv.canGoBack()) {
+                wv.goBack();
                 return true;
             }
 
@@ -1389,20 +1443,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean tryClosePopup() {
-        if (webView == null) return false;
+        WebView wv = getCurrentWebView();
+        if (wv == null) return false;
 
-        float x = webView.getWidth() / 2f;
+        float x = wv.getWidth() / 2f;
         float y = 15f;
 
         long downTime = SystemClock.uptimeMillis();
         MotionEvent downEvent = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, x, y, 0);
-        webView.dispatchTouchEvent(downEvent);
+        wv.dispatchTouchEvent(downEvent);
         downEvent.recycle();
 
-        webView.postDelayed(() -> {
-            if (webView != null) {
+        wv.postDelayed(() -> {
+            if (wv != null) {
                 MotionEvent upEvent = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, x, y, 0);
-                webView.dispatchTouchEvent(upEvent);
+                wv.dispatchTouchEvent(upEvent);
                 upEvent.recycle();
             }
         }, 50);
@@ -1413,8 +1468,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        if (webView != null) {
-            webView.onPause();
+        for (int i = 0; i < MAX_TABS; i++) {
+            if (webViews[i] != null) {
+                webViews[i].onPause();
+            }
         }
         CookieManager.getInstance().flush();
     }
@@ -1422,8 +1479,11 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (webView != null) {
-            webView.destroy();
+        for (int i = 0; i < MAX_TABS; i++) {
+            if (webViews[i] != null) {
+                webViews[i].destroy();
+                webViews[i] = null;
+            }
         }
     }
 }
