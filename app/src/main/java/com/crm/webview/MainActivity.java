@@ -76,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean isBottomMenuOpen = false;
     private boolean isSearchOpen = false;
     private boolean isNightMode = false;
+    private boolean isNightModeCSS = true; // 网页也应用夜间模式
 
     // 搜索相关
     private LinearLayout searchBar;
@@ -156,6 +157,7 @@ public class MainActivity extends AppCompatActivity {
 
         // 夜间模式状态
         isNightMode = prefs.getBoolean("night_mode", false);
+        isNightModeCSS = prefs.getBoolean("night_mode_css", true);
     }
 
     private void loadConfig() {
@@ -328,6 +330,9 @@ public class MainActivity extends AppCompatActivity {
         android.widget.PopupMenu popup = new android.widget.PopupMenu(this, btnMenu);
         popup.getMenu().add(0, 1, 0, isInspectMode ? "退出查找元素" : "🔍 查找元素");
         popup.getMenu().add(0, 2, 0, "🌙 " + (isNightMode ? "日间模式" : "夜间模式"));
+        if (isNightMode) {
+            popup.getMenu().add(0, 4, 0, "🎨 网页暗色: " + (isNightModeCSS ? "开" : "关"));
+        }
         popup.getMenu().add(0, 3, 0, "⚙️ 设置");
 
         popup.setOnMenuItemClickListener(item -> {
@@ -339,6 +344,9 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             } else if (item.getItemId() == 3) {
                 startActivity(new Intent(this, SettingsActivity.class));
+                return true;
+            } else if (item.getItemId() == 4) {
+                toggleNightModeCSS();
                 return true;
             }
             return false;
@@ -597,20 +605,39 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this, isNightMode ? "已开启夜间模式" : "已关闭夜间模式", Toast.LENGTH_SHORT).show();
     }
 
+    private void toggleNightModeCSS() {
+        isNightModeCSS = !isNightModeCSS;
+        prefs.edit().putBoolean("night_mode_css", isNightModeCSS).apply();
+        if (isNightMode) {
+            if (isNightModeCSS) {
+                for (WebView webView : webViews) {
+                    injectNightModeCSS(webView);
+                }
+            } else {
+                for (WebView webView : webViews) {
+                    removeNightModeCSS(webView);
+                }
+            }
+        }
+        Toast.makeText(this, isNightModeCSS ? "网页暗色已开启" : "网页暗色已关闭", Toast.LENGTH_SHORT).show();
+    }
+
     private void applyNightMode() {
         if (isNightMode) {
-            // 应用暗色主题
-            getWindow().getDecorView().setBackgroundColor(Color.parseColor("#121212"));
+            // 应用 App 暗色
+            tabContainer.setBackgroundColor(Color.parseColor("#1E1E1E"));
+            bottomMenuContainer.setBackgroundColor(Color.parseColor("#1E1E1E"));
 
-            // 给所有 WebView 注入夜间模式 CSS
-            for (WebView webView : webViews) {
-                injectNightModeCSS(webView);
+            if (isNightModeCSS) {
+                for (WebView webView : webViews) {
+                    injectNightModeCSS(webView);
+                }
             }
         } else {
-            // 恢复正常主题
-            getWindow().getDecorView().setBackgroundColor(Color.parseColor("#F5F5F5"));
+            // 恢复正常
+            tabContainer.setBackgroundColor(Color.WHITE);
+            bottomMenuContainer.setBackgroundColor(Color.WHITE);
 
-            // 移除夜间模式 CSS
             for (WebView webView : webViews) {
                 removeNightModeCSS(webView);
             }
@@ -618,30 +645,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void injectNightModeCSS(WebView webView) {
-        String nightCSS = "javascript:(function() {" +
-                "var style = document.getElementById('webhub-night-mode');" +
-                "if (!style) {" +
-                "  style = document.createElement('style');" +
-                "  style.id = 'webhub-night-mode';" +
-                "  document.head.appendChild(style);" +
-                "}" +
-                "style.textContent = '" +
-                "body { background-color: #121212 !important; color: #E0E0E0 !important; }" +
-                "a { color: #90CAF9 !important; }" +
-                "p, div, span, h1, h2, h3, h4, h5, h6, li, td, th { color: #E0E0E0 !important; }" +
-                "input, textarea, select { background-color: #333333 !important; color: #E0E0E0 !important; }" +
-                "img { opacity: 0.8; }" +
-                "';" +
-                "})()";
-        webView.evaluateJavascript(nightCSS, null);
+        String css = "var s=document.getElementById('wh-nm');" +
+                "if(!s){s=document.createElement('style');s.id='wh-nm';document.head.appendChild(s);}" +
+                "s.textContent='*{background-color:#1a1a1a!important;color:#ccc!important;border-color:#333!important}" +
+                "a{color:#6db3f2!important}" +
+                "input,textarea,select,button{background:#2a2a2a!important;color:#ccc!important}" +
+                "img,video{opacity:.85}';";
+        webView.evaluateJavascript("(function(){" + css + "})()", null);
     }
 
     private void removeNightModeCSS(WebView webView) {
-        String removeCSS = "javascript:(function() {" +
-                "var style = document.getElementById('webhub-night-mode');" +
-                "if (style) style.remove();" +
-                "})()";
-        webView.evaluateJavascript(removeCSS, null);
+        webView.evaluateJavascript("(function(){var s=document.getElementById('wh-nm');if(s)s.remove();})()", null);
     }
 
     /**
@@ -968,8 +982,8 @@ public class MainActivity extends AppCompatActivity {
                 CookieManager.getInstance().flush();
                 executeCustomScript(view);
 
-                // 应用夜间模式
-                if (isNightMode) {
+                // 应用夜间模式 CSS（只在开启夜间模式且开启CSS时）
+                if (isNightMode && isNightModeCSS) {
                     injectNightModeCSS(view);
                 }
             }
