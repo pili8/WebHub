@@ -230,22 +230,31 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void addDrawerHttpCard(int index, String name, String url, String method, String headers, String body) {
-        View cardView = LayoutInflater.from(this).inflate(R.layout.item_http_card, drawerHttpCards, false);
+        View cardView = LayoutInflater.from(this).inflate(R.layout.item_http_card_v2, drawerHttpCards, false);
 
-        TextView tvName = cardView.findViewById(R.id.tvRequestName);
-        TextView tvUrl = cardView.findViewById(R.id.tvRequestUrl);
+        TextView tvMethod = cardView.findViewById(R.id.tvMethod);
+        TextView tvName = cardView.findViewById(R.id.tvName);
+        TextView tvUrl = cardView.findViewById(R.id.tvUrl);
+        TextView tvArrow = cardView.findViewById(R.id.tvArrow);
+        LinearLayout headerArea = cardView.findViewById(R.id.headerArea);
+        LinearLayout detailArea = cardView.findViewById(R.id.detailArea);
         LinearLayout paramsContainer = cardView.findViewById(R.id.paramsContainer);
         Button btnSend = cardView.findViewById(R.id.btnSend);
-        ImageView btnSettings = cardView.findViewById(R.id.btnSettings);
-        ImageView btnDelete = cardView.findViewById(R.id.btnDelete);
+        LinearLayout responseArea = cardView.findViewById(R.id.responseArea);
         TextView tvResponse = cardView.findViewById(R.id.tvResponse);
+        TextView btnCopy = cardView.findViewById(R.id.btnCopy);
 
+        // 设置基本信息
+        tvMethod.setText(method);
         tvName.setText(name);
         tvUrl.setText(url);
 
-        // 隐藏设置和删除按钮
-        btnSettings.setVisibility(View.GONE);
-        btnDelete.setVisibility(View.GONE);
+        // 方法标签颜色
+        if ("GET".equals(method)) {
+            tvMethod.setBackgroundColor(Color.parseColor("#4CAF50"));
+        } else {
+            tvMethod.setBackgroundColor(Color.parseColor("#2196F3"));
+        }
 
         // 提取参数
         List<String> paramNames = new ArrayList<>();
@@ -269,9 +278,17 @@ public class MainActivity extends AppCompatActivity {
             paramsContainer.addView(paramView);
         }
 
+        // 折叠/展开
+        final boolean[] isExpanded = {false};
+        headerArea.setOnClickListener(v -> {
+            isExpanded[0] = !isExpanded[0];
+            detailArea.setVisibility(isExpanded[0] ? View.VISIBLE : View.GONE);
+            tvArrow.setText(isExpanded[0] ? "▲" : "▼");
+        });
+
         // 发送按钮
         btnSend.setOnClickListener(v -> {
-            tvResponse.setVisibility(View.VISIBLE);
+            responseArea.setVisibility(View.VISIBLE);
             tvResponse.setText("请求中...");
             tvResponse.setTextColor(Color.parseColor("#666666"));
 
@@ -300,6 +317,17 @@ public class MainActivity extends AppCompatActivity {
                     });
                 }
             }).start();
+        });
+
+        // 复制按钮
+        btnCopy.setOnClickListener(v -> {
+            String text = tvResponse.getText().toString();
+            if (!text.isEmpty()) {
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                ClipData clip = ClipData.newPlainText("response", text);
+                clipboard.setPrimaryClip(clip);
+                Toast.makeText(this, "已复制到剪贴板", Toast.LENGTH_SHORT).show();
+            }
         });
 
         drawerHttpCards.addView(cardView);
