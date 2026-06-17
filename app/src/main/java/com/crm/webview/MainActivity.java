@@ -1413,14 +1413,12 @@ public class MainActivity extends AppCompatActivity {
             // 关闭底部菜单
             if (isBottomMenuOpen) {
                 hideBottomMenu();
-                Toast.makeText(this, "关闭菜单", Toast.LENGTH_SHORT).show();
                 return true;
             }
 
             // 退出查看模式
             if (isInspectMode) {
                 toggleInspectMode();
-                Toast.makeText(this, "退出查找元素模式", Toast.LENGTH_SHORT).show();
                 return true;
             }
 
@@ -1428,7 +1426,6 @@ public class MainActivity extends AppCompatActivity {
             if (isDropdownOpen) {
                 isDropdownOpen = false;
                 updateDropdown();
-                Toast.makeText(this, "关闭下拉菜单", Toast.LENGTH_SHORT).show();
                 return true;
             }
 
@@ -1438,7 +1435,6 @@ public class MainActivity extends AppCompatActivity {
             String currentUrl = wv != null ? wv.getUrl() : null;
             if (kdocsOptimize && isKdocsUrl(currentUrl)) {
                 tryClosePopup();
-                Toast.makeText(this, "关闭弹窗", Toast.LENGTH_SHORT).show();
                 return true;
             }
 
