@@ -72,6 +72,14 @@ public class MainActivity extends AppCompatActivity {
     private boolean isDropdownOpen = false;
     private boolean isInspectMode = false;
     private boolean isBottomMenuOpen = false;
+    private boolean isSearchOpen = false;
+    private boolean isNightMode = false;
+
+    // 搜索相关
+    private LinearLayout searchBar;
+    private EditText etSearch;
+    private LinearLayout searchResults;
+    private CheckBox cbSearchContent;
 
     // 配置数据
     private int tabCount = 3;
@@ -110,6 +118,11 @@ public class MainActivity extends AppCompatActivity {
         setupAllWebViews();
         requestPermissions();
         switchTab(0);
+
+        // 应用夜间模式
+        if (isNightMode) {
+            applyNightMode();
+        }
     }
 
     @Override
@@ -132,6 +145,15 @@ public class MainActivity extends AppCompatActivity {
         dropdownList = findViewById(R.id.dropdownList);
         inspectBanner = findViewById(R.id.inspectBanner);
         btnRefresh = findViewById(R.id.btnRefresh);
+
+        // 搜索相关
+        searchBar = findViewById(R.id.searchBar);
+        etSearch = findViewById(R.id.etSearch);
+        searchResults = findViewById(R.id.searchResults);
+        cbSearchContent = findViewById(R.id.cbSearchContent);
+
+        // 夜间模式状态
+        isNightMode = prefs.getBoolean("night_mode", false);
     }
 
     private void loadConfig() {
@@ -281,18 +303,39 @@ public class MainActivity extends AppCompatActivity {
 
         btnDropdown.setOnClickListener(v -> toggleDropdown());
         btnMenu.setOnClickListener(v -> showPopupMenu());
+
+        // 搜索按钮
+        ImageView btnSearch = findViewById(R.id.btnSearch);
+        btnSearch.setOnClickListener(v -> toggleSearch());
+
+        // 搜索取消按钮
+        TextView btnSearchCancel = findViewById(R.id.btnSearchCancel);
+        btnSearchCancel.setOnClickListener(v -> closeSearch());
+
+        // 搜索输入框监听
+        etSearch.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
+                performSearch();
+                return true;
+            }
+            return false;
+        });
     }
 
     private void showPopupMenu() {
         android.widget.PopupMenu popup = new android.widget.PopupMenu(this, btnMenu);
         popup.getMenu().add(0, 1, 0, isInspectMode ? "退出查找元素" : "🔍 查找元素");
-        popup.getMenu().add(0, 2, 0, "⚙️ 设置");
+        popup.getMenu().add(0, 2, 0, "🌙 " + (isNightMode ? "日间模式" : "夜间模式"));
+        popup.getMenu().add(0, 3, 0, "⚙️ 设置");
 
         popup.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == 1) {
                 toggleInspectMode();
                 return true;
             } else if (item.getItemId() == 2) {
+                toggleNightMode();
+                return true;
+            } else if (item.getItemId() == 3) {
                 startActivity(new Intent(this, SettingsActivity.class));
                 return true;
             }
@@ -300,6 +343,303 @@ public class MainActivity extends AppCompatActivity {
         });
 
         popup.show();
+    }
+
+    // ========== 搜索功能 ==========
+
+    private void toggleSearch() {
+        if (isSearchOpen) {
+            closeSearch();
+        } else {
+            openSearch();
+        }
+    }
+
+    private void openSearch() {
+        isSearchOpen = true;
+        searchBar.setVisibility(View.VISIBLE);
+        searchResults.setVisibility(View.VISIBLE);
+        webViewContainer.setVisibility(View.GONE);
+        etSearch.requestFocus();
+
+        // 显示键盘
+        android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        imm.showSoftInput(etSearch, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+    }
+
+    private void closeSearch() {
+        isSearchOpen = false;
+        searchBar.setVisibility(View.GONE);
+        searchResults.setVisibility(View.GONE);
+        webViewContainer.setVisibility(View.VISIBLE);
+        etSearch.setText("");
+
+        // 隐藏键盘
+        android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromWindow(etSearch.getWindowToken(), 0);
+    }
+
+    private void performSearch() {
+        String query = etSearch.getText().toString().trim().toLowerCase();
+        if (query.isEmpty()) {
+            Toast.makeText(this, "请输入搜索内容", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        boolean searchContent = cbSearchContent.isChecked();
+        searchResults.removeAllViews();
+
+        // 显示搜索中提示
+        TextView loadingText = new TextView(this);
+        loadingText.setText("搜索中...");
+        loadingText.setTextSize(14);
+        loadingText.setTextColor(Color.parseColor("#999999"));
+        loadingText.setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16));
+        loadingText.setGravity(Gravity.CENTER);
+        searchResults.addView(loadingText);
+
+        if (searchContent) {
+            // 搜索网页内容（后台加载）
+            new Thread(() -> {
+                List<SearchResult> results = searchWebContent(query);
+                runOnUiThread(() -> {
+                    searchResults.removeAllViews();
+                    displaySearchResults(results, query);
+                });
+            }).start();
+        } else {
+            // 只搜索标题和URL（即时）
+            List<SearchResult> results = searchLinksOnly(query);
+            searchResults.removeAllViews();
+            displaySearchResults(results, query);
+        }
+    }
+
+    private List<SearchResult> searchLinksOnly(String query) {
+        List<SearchResult> results = new ArrayList<>();
+        for (int i = 0; i < tabLinks.size(); i++) {
+            List<LinkItem> links = tabLinks.get(i);
+            for (int j = 0; j < links.size(); j++) {
+                LinkItem link = links.get(j);
+                if (link.title.toLowerCase().contains(query) || link.url.toLowerCase().contains(query)) {
+                    results.add(new SearchResult(i, j, link.title, link.url, "标题/URL"));
+                }
+            }
+        }
+        return results;
+    }
+
+    private List<SearchResult> searchWebContent(String query) {
+        List<SearchResult> results = new ArrayList<>();
+
+        // 先搜索标题和URL
+        results.addAll(searchLinksOnly(query));
+
+        // 然后搜索网页内容
+        for (int i = 0; i < tabLinks.size(); i++) {
+            List<LinkItem> links = tabLinks.get(i);
+            for (int j = 0; j < links.size(); j++) {
+                LinkItem link = links.get(j);
+                if (link.url.equals("about:blank")) continue;
+
+                try {
+                    // 创建临时 WebView 加载网页
+                    final int tabIndex = i;
+                    final int linkIndex = j;
+                    final String[] content = {""};
+
+                    runOnUiThread(() -> {
+                        WebView tempWebView = new WebView(MainActivity.this);
+                        tempWebView.getSettings().setJavaScriptEnabled(true);
+                        tempWebView.setWebViewClient(new WebViewClient() {
+                            @Override
+                            public void onPageFinished(WebView view, String url) {
+                                view.evaluateJavascript(
+                                        "(function() { return document.body.innerText; })();",
+                                        value -> {
+                                            content[0] = value;
+                                            synchronized (content) {
+                                                content.notify();
+                                            }
+                                        }
+                                );
+                            }
+                        });
+                        tempWebView.loadUrl(link.url);
+                    });
+
+                    synchronized (content) {
+                        content.wait(5000); // 最多等待5秒
+                    }
+
+                    if (!content[0].isEmpty() && content[0].toLowerCase().contains(query)) {
+                        // 检查是否已在结果中
+                        boolean exists = false;
+                        for (SearchResult r : results) {
+                            if (r.tabIndex == i && r.linkIndex == j) {
+                                exists = true;
+                                break;
+                            }
+                        }
+                        if (!exists) {
+                            results.add(new SearchResult(i, j, link.title, link.url, "网页内容"));
+                        }
+                    }
+                } catch (Exception e) {
+                    // 忽略加载失败的网页
+                }
+            }
+        }
+
+        return results;
+    }
+
+    private void displaySearchResults(List<SearchResult> results, String query) {
+        if (results.isEmpty()) {
+            TextView emptyText = new TextView(this);
+            emptyText.setText("未找到匹配结果");
+            emptyText.setTextSize(14);
+            emptyText.setTextColor(Color.parseColor("#999999"));
+            emptyText.setPadding(dpToPx(16), dpToPx(32), dpToPx(16), dpToPx(16));
+            emptyText.setGravity(Gravity.CENTER);
+            searchResults.addView(emptyText);
+            return;
+        }
+
+        // 结果数量
+        TextView countText = new TextView(this);
+        countText.setText("找到 " + results.size() + " 个结果");
+        countText.setTextSize(12);
+        countText.setTextColor(Color.parseColor("#999999"));
+        countText.setPadding(dpToPx(16), dpToPx(12), dpToPx(16), dpToPx(8));
+        searchResults.addView(countText);
+
+        // 结果列表
+        for (SearchResult result : results) {
+            LinearLayout item = new LinearLayout(this);
+            item.setOrientation(LinearLayout.VERTICAL);
+            item.setPadding(dpToPx(16), dpToPx(12), dpToPx(16), dpToPx(12));
+            item.setBackgroundResource(android.R.drawable.list_selector_background);
+
+            // 标题
+            TextView titleView = new TextView(this);
+            titleView.setText(result.title);
+            titleView.setTextSize(15);
+            titleView.setTextColor(Color.parseColor("#333333"));
+            titleView.setMaxLines(1);
+            titleView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            item.addView(titleView);
+
+            // URL
+            TextView urlView = new TextView(this);
+            urlView.setText(result.url);
+            urlView.setTextSize(12);
+            urlView.setTextColor(Color.parseColor("#1976D2"));
+            urlView.setMaxLines(1);
+            urlView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            urlView.setPadding(0, dpToPx(2), 0, 0);
+            item.addView(urlView);
+
+            // 来源
+            TextView sourceView = new TextView(this);
+            sourceView.setText("匹配: " + result.source);
+            sourceView.setTextSize(11);
+            sourceView.setTextColor(Color.parseColor("#999999"));
+            sourceView.setPadding(0, dpToPx(2), 0, 0);
+            item.addView(sourceView);
+
+            // 分割线
+            View divider = new View(this);
+            divider.setBackgroundColor(Color.parseColor("#EEEEEE"));
+            LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, 1);
+            dividerParams.topMargin = dpToPx(12);
+            divider.setLayoutParams(dividerParams);
+
+            // 点击打开链接
+            final int tabIndex = result.tabIndex;
+            final int linkIndex = result.linkIndex;
+            item.setOnClickListener(v -> {
+                closeSearch();
+                switchTab(tabIndex);
+                switchLink(tabIndex, linkIndex);
+            });
+
+            searchResults.addView(item);
+            searchResults.addView(divider);
+        }
+    }
+
+    static class SearchResult {
+        int tabIndex;
+        int linkIndex;
+        String title;
+        String url;
+        String source;
+
+        SearchResult(int tabIndex, int linkIndex, String title, String url, String source) {
+            this.tabIndex = tabIndex;
+            this.linkIndex = linkIndex;
+            this.title = title;
+            this.url = url;
+            this.source = source;
+        }
+    }
+
+    // ========== 夜间模式 ==========
+
+    private void toggleNightMode() {
+        isNightMode = !isNightMode;
+        prefs.edit().putBoolean("night_mode", isNightMode).apply();
+        applyNightMode();
+        Toast.makeText(this, isNightMode ? "已开启夜间模式" : "已关闭夜间模式", Toast.LENGTH_SHORT).show();
+    }
+
+    private void applyNightMode() {
+        if (isNightMode) {
+            // 应用暗色主题
+            getWindow().getDecorView().setBackgroundColor(Color.parseColor("#121212"));
+
+            // 给所有 WebView 注入夜间模式 CSS
+            for (WebView webView : webViews) {
+                injectNightModeCSS(webView);
+            }
+        } else {
+            // 恢复正常主题
+            getWindow().getDecorView().setBackgroundColor(Color.parseColor("#F5F5F5"));
+
+            // 移除夜间模式 CSS
+            for (WebView webView : webViews) {
+                removeNightModeCSS(webView);
+            }
+        }
+    }
+
+    private void injectNightModeCSS(WebView webView) {
+        String nightCSS = "javascript:(function() {" +
+                "var style = document.getElementById('webhub-night-mode');" +
+                "if (!style) {" +
+                "  style = document.createElement('style');" +
+                "  style.id = 'webhub-night-mode';" +
+                "  document.head.appendChild(style);" +
+                "}" +
+                "style.textContent = '" +
+                "body { background-color: #121212 !important; color: #E0E0E0 !important; }" +
+                "a { color: #90CAF9 !important; }" +
+                "p, div, span, h1, h2, h3, h4, h5, h6, li, td, th { color: #E0E0E0 !important; }" +
+                "input, textarea, select { background-color: #333333 !important; color: #E0E0E0 !important; }" +
+                "img { opacity: 0.8; }" +
+                "';" +
+                "})()";
+        webView.evaluateJavascript(nightCSS, null);
+    }
+
+    private void removeNightModeCSS(WebView webView) {
+        String removeCSS = "javascript:(function() {" +
+                "var style = document.getElementById('webhub-night-mode');" +
+                "if (style) style.remove();" +
+                "})()";
+        webView.evaluateJavascript(removeCSS, null);
     }
 
     /**
@@ -450,6 +790,23 @@ public class MainActivity extends AppCompatActivity {
         if (!tabInitialized[index]) {
             loadCurrentLink();
             tabInitialized[index] = true;
+        }
+
+        updateDropdown();
+    }
+
+    private void switchLink(int tabIndex, int linkIndex) {
+        if (tabIndex < 0 || tabIndex >= tabLinks.size()) return;
+        List<LinkItem> links = tabLinks.get(tabIndex);
+        if (linkIndex < 0 || linkIndex >= links.size()) return;
+
+        currentLinkIndex = linkIndex;
+
+        // 加载链接
+        if (tabIndex < webViews.size()) {
+            LinkItem link = links.get(linkIndex);
+            webViews.get(tabIndex).loadUrl(link.url);
+            tvTitle.setText(link.title);
         }
 
         updateDropdown();
@@ -608,6 +965,11 @@ public class MainActivity extends AppCompatActivity {
                 }
                 CookieManager.getInstance().flush();
                 executeCustomScript(view);
+
+                // 应用夜间模式
+                if (isNightMode) {
+                    injectNightModeCSS(view);
+                }
             }
 
             @Override

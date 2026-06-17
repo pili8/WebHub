@@ -28,7 +28,7 @@
                 android:id="@+id/tvTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="CRM"
+                android:text="WebHub"
                 android:textColor="@android:color/white"
                 android:textSize="17sp"
                 android:textStyle="bold"
@@ -46,6 +46,16 @@
                 android:visibility="gone" />
 
         </LinearLayout>
+
+        <ImageView
+            android:id="@+id/btnSearch"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="10dp"
+            android:src="@android:drawable/ic_menu_search"
+            android:scaleType="centerInside"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="搜索" />
 
         <ImageView
             android:id="@+id/btnRefresh"
@@ -68,6 +78,89 @@
             android:background="?attr/selectableItemBackgroundBorderless" />
 
     </LinearLayout>
+
+    <!-- 搜索栏 -->
+    <LinearLayout
+        android:id="@+id/searchBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#FFFFFF"
+        android:elevation="4dp"
+        android:padding="8dp"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <EditText
+                android:id="@+id/etSearch"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:hint="搜索链接..."
+                android:textSize="14sp"
+                android:background="@drawable/input_bg"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:singleLine="true"
+                android:imeOptions="actionSearch"
+                android:inputType="text" />
+
+            <TextView
+                android:id="@+id/btnSearchCancel"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:gravity="center"
+                android:text="取消"
+                android:textSize="14sp"
+                android:textColor="#1976D2"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:layout_marginStart="8dp" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="6dp">
+
+            <CheckBox
+                android:id="@+id/cbSearchContent"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="搜索网页内容"
+                android:textSize="12sp"
+                android:textColor="#666666" />
+
+            <TextView
+                android:id="@+id/tvSearchHint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="（较慢，需加载网页）"
+                android:textSize="11sp"
+                android:textColor="#999999"
+                android:layout_marginStart="4dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- 搜索结果 -->
+    <LinearLayout
+        android:id="@+id/searchResults"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:background="#FFFFFF"
+        android:visibility="gone" />
 
     <!-- 下拉列表 -->
     <LinearLayout
