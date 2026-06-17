@@ -1516,10 +1516,14 @@ public class MainActivity extends AppCompatActivity {
                 .setView(dialogView)
                 .create();
 
+        // 设置弹窗位置和大小
         dialog.getWindow().setGravity(Gravity.BOTTOM);
         dialog.getWindow().setLayout(
                 android.view.WindowManager.LayoutParams.MATCH_PARENT,
                 android.view.WindowManager.LayoutParams.WRAP_CONTENT);
+
+        // 点击外部关闭
+        dialog.setCanceledOnTouchOutside(true);
 
         btnClose.setOnClickListener(v -> dialog.dismiss());
 
@@ -1619,9 +1623,10 @@ public class MainActivity extends AppCompatActivity {
             if (actions != null && !actions.isEmpty()) {
                 String js = buildScriptFromActions(actions);
                 if (!js.isEmpty()) {
+                    // 金山文档是SPA，需要更长延迟等待渲染完成
                     webView.postDelayed(() -> {
                         webView.evaluateJavascript(js, null);
-                    }, 500);
+                    }, 2000);
                 }
             }
         }
@@ -1706,9 +1711,8 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
 
-            // 没有历史记录
-            Toast.makeText(this, "再按一次退出", Toast.LENGTH_SHORT).show();
-            return true;
+            // 没有历史记录，退出APP
+            return super.onKeyDown(keyCode, event);
         }
         return super.onKeyDown(keyCode, event);
     }

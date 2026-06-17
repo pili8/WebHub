@@ -113,7 +113,42 @@
 
 ---
 
+## 版本管理规则
+
+### 发布版本（GitHub Release）
+
+| 大版本 | 包名 | 应用名 | 说明 |
+|--------|------|--------|------|
+| V2.x | com.crm.webview | WebHub | 正式版 |
+| V3.x | com.crm.webview.v3 | WebHub | 正式版 |
+| V4.x | com.crm.webview.v4 | WebHub | 正式版 |
+
+**规则：**
+- 应用名统一为 "WebHub"
+- 大版本号变化时包名也变化（支持并存）
+- 发布到 GitHub Release
+
+### 测试版本（本地测试）
+
+| 大版本 | 包名 | 应用名 | 说明 |
+|--------|------|--------|------|
+| V3.x | com.crm.webview.test | WebHub Test | 测试版 |
+| V3.x | com.crm.webview.v3.test | WebHub Test | 测试版 |
+
+**规则：**
+- 包名加 `.test` 后缀
+- 应用名加 "Test" 后缀
+- 不发布到 GitHub Release
+- 可与正式版同时安装
+
+### 版本文件命名
+
+- 正式版：`WebHub-v{版本号}.apk`
+- 测试版：`WebHub-v{版本号}-test.apk`
+
+---
+
 ## 文件位置
 
-- V1 APK: `E:\08Very\000-收集Inbox\WebViewApp\V1\CRM-V1.apk`
-- 最新 APK: `E:\08Very\000-收集Inbox\WebHub\WebHub.apk`
+- V2.1 APK: `E:\08Very\000-收集Inbox\WebHub\WebHub-v2.1.apk`
+- 测试版 APK: `E:\08Very\000-收集Inbox\WebHub\WebHub-v3.1.apk`
