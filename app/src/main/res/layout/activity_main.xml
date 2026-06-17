@@ -196,30 +196,13 @@
         android:gravity="center"
         android:visibility="gone" />
 
-    <!-- 内容区域 -->
+    <!-- WebView 内容区 -->
     <FrameLayout
-        android:id="@+id/contentContainer"
+        android:id="@+id/webViewContainer"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:background="#F5F5F5">
-
-        <!-- HTTP 请求页面 -->
-        <LinearLayout
-            android:id="@+id/httpRequestPage"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:visibility="gone" />
-
-        <!-- WebView 容器 -->
-        <FrameLayout
-            android:id="@+id/webViewContainer"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@android:color/white" />
-
-    </FrameLayout>
+        android:background="@android:color/white" />
 
     <!-- 底部子链接菜单（长按选项卡时显示） -->
     <LinearLayout

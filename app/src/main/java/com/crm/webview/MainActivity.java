@@ -66,8 +66,6 @@ public class MainActivity extends AppCompatActivity {
     private FrameLayout webViewContainer;
     private LinearLayout tabContainer;
     private LinearLayout bottomMenuContainer;
-    private FrameLayout contentContainer;
-    private LinearLayout httpRequestPage;
 
     // 多 WebView（每个选项卡独立）
     private WebView[] webViews = new WebView[MAX_TABS];
@@ -91,9 +89,6 @@ public class MainActivity extends AppCompatActivity {
     private boolean isSearchOpen = false;
     private boolean isNightMode = false;
     private boolean isNightModeCSS = true; // 网页也应用夜间模式
-
-    // HTTP 请求相关
-    private boolean isHttpTab = false; // 当前是否是 HTTP 选项卡
 
     // 定时刷新相关
     private android.os.Handler autoRefreshHandler = new android.os.Handler();
@@ -138,7 +133,6 @@ public class MainActivity extends AppCompatActivity {
 
         initViews();
         loadConfig();
-        initHttpRequestPage(); // 在 loadConfig 之后调用
         createTabsAndWebViews();
         setupListeners();
         setupAllWebViews();
@@ -176,8 +170,6 @@ public class MainActivity extends AppCompatActivity {
         webViewContainer = findViewById(R.id.webViewContainer);
         tabContainer = findViewById(R.id.tabContainer);
         bottomMenuContainer = findViewById(R.id.bottomMenuContainer);
-        contentContainer = findViewById(R.id.contentContainer);
-        httpRequestPage = findViewById(R.id.httpRequestPage);
         progressBar = findViewById(R.id.progressBar);
         tvTitle = findViewById(R.id.tvTitle);
         tvArrow = findViewById(R.id.tvArrow);
@@ -202,45 +194,6 @@ public class MainActivity extends AppCompatActivity {
 
         autoRefreshInterval = prefs.getInt("auto_refresh_interval", 0);
         updateAutoRefreshIndicator();
-    }
-
-    private void initHttpRequestPage() {
-        httpRequestPage.removeAllViews();
-        View.inflate(this, R.layout.fragment_http_requests, httpRequestPage);
-
-        // 添加请求按钮
-        TextView btnAddHttp = httpRequestPage.findViewById(R.id.btnAddHttp);
-        btnAddHttp.setOnClickListener(v -> {
-            startActivity(new Intent(this, HttpConfigActivity.class));
-        });
-
-        // 加载卡片
-        loadHttpCards();
-    }
-
-    private void loadHttpCards() {
-        LinearLayout container = httpRequestPage.findViewById(R.id.httpCardsContainer);
-        if (container == null) return;
-        container.removeAllViews();
-
-        SharedPreferences httpPrefs = getSharedPreferences("http_configs", MODE_PRIVATE);
-        int count = httpPrefs.getInt("count", 0);
-
-        // 如果没有配置，添加测试数据
-        if (count == 0) {
-            addTestHttpConfigs();
-            count = httpPrefs.getInt("count", 0);
-        }
-
-        for (int i = 0; i < count; i++) {
-            String name = httpPrefs.getString("name_" + i, "请求 " + (i + 1));
-            String url = httpPrefs.getString("url_" + i, "");
-            String method = httpPrefs.getString("method_" + i, "POST");
-            String headers = httpPrefs.getString("headers_" + i, "");
-            String body = httpPrefs.getString("body_" + i, "");
-
-            addHttpCard(container, i, name, url, method, headers, body);
-        }
     }
 
     private void addTestHttpConfigs() {
@@ -269,116 +222,6 @@ public class MainActivity extends AppCompatActivity {
         editor.putString("headers_2", "Content-Type: application/json");
         editor.putString("body_2", "{\n  \"app_id\": \"{{app_id}}\",\n  \"app_secret\": \"{{app_secret}}\"\n}");
 
-        editor.apply();
-    }
-
-    private void addHttpCard(LinearLayout container, int index, String name, String url, String method, String headers, String body) {
-        View cardView = LayoutInflater.from(this).inflate(R.layout.item_http_card, container, false);
-
-        TextView tvName = cardView.findViewById(R.id.tvRequestName);
-        TextView tvUrl = cardView.findViewById(R.id.tvRequestUrl);
-        LinearLayout paramsContainer = cardView.findViewById(R.id.paramsContainer);
-        Button btnSend = cardView.findViewById(R.id.btnSend);
-        ImageView btnSettings = cardView.findViewById(R.id.btnSettings);
-        ImageView btnDelete = cardView.findViewById(R.id.btnDelete);
-        TextView tvResponse = cardView.findViewById(R.id.tvResponse);
-
-        tvName.setText(name);
-        tvUrl.setText(url);
-
-        // 提取参数
-        List<String> paramNames = new ArrayList<>();
-        Pattern pattern = Pattern.compile("\\{\\{(.*?)\\}\\}");
-        Matcher matcher = pattern.matcher(body);
-        while (matcher.find()) {
-            String paramName = matcher.group(1);
-            if (!paramNames.contains(paramName)) {
-                paramNames.add(paramName);
-            }
-        }
-
-        // 创建参数输入框
-        List<EditText> paramInputs = new ArrayList<>();
-        for (String paramName : paramNames) {
-            View paramView = LayoutInflater.from(this).inflate(R.layout.item_param, paramsContainer, false);
-            TextView tvParamName = paramView.findViewById(R.id.tvParamName);
-            EditText etParamValue = paramView.findViewById(R.id.etParamValue);
-            tvParamName.setText(paramName);
-            paramInputs.add(etParamValue);
-            paramsContainer.addView(paramView);
-        }
-
-        // 发送按钮
-        btnSend.setOnClickListener(v -> {
-            tvResponse.setVisibility(View.VISIBLE);
-            tvResponse.setText("请求中...");
-            tvResponse.setTextColor(Color.parseColor("#666666"));
-
-            // 替换参数
-            String bodyToSend = body;
-            for (int i = 0; i < paramNames.size(); i++) {
-                if (i < paramInputs.size()) {
-                    String value = paramInputs.get(i).getText().toString().trim();
-                    bodyToSend = bodyToSend.replace("{{" + paramNames.get(i) + "}}", value);
-                }
-            }
-
-            String finalBody = bodyToSend;
-            new Thread(() -> {
-                try {
-                    String response = makeHttpRequest(url, method, headers, finalBody);
-                    String formatted = formatJson(response);
-                    runOnUiThread(() -> {
-                        tvResponse.setText(formatted);
-                        tvResponse.setTextColor(Color.parseColor("#333333"));
-                    });
-                } catch (Exception e) {
-                    runOnUiThread(() -> {
-                        tvResponse.setText("请求失败: " + e.getMessage());
-                        tvResponse.setTextColor(Color.parseColor("#F44336"));
-                    });
-                }
-            }).start();
-        });
-
-        // 设置按钮
-        btnSettings.setOnClickListener(v -> {
-            Intent intent = new Intent(this, HttpConfigActivity.class);
-            intent.putExtra("edit_index", index);
-            startActivity(intent);
-        });
-
-        // 删除按钮
-        btnDelete.setOnClickListener(v -> {
-            new AlertDialog.Builder(this)
-                    .setTitle("删除请求")
-                    .setMessage("确定删除「" + name + "」？")
-                    .setPositiveButton("删除", (d, w) -> {
-                        deleteHttpConfig(index);
-                        loadHttpCards();
-                    })
-                    .setNegativeButton("取消", null)
-                    .show();
-        });
-
-        container.addView(cardView);
-    }
-
-    private void deleteHttpConfig(int index) {
-        SharedPreferences httpPrefs = getSharedPreferences("http_configs", MODE_PRIVATE);
-        int count = httpPrefs.getInt("count", 0);
-        if (index < 0 || index >= count) return;
-
-        SharedPreferences.Editor editor = httpPrefs.edit();
-        // 移除指定索引的配置
-        for (int i = index; i < count - 1; i++) {
-            editor.putString("name_" + i, httpPrefs.getString("name_" + (i + 1), ""));
-            editor.putString("url_" + i, httpPrefs.getString("url_" + (i + 1), ""));
-            editor.putString("method_" + i, httpPrefs.getString("method_" + (i + 1), "POST"));
-            editor.putString("headers_" + i, httpPrefs.getString("headers_" + (i + 1), ""));
-            editor.putString("body_" + i, httpPrefs.getString("body_" + (i + 1), ""));
-        }
-        editor.putInt("count", count - 1);
         editor.apply();
     }
 
@@ -446,17 +289,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadConfig() {
-        // 检查是否启用 HTTP 请求选项卡
-        isHttpTab = prefs.getBoolean("http_tab_enabled", true);
-
         tabCount = prefs.getInt("tab_count", 3);
         if (tabCount < 2) tabCount = 2;
         if (tabCount > MAX_TABS) tabCount = MAX_TABS;
 
-        String[] defaultIcons = {"📡", "📋", "➕", "📁", "👤"};
-        String[] defaultTitles = {"HTTP 请求", "最近新增", "录入线索", "选项卡4", "选项卡5"};
+        String[] defaultIcons = {"📊", "📋", "➕", "📁", "👤"};
+        String[] defaultTitles = {"销售机会", "最近新增", "录入线索", "选项卡4", "选项卡5"};
         String[] defaultUrls = {
-                "about:blank",
+                "https://www.kdocs.cn/wo/sl/v12CEOZt",
                 "https://www.kdocs.cn/wo/sl/v14T2gpD",
                 "https://www.kdocs.cn/wo/sl/v13iHfr4",
                 "about:blank",
@@ -515,12 +355,10 @@ public class MainActivity extends AppCompatActivity {
             webViews[i] = null;
         }
 
-        // 创建选项卡（HTTP + Web）
-        int totalTabs = (isHttpTab ? 1 : 0) + tabCount;
-        if (totalTabs > MAX_TABS) totalTabs = MAX_TABS;
+        // 只创建第一个 WebView
+        createWebView(0);
 
-        for (int i = 0; i < totalTabs; i++) {
-            final int tabIndex = i;
+        for (int i = 0; i < tabCount; i++) {
 
             // 创建选项卡
             LinearLayout tab = new LinearLayout(this);
@@ -530,60 +368,45 @@ public class MainActivity extends AppCompatActivity {
                     0, LinearLayout.LayoutParams.MATCH_PARENT, 1);
             tab.setLayoutParams(tabParams);
 
-            // 选项卡图标和标题
-            String icon, title;
-            if (isHttpTab && i == 0) {
-                // HTTP 选项卡
-                icon = "📡";
-                title = "HTTP";
-            } else {
-                // Web 选项卡
-                int webIndex = isHttpTab ? i - 1 : i;
-                icon = tabIcons[webIndex];
-                title = tabTitles[webIndex];
-            }
-
             // 选项卡图标
-            TextView iconView = new TextView(this);
-            iconView.setText(icon);
-            iconView.setTextSize(22);
-            iconView.setGravity(Gravity.CENTER);
+            TextView icon = new TextView(this);
+            icon.setText(tabIcons[i]);
+            icon.setTextSize(22);
+            icon.setGravity(Gravity.CENTER);
             LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT);
-            iconView.setLayoutParams(iconParams);
+            icon.setLayoutParams(iconParams);
 
             // 选项卡文字
-            TextView textView = new TextView(this);
-            textView.setText(title);
-            textView.setTextSize(10);
-            textView.setGravity(Gravity.CENTER);
-            textView.setTextColor(i == 0 ? Color.parseColor("#1976D2") : Color.parseColor("#666666"));
+            TextView text = new TextView(this);
+            text.setText(tabTitles[i]);
+            text.setTextSize(10);
+            text.setGravity(Gravity.CENTER);
+            text.setTextColor(i == 0 ? Color.parseColor("#1976D2") : Color.parseColor("#666666"));
             LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT);
             textParams.topMargin = dpToPx(2);
-            textView.setLayoutParams(textParams);
+            text.setLayoutParams(textParams);
 
-            tab.addView(iconView);
-            tab.addView(textView);
+            tab.addView(icon);
+            tab.addView(text);
             tabContainer.addView(tab);
 
             tabViews.add(tab);
-            tabIconViews.add(iconView);
-            tabTextViews.add(textView);
+            tabIconViews.add(icon);
+            tabTextViews.add(text);
 
             // 点击切换选项卡
-            tab.setOnClickListener(v -> switchTab(tabIndex));
+            final int index = i;
+            tab.setOnClickListener(v -> switchTab(index));
 
-            // 长按显示子链接菜单（仅Web选项卡）
-            if (!(isHttpTab && tabIndex == 0)) {
-                tab.setOnLongClickListener(v -> {
-                    int webIndex = isHttpTab ? tabIndex - 1 : tabIndex;
-                    showBottomMenu(webIndex);
-                    return true;
-                });
-            }
+            // 长按显示子链接菜单
+            tab.setOnLongClickListener(v -> {
+                showBottomMenu(index);
+                return true;
+            });
         }
     }
 
@@ -663,7 +486,7 @@ public class MainActivity extends AppCompatActivity {
         refreshMenu.add(1, 53, 0, "每5分钟").setChecked(autoRefreshInterval == 300);
         refreshMenu.setGroupCheckable(1, true, true);
 
-        popup.getMenu().add(0, 6, 0, "📡 HTTP 请求配置");
+        popup.getMenu().add(0, 6, 0, "📡 HTTP 请求");
         popup.getMenu().add(0, 4, 0, "⚙️ 设置");
 
         popup.setOnMenuItemClickListener(item -> {
@@ -682,7 +505,7 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
                 return true;
             } else if (item.getItemId() == 6) {
-                startActivity(new Intent(this, HttpConfigActivity.class));
+                showHttpDialog();
                 return true;
             } else if (item.getItemId() >= 50 && item.getItemId() <= 53) {
                 // 定时刷新
@@ -695,6 +518,139 @@ public class MainActivity extends AppCompatActivity {
         });
 
         popup.show();
+    }
+
+    private void showHttpDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_http_requests, null);
+        builder.setView(dialogView);
+
+        AlertDialog dialog = builder.create();
+        dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+
+        // 关闭按钮
+        ImageView btnClose = dialogView.findViewById(R.id.btnClose);
+        btnClose.setOnClickListener(v -> dialog.dismiss());
+
+        // 设置按钮
+        Button btnHttpSettings = dialogView.findViewById(R.id.btnHttpSettings);
+        btnHttpSettings.setOnClickListener(v -> {
+            dialog.dismiss();
+            startActivity(new Intent(this, HttpConfigActivity.class));
+        });
+
+        // 添加请求按钮
+        Button btnAddHttp = dialogView.findViewById(R.id.btnAddHttp);
+        btnAddHttp.setOnClickListener(v -> {
+            dialog.dismiss();
+            startActivity(new Intent(this, HttpConfigActivity.class));
+        });
+
+        // 加载HTTP卡片
+        loadHttpDialogCards(dialogView);
+
+        dialog.show();
+    }
+
+    private void loadHttpDialogCards(View dialogView) {
+        LinearLayout container = dialogView.findViewById(R.id.httpCardsContainer);
+        if (container == null) return;
+        container.removeAllViews();
+
+        SharedPreferences httpPrefs = getSharedPreferences("http_configs", MODE_PRIVATE);
+        int count = httpPrefs.getInt("count", 0);
+
+        // 如果没有配置，添加测试数据
+        if (count == 0) {
+            addTestHttpConfigs();
+            count = httpPrefs.getInt("count", 0);
+        }
+
+        for (int i = 0; i < count; i++) {
+            String name = httpPrefs.getString("name_" + i, "请求 " + (i + 1));
+            String url = httpPrefs.getString("url_" + i, "");
+            String method = httpPrefs.getString("method_" + i, "POST");
+            String headers = httpPrefs.getString("headers_" + i, "");
+            String body = httpPrefs.getString("body_" + i, "");
+
+            addHttpDialogCard(container, i, name, url, method, headers, body);
+        }
+    }
+
+    private void addHttpDialogCard(LinearLayout container, int index, String name, String url, String method, String headers, String body) {
+        View cardView = LayoutInflater.from(this).inflate(R.layout.item_http_card, container, false);
+
+        TextView tvName = cardView.findViewById(R.id.tvRequestName);
+        TextView tvUrl = cardView.findViewById(R.id.tvRequestUrl);
+        LinearLayout paramsContainer = cardView.findViewById(R.id.paramsContainer);
+        Button btnSend = cardView.findViewById(R.id.btnSend);
+        ImageView btnSettings = cardView.findViewById(R.id.btnSettings);
+        ImageView btnDelete = cardView.findViewById(R.id.btnDelete);
+        TextView tvResponse = cardView.findViewById(R.id.tvResponse);
+
+        tvName.setText(name);
+        tvUrl.setText(url);
+
+        // 隐藏设置和删除按钮
+        btnSettings.setVisibility(View.GONE);
+        btnDelete.setVisibility(View.GONE);
+
+        // 提取参数
+        List<String> paramNames = new ArrayList<>();
+        Pattern pattern = Pattern.compile("\\{\\{(.*?)\\}\\}");
+        Matcher matcher = pattern.matcher(body);
+        while (matcher.find()) {
+            String paramName = matcher.group(1);
+            if (!paramNames.contains(paramName)) {
+                paramNames.add(paramName);
+            }
+        }
+
+        // 创建参数输入框
+        List<EditText> paramInputs = new ArrayList<>();
+        for (String paramName : paramNames) {
+            View paramView = LayoutInflater.from(this).inflate(R.layout.item_param, paramsContainer, false);
+            TextView tvParamName = paramView.findViewById(R.id.tvParamName);
+            EditText etParamValue = paramView.findViewById(R.id.etParamValue);
+            tvParamName.setText(paramName);
+            paramInputs.add(etParamValue);
+            paramsContainer.addView(paramView);
+        }
+
+        // 发送按钮
+        btnSend.setOnClickListener(v -> {
+            tvResponse.setVisibility(View.VISIBLE);
+            tvResponse.setText("请求中...");
+            tvResponse.setTextColor(Color.parseColor("#666666"));
+
+            // 替换参数
+            String bodyToSend = body;
+            for (int i = 0; i < paramNames.size(); i++) {
+                if (i < paramInputs.size()) {
+                    String value = paramInputs.get(i).getText().toString().trim();
+                    bodyToSend = bodyToSend.replace("{{" + paramNames.get(i) + "}}", value);
+                }
+            }
+
+            String finalBody = bodyToSend;
+            new Thread(() -> {
+                try {
+                    String response = makeHttpRequest(url, method, headers, finalBody);
+                    String formatted = formatJson(response);
+                    runOnUiThread(() -> {
+                        tvResponse.setText(formatted);
+                        tvResponse.setTextColor(Color.parseColor("#333333"));
+                    });
+                } catch (Exception e) {
+                    runOnUiThread(() -> {
+                        tvResponse.setText("错误: " + e.getMessage());
+                        tvResponse.setTextColor(Color.parseColor("#F44336"));
+                    });
+                }
+            }).start();
+        });
+
+        container.addView(cardView);
     }
 
     // ========== 定时刷新 ==========
@@ -1148,8 +1104,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void switchTab(int index) {
-        int totalTabs = (isHttpTab ? 1 : 0) + tabCount;
-        if (index < 0 || index >= totalTabs) return;
+        if (index < 0 || index >= tabCount) return;
 
         // 关闭底部菜单
         hideBottomMenu();
@@ -1159,8 +1114,7 @@ public class MainActivity extends AppCompatActivity {
             inspectBanner.setVisibility(View.GONE);
         }
 
-        // 隐藏所有内容
-        httpRequestPage.setVisibility(View.GONE);
+        // 隐藏当前 WebView
         WebView oldWebView = getCurrentWebView();
         if (oldWebView != null) {
             oldWebView.setVisibility(View.GONE);
@@ -1179,34 +1133,25 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        // 判断是否是 HTTP 请求选项卡（第一个选项卡）
-        if (isHttpTab && index == 0) {
-            httpRequestPage.setVisibility(View.VISIBLE);
-            loadHttpCards();
-        } else {
-            // Web 选项卡
-            int webIndex = isHttpTab ? index - 1 : index;
+        // 创建 WebView（如果不存在）
+        createWebView(index);
 
-            // 创建 WebView（如果不存在）
-            createWebView(webIndex);
+        // 显示当前 WebView
+        WebView newWebView = getCurrentWebView();
+        if (newWebView != null) {
+            newWebView.setVisibility(View.VISIBLE);
+            newWebView.onResume();
+        }
 
-            // 显示当前 WebView
-            WebView newWebView = webViews[webIndex];
-            if (newWebView != null) {
-                newWebView.setVisibility(View.VISIBLE);
-                newWebView.onResume();
-            }
-
-            // 检查 WebView 是否有效
-            if (tabLoaded[webIndex] && newWebView != null) {
-                String url = newWebView.getUrl();
-                if (url == null || url.equals("about:blank")) {
-                    loadCurrentLink();
-                }
-            } else if (!tabLoaded[webIndex]) {
+        // 检查 WebView 是否有效
+        if (tabLoaded[index] && newWebView != null) {
+            String url = newWebView.getUrl();
+            if (url == null || url.equals("about:blank")) {
                 loadCurrentLink();
-                tabLoaded[webIndex] = true;
             }
+        } else if (!tabLoaded[index]) {
+            loadCurrentLink();
+            tabLoaded[index] = true;
         }
 
         updateDropdown();
