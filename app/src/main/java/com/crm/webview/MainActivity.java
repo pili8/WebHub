@@ -1464,10 +1464,6 @@ public class MainActivity extends AppCompatActivity {
         TextView tvClass = dialogView.findViewById(R.id.tvClass);
         TextView tvText = dialogView.findViewById(R.id.tvText);
 
-        LinearLayout rowId = dialogView.findViewById(R.id.rowId);
-        LinearLayout rowClass = dialogView.findViewById(R.id.rowClass);
-        LinearLayout rowText = dialogView.findViewById(R.id.rowText);
-
         TextView btnCopyId = dialogView.findViewById(R.id.btnCopyId);
         TextView btnCopyClass = dialogView.findViewById(R.id.btnCopyClass);
         TextView btnCopyAll = dialogView.findViewById(R.id.btnCopyAll);
@@ -1476,7 +1472,7 @@ public class MainActivity extends AppCompatActivity {
         tvTag.setText("<" + tag + ">");
 
         if (id != null && !id.isEmpty()) {
-            rowId.setVisibility(View.VISIBLE);
+            tvId.setVisibility(View.VISIBLE);
             tvId.setText("#" + id);
             btnCopyId.setVisibility(View.VISIBLE);
             btnCopyId.setOnClickListener(v -> {
@@ -1486,8 +1482,8 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (classes != null && !classes.isEmpty()) {
-            rowClass.setVisibility(View.VISIBLE);
             String firstClass = classes.split("\\s+")[0];
+            tvClass.setVisibility(View.VISIBLE);
             tvClass.setText("." + firstClass);
             btnCopyClass.setVisibility(View.VISIBLE);
             btnCopyClass.setOnClickListener(v -> {
@@ -1497,7 +1493,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (text != null && !text.isEmpty()) {
-            rowText.setVisibility(View.VISIBLE);
+            tvText.setVisibility(View.VISIBLE);
             tvText.setText(text);
         }
 
