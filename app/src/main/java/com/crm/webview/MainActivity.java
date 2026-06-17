@@ -899,10 +899,19 @@ public class MainActivity extends AppCompatActivity {
         WebView newWebView = getCurrentWebView();
         if (newWebView != null) {
             newWebView.setVisibility(View.VISIBLE);
+            // 恢复 WebView（可能被系统暂停）
+            newWebView.onResume();
         }
 
-        // 只有第一次访问才加载
-        if (!tabLoaded[index]) {
+        // 检查 WebView 是否有效（被系统回收后可能白屏）
+        if (tabLoaded[index] && newWebView != null) {
+            String url = newWebView.getUrl();
+            if (url == null || url.equals("about:blank")) {
+                // WebView 被回收，重新加载
+                loadCurrentLink();
+            }
+        } else if (!tabLoaded[index]) {
+            // 第一次访问
             loadCurrentLink();
             tabLoaded[index] = true;
         }
