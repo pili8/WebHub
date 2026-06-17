@@ -196,20 +196,13 @@
         android:gravity="center"
         android:visibility="gone" />
 
-    <!-- WebView 内容区（支持下拉刷新） -->
-    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-        android:id="@+id/swipeRefresh"
+    <!-- WebView 内容区 -->
+    <FrameLayout
+        android:id="@+id/webViewContainer"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
-
-        <FrameLayout
-            android:id="@+id/webViewContainer"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@android:color/white" />
-
-    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+        android:layout_weight="1"
+        android:background="@android:color/white" />
 
     <!-- 底部子链接菜单（长按选项卡时显示） -->
     <LinearLayout
