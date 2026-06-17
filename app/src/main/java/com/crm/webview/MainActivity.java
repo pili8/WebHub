@@ -688,10 +688,8 @@ public class MainActivity extends AppCompatActivity {
             webViewContainer.setBackgroundColor(Color.parseColor("#121212"));
 
             // 如果网页暗色开关开启，注入 CSS
-            if (isNightModeCSS) {
-                webView != null ? webView : null {
-                    injectNightModeCSS(webView);
-                }
+            if (isNightModeCSS && webView != null) {
+                injectNightModeCSS(webView);
             }
         } else {
             // 标题栏恢复
@@ -702,7 +700,7 @@ public class MainActivity extends AppCompatActivity {
             webViewContainer.setBackgroundColor(Color.WHITE);
 
             // 移除网页暗色 CSS
-            webView != null ? webView : null {
+            if (webView != null) {
                 removeNightModeCSS(webView);
             }
         }
