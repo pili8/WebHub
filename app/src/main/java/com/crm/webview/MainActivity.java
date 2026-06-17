@@ -104,10 +104,18 @@ public class MainActivity extends AppCompatActivity {
     static class LinkItem {
         String title;
         String url;
+        String actions;
 
         LinkItem(String title, String url) {
             this.title = title;
             this.url = url;
+            this.actions = "";
+        }
+
+        LinkItem(String title, String url, String actions) {
+            this.title = title;
+            this.url = url;
+            this.actions = actions;
         }
     }
 
@@ -218,9 +226,11 @@ public class MainActivity extends AppCompatActivity {
 
                     String[] parts = line.split("\\|", 2);
                     String titleUrl = parts[0];
+                    String actions = parts.length > 1 ? parts[1] : "";
+
                     String[] titleUrlParts = titleUrl.split(",", 2);
                     if (titleUrlParts.length == 2) {
-                        links.add(new LinkItem(titleUrlParts[0].trim(), titleUrlParts[1].trim()));
+                        links.add(new LinkItem(titleUrlParts[0].trim(), titleUrlParts[1].trim(), actions));
                     }
                 }
             }
@@ -1347,15 +1357,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void executeCustomScript(WebView webView) {
-        if (currentTab >= 0 && currentTab < tabActions.length) {
-            String actions = tabActions[currentTab];
-            if (actions != null && !actions.isEmpty()) {
-                String js = buildScriptFromActions(actions);
-                if (!js.isEmpty()) {
-                    // 金山文档是SPA，需要更长延迟等待渲染完成
-                    webView.postDelayed(() -> {
-                        webView.evaluateJavascript(js, null);
-                    }, 2000);
+        // 获取当前链接的操作
+        if (currentTab >= 0 && currentTab < tabLinks.size()) {
+            List<LinkItem> links = tabLinks.get(currentTab);
+            if (currentLinkIndex >= 0 && currentLinkIndex < links.size()) {
+                String actions = links.get(currentLinkIndex).actions;
+                if (actions != null && !actions.isEmpty()) {
+                    String js = buildScriptFromActions(actions);
+                    if (!js.isEmpty()) {
+                        // 金山文档是SPA，需要更长延迟等待渲染完成
+                        webView.postDelayed(() -> {
+                            webView.evaluateJavascript(js, null);
+                        }, 2000);
+                    }
                 }
             }
         }
@@ -1440,8 +1454,9 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
 
-            // 没有历史记录，退出APP
-            return super.onKeyDown(keyCode, event);
+            // 没有历史记录，不退出APP
+            Toast.makeText(this, "已到第一页", Toast.LENGTH_SHORT).show();
+            return true;
         }
         return super.onKeyDown(keyCode, event);
     }
