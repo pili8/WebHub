@@ -330,8 +330,7 @@ public class MainActivity extends AppCompatActivity {
     private void showPopupMenu() {
         android.widget.PopupMenu popup = new android.widget.PopupMenu(this, btnMenu);
         popup.getMenu().add(0, 1, 0, isInspectMode ? "退出查找元素" : "🔍 查找元素");
-        popup.getMenu().add(0, 2, 0, "🌙 App暗色: " + (isNightMode ? "开" : "关"));
-        popup.getMenu().add(0, 4, 0, "🎨 网页暗色: " + (isNightModeCSS ? "开" : "关"));
+        popup.getMenu().add(0, 2, 0, "🌙 " + (isNightMode ? "日间模式" : "夜间模式"));
         popup.getMenu().add(0, 3, 0, "⚙️ 设置");
 
         popup.setOnMenuItemClickListener(item -> {
@@ -343,9 +342,6 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             } else if (item.getItemId() == 3) {
                 startActivity(new Intent(this, SettingsActivity.class));
-                return true;
-            } else if (item.getItemId() == 4) {
-                toggleNightModeCSS();
                 return true;
             }
             return false;
