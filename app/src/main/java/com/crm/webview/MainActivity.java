@@ -58,6 +58,8 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import androidx.drawerlayout.widget.DrawerLayout;
+
 public class MainActivity extends AppCompatActivity {
 
     private static final int PERMISSION_REQUEST_CODE = 100;
@@ -67,6 +69,10 @@ public class MainActivity extends AppCompatActivity {
     private FrameLayout webViewContainer;
     private LinearLayout tabContainer;
     private LinearLayout bottomMenuContainer;
+
+    // 抽屉
+    private DrawerLayout drawerLayout;
+    private LinearLayout drawerHttpCards;
 
     // 多 WebView（每个选项卡独立）
     private WebView[] webViews = new WebView[MAX_TABS];
@@ -171,6 +177,8 @@ public class MainActivity extends AppCompatActivity {
         webViewContainer = findViewById(R.id.webViewContainer);
         tabContainer = findViewById(R.id.tabContainer);
         bottomMenuContainer = findViewById(R.id.bottomMenuContainer);
+        drawerLayout = findViewById(R.id.drawerLayout);
+        drawerHttpCards = findViewById(R.id.drawerHttpCards);
         progressBar = findViewById(R.id.progressBar);
         tvTitle = findViewById(R.id.tvTitle);
         tvArrow = findViewById(R.id.tvArrow);
@@ -195,6 +203,106 @@ public class MainActivity extends AppCompatActivity {
 
         autoRefreshInterval = prefs.getInt("auto_refresh_interval", 0);
         updateAutoRefreshIndicator();
+    }
+
+    private void loadDrawerHttpCards() {
+        if (drawerHttpCards == null) return;
+        drawerHttpCards.removeAllViews();
+
+        SharedPreferences httpPrefs = getSharedPreferences("http_configs", MODE_PRIVATE);
+        int count = httpPrefs.getInt("count", 0);
+
+        // 如果没有配置，添加测试数据
+        if (count == 0) {
+            addTestHttpConfigs();
+            count = httpPrefs.getInt("count", 0);
+        }
+
+        for (int i = 0; i < count; i++) {
+            String name = httpPrefs.getString("name_" + i, "请求 " + (i + 1));
+            String url = httpPrefs.getString("url_" + i, "");
+            String method = httpPrefs.getString("method_" + i, "POST");
+            String headers = httpPrefs.getString("headers_" + i, "");
+            String body = httpPrefs.getString("body_" + i, "");
+
+            addDrawerHttpCard(i, name, url, method, headers, body);
+        }
+    }
+
+    private void addDrawerHttpCard(int index, String name, String url, String method, String headers, String body) {
+        View cardView = LayoutInflater.from(this).inflate(R.layout.item_http_card, drawerHttpCards, false);
+
+        TextView tvName = cardView.findViewById(R.id.tvRequestName);
+        TextView tvUrl = cardView.findViewById(R.id.tvRequestUrl);
+        LinearLayout paramsContainer = cardView.findViewById(R.id.paramsContainer);
+        Button btnSend = cardView.findViewById(R.id.btnSend);
+        ImageView btnSettings = cardView.findViewById(R.id.btnSettings);
+        ImageView btnDelete = cardView.findViewById(R.id.btnDelete);
+        TextView tvResponse = cardView.findViewById(R.id.tvResponse);
+
+        tvName.setText(name);
+        tvUrl.setText(url);
+
+        // 隐藏设置和删除按钮
+        btnSettings.setVisibility(View.GONE);
+        btnDelete.setVisibility(View.GONE);
+
+        // 提取参数
+        List<String> paramNames = new ArrayList<>();
+        Pattern pattern = Pattern.compile("\\{\\{(.*?)\\}\\}");
+        Matcher matcher = pattern.matcher(body);
+        while (matcher.find()) {
+            String paramName = matcher.group(1);
+            if (!paramNames.contains(paramName)) {
+                paramNames.add(paramName);
+            }
+        }
+
+        // 创建参数输入框
+        List<EditText> paramInputs = new ArrayList<>();
+        for (String paramName : paramNames) {
+            View paramView = LayoutInflater.from(this).inflate(R.layout.item_param, paramsContainer, false);
+            TextView tvParamName = paramView.findViewById(R.id.tvParamName);
+            EditText etParamValue = paramView.findViewById(R.id.etParamValue);
+            tvParamName.setText(paramName);
+            paramInputs.add(etParamValue);
+            paramsContainer.addView(paramView);
+        }
+
+        // 发送按钮
+        btnSend.setOnClickListener(v -> {
+            tvResponse.setVisibility(View.VISIBLE);
+            tvResponse.setText("请求中...");
+            tvResponse.setTextColor(Color.parseColor("#666666"));
+
+            // 替换参数
+            String bodyToSend = body;
+            for (int i = 0; i < paramNames.size(); i++) {
+                if (i < paramInputs.size()) {
+                    String value = paramInputs.get(i).getText().toString().trim();
+                    bodyToSend = bodyToSend.replace("{{" + paramNames.get(i) + "}}", value);
+                }
+            }
+
+            String finalBody = bodyToSend;
+            new Thread(() -> {
+                try {
+                    String response = makeHttpRequest(url, method, headers, finalBody);
+                    String formatted = formatJson(response);
+                    runOnUiThread(() -> {
+                        tvResponse.setText(formatted);
+                        tvResponse.setTextColor(Color.parseColor("#333333"));
+                    });
+                } catch (Exception e) {
+                    runOnUiThread(() -> {
+                        tvResponse.setText("错误: " + e.getMessage());
+                        tvResponse.setTextColor(Color.parseColor("#F44336"));
+                    });
+                }
+            }).start();
+        });
+
+        drawerHttpCards.addView(cardView);
     }
 
     private void addTestHttpConfigs() {
@@ -458,6 +566,31 @@ public class MainActivity extends AppCompatActivity {
         btnDropdown.setOnClickListener(v -> toggleDropdown());
         btnMenu.setOnClickListener(v -> showPopupMenu());
 
+        // HTTP 请求按钮 - 打开抽屉
+        ImageView btnHttp = findViewById(R.id.btnHttp);
+        btnHttp.setOnClickListener(v -> {
+            loadDrawerHttpCards();
+            drawerLayout.openDrawer(android.view.Gravity.START);
+        });
+
+        // 抽屉关闭按钮
+        ImageView btnCloseDrawer = findViewById(R.id.btnCloseDrawer);
+        btnCloseDrawer.setOnClickListener(v -> drawerLayout.closeDrawer(android.view.Gravity.START));
+
+        // 抽屉添加按钮
+        Button btnDrawerAddHttp = findViewById(R.id.btnDrawerAddHttp);
+        btnDrawerAddHttp.setOnClickListener(v -> {
+            drawerLayout.closeDrawer(android.view.Gravity.START);
+            startActivity(new Intent(this, HttpConfigActivity.class));
+        });
+
+        // 抽屉设置按钮
+        Button btnDrawerSettings = findViewById(R.id.btnDrawerSettings);
+        btnDrawerSettings.setOnClickListener(v -> {
+            drawerLayout.closeDrawer(android.view.Gravity.START);
+            startActivity(new Intent(this, HttpConfigActivity.class));
+        });
+
         // 搜索取消按钮
         TextView btnSearchCancel = findViewById(R.id.btnSearchCancel);
         btnSearchCancel.setOnClickListener(v -> closeSearch());
@@ -487,7 +620,6 @@ public class MainActivity extends AppCompatActivity {
         refreshMenu.add(1, 53, 0, "每5分钟").setChecked(autoRefreshInterval == 300);
         refreshMenu.setGroupCheckable(1, true, true);
 
-        popup.getMenu().add(0, 6, 0, "📡 HTTP 请求");
         popup.getMenu().add(0, 4, 0, "⚙️ 设置");
 
         popup.setOnMenuItemClickListener(item -> {
@@ -505,9 +637,6 @@ public class MainActivity extends AppCompatActivity {
                 intent.putExtra("night_mode", isNightMode);
                 startActivity(intent);
                 return true;
-            } else if (item.getItemId() == 6) {
-                showHttpDialog();
-                return true;
             } else if (item.getItemId() >= 50 && item.getItemId() <= 53) {
                 // 定时刷新
                 int[] intervals = {0, 30, 60, 300};
@@ -519,139 +648,6 @@ public class MainActivity extends AppCompatActivity {
         });
 
         popup.show();
-    }
-
-    private void showHttpDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_http_requests, null);
-        builder.setView(dialogView);
-
-        AlertDialog dialog = builder.create();
-        dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-
-        // 关闭按钮
-        ImageView btnClose = dialogView.findViewById(R.id.btnClose);
-        btnClose.setOnClickListener(v -> dialog.dismiss());
-
-        // 设置按钮
-        Button btnHttpSettings = dialogView.findViewById(R.id.btnHttpSettings);
-        btnHttpSettings.setOnClickListener(v -> {
-            dialog.dismiss();
-            startActivity(new Intent(this, HttpConfigActivity.class));
-        });
-
-        // 添加请求按钮
-        Button btnAddHttp = dialogView.findViewById(R.id.btnAddHttp);
-        btnAddHttp.setOnClickListener(v -> {
-            dialog.dismiss();
-            startActivity(new Intent(this, HttpConfigActivity.class));
-        });
-
-        // 加载HTTP卡片
-        loadHttpDialogCards(dialogView);
-
-        dialog.show();
-    }
-
-    private void loadHttpDialogCards(View dialogView) {
-        LinearLayout container = dialogView.findViewById(R.id.httpCardsContainer);
-        if (container == null) return;
-        container.removeAllViews();
-
-        SharedPreferences httpPrefs = getSharedPreferences("http_configs", MODE_PRIVATE);
-        int count = httpPrefs.getInt("count", 0);
-
-        // 如果没有配置，添加测试数据
-        if (count == 0) {
-            addTestHttpConfigs();
-            count = httpPrefs.getInt("count", 0);
-        }
-
-        for (int i = 0; i < count; i++) {
-            String name = httpPrefs.getString("name_" + i, "请求 " + (i + 1));
-            String url = httpPrefs.getString("url_" + i, "");
-            String method = httpPrefs.getString("method_" + i, "POST");
-            String headers = httpPrefs.getString("headers_" + i, "");
-            String body = httpPrefs.getString("body_" + i, "");
-
-            addHttpDialogCard(container, i, name, url, method, headers, body);
-        }
-    }
-
-    private void addHttpDialogCard(LinearLayout container, int index, String name, String url, String method, String headers, String body) {
-        View cardView = LayoutInflater.from(this).inflate(R.layout.item_http_card, container, false);
-
-        TextView tvName = cardView.findViewById(R.id.tvRequestName);
-        TextView tvUrl = cardView.findViewById(R.id.tvRequestUrl);
-        LinearLayout paramsContainer = cardView.findViewById(R.id.paramsContainer);
-        Button btnSend = cardView.findViewById(R.id.btnSend);
-        ImageView btnSettings = cardView.findViewById(R.id.btnSettings);
-        ImageView btnDelete = cardView.findViewById(R.id.btnDelete);
-        TextView tvResponse = cardView.findViewById(R.id.tvResponse);
-
-        tvName.setText(name);
-        tvUrl.setText(url);
-
-        // 隐藏设置和删除按钮
-        btnSettings.setVisibility(View.GONE);
-        btnDelete.setVisibility(View.GONE);
-
-        // 提取参数
-        List<String> paramNames = new ArrayList<>();
-        Pattern pattern = Pattern.compile("\\{\\{(.*?)\\}\\}");
-        Matcher matcher = pattern.matcher(body);
-        while (matcher.find()) {
-            String paramName = matcher.group(1);
-            if (!paramNames.contains(paramName)) {
-                paramNames.add(paramName);
-            }
-        }
-
-        // 创建参数输入框
-        List<EditText> paramInputs = new ArrayList<>();
-        for (String paramName : paramNames) {
-            View paramView = LayoutInflater.from(this).inflate(R.layout.item_param, paramsContainer, false);
-            TextView tvParamName = paramView.findViewById(R.id.tvParamName);
-            EditText etParamValue = paramView.findViewById(R.id.etParamValue);
-            tvParamName.setText(paramName);
-            paramInputs.add(etParamValue);
-            paramsContainer.addView(paramView);
-        }
-
-        // 发送按钮
-        btnSend.setOnClickListener(v -> {
-            tvResponse.setVisibility(View.VISIBLE);
-            tvResponse.setText("请求中...");
-            tvResponse.setTextColor(Color.parseColor("#666666"));
-
-            // 替换参数
-            String bodyToSend = body;
-            for (int i = 0; i < paramNames.size(); i++) {
-                if (i < paramInputs.size()) {
-                    String value = paramInputs.get(i).getText().toString().trim();
-                    bodyToSend = bodyToSend.replace("{{" + paramNames.get(i) + "}}", value);
-                }
-            }
-
-            String finalBody = bodyToSend;
-            new Thread(() -> {
-                try {
-                    String response = makeHttpRequest(url, method, headers, finalBody);
-                    String formatted = formatJson(response);
-                    runOnUiThread(() -> {
-                        tvResponse.setText(formatted);
-                        tvResponse.setTextColor(Color.parseColor("#333333"));
-                    });
-                } catch (Exception e) {
-                    runOnUiThread(() -> {
-                        tvResponse.setText("错误: " + e.getMessage());
-                        tvResponse.setTextColor(Color.parseColor("#F44336"));
-                    });
-                }
-            }).start();
-        });
-
-        container.addView(cardView);
     }
 
     // ========== 定时刷新 ==========
