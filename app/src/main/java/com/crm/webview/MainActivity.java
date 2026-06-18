@@ -163,13 +163,20 @@ public class MainActivity extends AppCompatActivity {
             setAutoRefresh(autoRefreshInterval);
         }
 
-        // 重新加载配置（页面操作可能在设置中修改）
+        // 检查选项卡数量是否变化
+        int oldTabCount = tabCount;
         loadConfig();
 
-        // 重新执行页面操作（APP从后台返回时WebView可能重新加载）
-        wv = getCurrentWebView();
-        if (wv != null) {
-            executeCustomScript(wv);
+        // 如果选项卡数量变化，重新创建UI
+        if (tabCount != oldTabCount) {
+            createTabsAndWebViews();
+            switchTab(0);
+        } else {
+            // 重新执行页面操作（APP从后台返回时WebView可能重新加载）
+            wv = getCurrentWebView();
+            if (wv != null) {
+                executeCustomScript(wv);
+            }
         }
     }
 
@@ -1395,21 +1402,35 @@ public class MainActivity extends AppCompatActivity {
         boolean pageActionsEnabled = prefs.getBoolean("page_actions_enabled", true);
         if (!pageActionsEnabled) return;
 
-        // 使用活跃链接索引获取操作
+        // 检查是否对所有页面生效
+        boolean pageActionsAll = prefs.getBoolean("page_actions_all", false);
+
+        // 获取操作
+        String actions = null;
         if (currentTab >= 0 && currentTab < tabLinks.size()) {
             List<LinkItem> links = tabLinks.get(currentTab);
-            if (activeLinkIndex >= 0 && activeLinkIndex < links.size()) {
-                String actions = links.get(activeLinkIndex).actions;
-                if (actions != null && !actions.isEmpty()) {
-                    String js = buildScriptFromActions(actions);
-                    if (!js.isEmpty()) {
-                        // 先执行一次
-                        webView.evaluateJavascript(js, null);
 
-                        // 启动 MutationObserver 监听页面变化
-                        startMutationObserver(webView, js);
-                    }
+            if (pageActionsAll) {
+                // 对所有页面生效：使用当前链接的操作
+                if (currentLinkIndex >= 0 && currentLinkIndex < links.size()) {
+                    actions = links.get(currentLinkIndex).actions;
                 }
+            } else {
+                // 只对活跃链接生效
+                if (activeLinkIndex >= 0 && activeLinkIndex < links.size()) {
+                    actions = links.get(activeLinkIndex).actions;
+                }
+            }
+        }
+
+        if (actions != null && !actions.isEmpty()) {
+            String js = buildScriptFromActions(actions);
+            if (!js.isEmpty()) {
+                // 先执行一次
+                webView.evaluateJavascript(js, null);
+
+                // 启动 MutationObserver 监听页面变化
+                startMutationObserver(webView, js);
             }
         }
     }

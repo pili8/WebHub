@@ -179,6 +179,45 @@
 
             </LinearLayout>
 
+            <!-- 对所有页面生效 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/card_white"
+                android:padding="14dp"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="对所有页面生效"
+                        android:textSize="15sp"
+                        android:textColor="#333333" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="包括新打开的页面和跳转的页面"
+                        android:textSize="12sp"
+                        android:textColor="#999999"
+                        android:layout_marginTop="2dp" />
+
+                </LinearLayout>
+
+                <android.widget.Switch
+                    android:id="@+id/switchPageActionsAll"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+            </LinearLayout>
+
             <!-- 清除缓存 -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -292,18 +331,21 @@
 
         </LinearLayout>
 
-    </ScrollView>
+            <!-- 保存按钮 -->
+            <Button
+                android:id="@+id/btnSave"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="保存设置"
+                android:textSize="15sp"
+                android:background="@drawable/btn_primary"
+                android:textColor="@android:color/white"
+                android:textAllCaps="false"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp" />
 
-    <!-- 底部保存按钮 -->
-    <Button
-        android:id="@+id/btnSave"
-        android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:text="保存设置"
-        android:textSize="15sp"
-        android:background="@drawable/btn_primary"
-        android:textColor="@android:color/white"
-        android:textAllCaps="false"
-        android:layout_margin="12dp" />
+        </LinearLayout>
+
+    </ScrollView>
 
 </LinearLayout>

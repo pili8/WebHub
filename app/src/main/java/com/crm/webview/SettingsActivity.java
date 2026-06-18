@@ -46,6 +46,7 @@ public class SettingsActivity extends AppCompatActivity {
     private Switch switchKdocsOptimize;
     private Switch switchNightModeCSS;
     private Switch switchPageActions;
+    private Switch switchPageActionsAll;
     private SharedPreferences prefs;
 
     private static final String[] ACTION_TYPES = {"隐藏", "点击", "修改"};
@@ -89,10 +90,12 @@ public class SettingsActivity extends AppCompatActivity {
         switchKdocsOptimize = findViewById(R.id.switchKdocsOptimize);
         switchNightModeCSS = findViewById(R.id.switchNightModeCSS);
         switchPageActions = findViewById(R.id.switchPageActions);
+        switchPageActionsAll = findViewById(R.id.switchPageActionsAll);
 
         switchKdocsOptimize.setChecked(prefs.getBoolean("kdocs_optimize", true));
         switchNightModeCSS.setChecked(prefs.getBoolean("night_mode_css", false));
         switchPageActions.setChecked(prefs.getBoolean("page_actions_enabled", true));
+        switchPageActionsAll.setChecked(prefs.getBoolean("page_actions_all", false));
 
         // 检查是否夜间模式
         boolean isNightMode = prefs.getBoolean("night_mode", false);
@@ -862,6 +865,7 @@ public class SettingsActivity extends AppCompatActivity {
         editor.putBoolean("kdocs_optimize", switchKdocsOptimize.isChecked());
         editor.putBoolean("night_mode_css", switchNightModeCSS.isChecked());
         editor.putBoolean("page_actions_enabled", switchPageActions.isChecked());
+        editor.putBoolean("page_actions_all", switchPageActionsAll.isChecked());
 
         editor.apply();
         Toast.makeText(this, "设置已保存", Toast.LENGTH_SHORT).show();
