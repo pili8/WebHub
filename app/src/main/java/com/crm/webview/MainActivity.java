@@ -106,17 +106,27 @@ public class MainActivity extends AppCompatActivity {
         String title;
         String url;
         String actions;
+        String scope; // link/domain/tab/all
 
         LinkItem(String title, String url) {
             this.title = title;
             this.url = url;
             this.actions = "";
+            this.scope = "link";
         }
 
         LinkItem(String title, String url, String actions) {
             this.title = title;
             this.url = url;
             this.actions = actions;
+            this.scope = "link";
+        }
+
+        LinkItem(String title, String url, String actions, String scope) {
+            this.title = title;
+            this.url = url;
+            this.actions = actions;
+            this.scope = scope;
         }
     }
 
@@ -245,9 +255,10 @@ public class MainActivity extends AppCompatActivity {
                     String titleUrl = parts[0];
                     String actions = parts.length > 1 ? parts[1] : "";
 
-                    String[] titleUrlParts = titleUrl.split(",", 2);
-                    if (titleUrlParts.length == 2) {
-                        links.add(new LinkItem(titleUrlParts[0].trim(), titleUrlParts[1].trim(), actions));
+                    String[] titleUrlParts = titleUrl.split(",", 3);
+                    if (titleUrlParts.length >= 2) {
+                        String scope = titleUrlParts.length > 2 ? titleUrlParts[2].trim() : "link";
+                        links.add(new LinkItem(titleUrlParts[0].trim(), titleUrlParts[1].trim(), actions, scope));
                     }
                 }
             }
@@ -1402,25 +1413,52 @@ public class MainActivity extends AppCompatActivity {
         boolean pageActionsEnabled = prefs.getBoolean("page_actions_enabled", true);
         if (!pageActionsEnabled) return;
 
-        // 检查是否对所有页面生效
-        boolean pageActionsAll = prefs.getBoolean("page_actions_all", false);
-
         // 收集所有需要执行的操作
         StringBuilder allActions = new StringBuilder();
 
-        if (pageActionsAll) {
-            // 对所有页面生效：收集所有选项卡的操作
+        // 获取当前链接的 scope
+        String currentScope = "link";
+        if (currentTab >= 0 && currentTab < tabLinks.size()) {
+            List<LinkItem> links = tabLinks.get(currentTab);
+            int linkIndex = activeLinkIndex >= 0 ? activeLinkIndex : currentLinkIndex;
+            if (linkIndex >= 0 && linkIndex < links.size()) {
+                currentScope = links.get(linkIndex).scope;
+            }
+        }
+
+        // 根据 scope 收集操作
+        if ("all".equals(currentScope)) {
+            // 所有选项卡
             for (int i = 0; i < tabLinks.size(); i++) {
-                List<LinkItem> links = tabLinks.get(i);
-                for (LinkItem link : links) {
-                    if (link.actions != null && !link.actions.isEmpty()) {
-                        if (allActions.length() > 0) allActions.append("\n");
-                        allActions.append(link.actions);
+                collectActions(tabLinks.get(i), allActions);
+            }
+        } else if ("tab".equals(currentScope)) {
+            // 当前选项卡
+            if (currentTab >= 0 && currentTab < tabLinks.size()) {
+                collectActions(tabLinks.get(currentTab), allActions);
+            }
+        } else if ("domain".equals(currentScope)) {
+            // 相似域名
+            if (currentTab >= 0 && currentTab < tabLinks.size()) {
+                List<LinkItem> links = tabLinks.get(currentTab);
+                int linkIndex = activeLinkIndex >= 0 ? activeLinkIndex : currentLinkIndex;
+                if (linkIndex >= 0 && linkIndex < links.size()) {
+                    String currentDomain = getDomain(links.get(linkIndex).url);
+                    for (List<LinkItem> tabLinksList : tabLinks) {
+                        for (LinkItem link : tabLinksList) {
+                            if (link.actions != null && !link.actions.isEmpty()) {
+                                String domain = getDomain(link.url);
+                                if (currentDomain.equals(domain)) {
+                                    if (allActions.length() > 0) allActions.append("\n");
+                                    allActions.append(link.actions);
+                                }
+                            }
+                        }
                     }
                 }
             }
         } else {
-            // 只对当前链接生效
+            // 仅此链接
             if (currentTab >= 0 && currentTab < tabLinks.size()) {
                 List<LinkItem> links = tabLinks.get(currentTab);
                 int linkIndex = activeLinkIndex >= 0 ? activeLinkIndex : currentLinkIndex;
@@ -1442,6 +1480,32 @@ public class MainActivity extends AppCompatActivity {
                 // 启动 MutationObserver 监听页面变化
                 startMutationObserver(webView, js);
             }
+        }
+    }
+
+    private void collectActions(List<LinkItem> links, StringBuilder allActions) {
+        for (LinkItem link : links) {
+            if (link.actions != null && !link.actions.isEmpty()) {
+                if (allActions.length() > 0) allActions.append("\n");
+                allActions.append(link.actions);
+            }
+        }
+    }
+
+    private String getDomain(String url) {
+        if (url == null || url.isEmpty()) return "";
+        try {
+            java.net.URI uri = new java.net.URI(url);
+            String host = uri.getHost();
+            if (host == null) return "";
+            // 提取主域名（去掉子域名）
+            String[] parts = host.split("\\.");
+            if (parts.length >= 2) {
+                return parts[parts.length - 2] + "." + parts[parts.length - 1];
+            }
+            return host;
+        } catch (Exception e) {
+            return "";
         }
     }
 

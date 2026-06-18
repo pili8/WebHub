@@ -46,7 +46,6 @@ public class SettingsActivity extends AppCompatActivity {
     private Switch switchKdocsOptimize;
     private Switch switchNightModeCSS;
     private Switch switchPageActions;
-    private Switch switchPageActionsAll;
     private SharedPreferences prefs;
 
     private static final String[] ACTION_TYPES = {"隐藏", "点击", "修改"};
@@ -67,6 +66,7 @@ public class SettingsActivity extends AppCompatActivity {
     static class LinkData {
         String title;
         String url;
+        String scope = "link"; // link/domain/tab/all
         List<ActionData> actions = new ArrayList<>();
         View cardView;
         LinearLayout actionsContainer;
@@ -95,7 +95,6 @@ public class SettingsActivity extends AppCompatActivity {
         switchKdocsOptimize.setChecked(prefs.getBoolean("kdocs_optimize", true));
         switchNightModeCSS.setChecked(prefs.getBoolean("night_mode_css", false));
         switchPageActions.setChecked(prefs.getBoolean("page_actions_enabled", true));
-        switchPageActionsAll.setChecked(prefs.getBoolean("page_actions_all", false));
 
         // 检查是否夜间模式
         boolean isNightMode = prefs.getBoolean("night_mode", false);
@@ -357,10 +356,11 @@ public class SettingsActivity extends AppCompatActivity {
                     String titleUrl = parts[0];
                     String actionsStr = parts.length > 1 ? parts[1] : "";
 
-                    String[] titleUrlParts = titleUrl.split(",", 2);
-                    if (titleUrlParts.length == 2) {
+                    String[] titleUrlParts = titleUrl.split(",", 3);
+                    if (titleUrlParts.length >= 2) {
                         link.title = titleUrlParts[0].trim();
                         link.url = titleUrlParts[1].trim();
+                        link.scope = titleUrlParts.length > 2 ? titleUrlParts[2].trim() : "link";
                     }
 
                     if (!actionsStr.isEmpty()) {
@@ -639,6 +639,36 @@ public class SettingsActivity extends AppCompatActivity {
         etLinkUrl.setText(link.url);
         link.actionsContainer = actionsContainer;
 
+        // 生效范围
+        Spinner spinnerScope = cardView.findViewById(R.id.spinnerScope);
+        String[] scopeOptions = {"仅此链接", "相似域名", "当前选项卡", "所有选项卡"};
+        ArrayAdapter<String> scopeAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item, scopeOptions);
+        scopeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerScope.setAdapter(scopeAdapter);
+
+        // 设置当前选中的生效范围
+        int scopeIndex = 0;
+        if ("domain".equals(link.scope)) scopeIndex = 1;
+        else if ("tab".equals(link.scope)) scopeIndex = 2;
+        else if ("all".equals(link.scope)) scopeIndex = 3;
+        spinnerScope.setSelection(scopeIndex);
+
+        // 监听生效范围变化
+        spinnerScope.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                switch (position) {
+                    case 0: link.scope = "link"; break;
+                    case 1: link.scope = "domain"; break;
+                    case 2: link.scope = "tab"; break;
+                    case 3: link.scope = "all"; break;
+                }
+            }
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
         // 拖动排序（链接）
         TextView btnDragLink = cardView.findViewById(R.id.btnDragLink);
         if (btnDragLink != null) {
@@ -826,7 +856,7 @@ public class SettingsActivity extends AppCompatActivity {
                 if (linkTitle.isEmpty() || linkUrl.isEmpty()) continue;
 
                 if (linksStr.length() > 0) linksStr.append("\n");
-                linksStr.append(linkTitle).append(",").append(linkUrl);
+                linksStr.append(linkTitle).append(",").append(linkUrl).append(",").append(link.scope);
 
                 StringBuilder actionsStr = new StringBuilder();
                 for (ActionData action : link.actions) {
@@ -865,7 +895,6 @@ public class SettingsActivity extends AppCompatActivity {
         editor.putBoolean("kdocs_optimize", switchKdocsOptimize.isChecked());
         editor.putBoolean("night_mode_css", switchNightModeCSS.isChecked());
         editor.putBoolean("page_actions_enabled", switchPageActions.isChecked());
-        editor.putBoolean("page_actions_all", switchPageActionsAll.isChecked());
 
         editor.apply();
         Toast.makeText(this, "设置已保存", Toast.LENGTH_SHORT).show();
