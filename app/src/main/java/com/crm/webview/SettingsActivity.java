@@ -90,7 +90,6 @@ public class SettingsActivity extends AppCompatActivity {
         switchKdocsOptimize = findViewById(R.id.switchKdocsOptimize);
         switchNightModeCSS = findViewById(R.id.switchNightModeCSS);
         switchPageActions = findViewById(R.id.switchPageActions);
-        switchPageActionsAll = findViewById(R.id.switchPageActionsAll);
 
         switchKdocsOptimize.setChecked(prefs.getBoolean("kdocs_optimize", true));
         switchNightModeCSS.setChecked(prefs.getBoolean("night_mode_css", false));
