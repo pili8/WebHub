@@ -777,8 +777,8 @@ public class SettingsActivity extends AppCompatActivity {
         Spinner spinnerAction = row.findViewById(R.id.spinnerAction);
         EditText etSelector = row.findViewById(R.id.etSelector);
         EditText etValue = row.findViewById(R.id.etValue);
+        LinearLayout layoutExtra = row.findViewById(R.id.layoutExtra);
         LinearLayout layoutDelay = row.findViewById(R.id.layoutDelay);
-        LinearLayout layoutValue = row.findViewById(R.id.layoutValue);
         EditText etDelay = row.findViewById(R.id.etDelay);
         TextView btnDelete = row.findViewById(R.id.btnDelete);
 
@@ -798,20 +798,43 @@ public class SettingsActivity extends AppCompatActivity {
         etDelay.setText(String.valueOf(action.delay));
 
         // 根据类型显示/隐藏相关字段
-        layoutDelay.setVisibility(actionIndex == 1 ? View.VISIBLE : View.GONE);
-        layoutValue.setVisibility(actionIndex == 2 ? View.VISIBLE : View.GONE);
+        if (actionIndex == 0) {
+            // 隐藏：不显示额外字段
+            layoutExtra.setVisibility(View.GONE);
+        } else {
+            layoutExtra.setVisibility(View.VISIBLE);
+            if (actionIndex == 1) {
+                // 点击：显示延迟
+                layoutDelay.setVisibility(View.VISIBLE);
+                etValue.setVisibility(View.GONE);
+            } else {
+                // 修改：显示新值
+                layoutDelay.setVisibility(View.GONE);
+                etValue.setVisibility(View.VISIBLE);
+            }
+        }
 
         spinnerAction.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                layoutDelay.setVisibility(position == 1 ? View.VISIBLE : View.GONE);
-                layoutValue.setVisibility(position == 2 ? View.VISIBLE : View.GONE);
+                if (position == 0) {
+                    layoutExtra.setVisibility(View.GONE);
+                } else {
+                    layoutExtra.setVisibility(View.VISIBLE);
+                    if (position == 1) {
+                        layoutDelay.setVisibility(View.VISIBLE);
+                        etValue.setVisibility(View.GONE);
+                    } else {
+                        layoutDelay.setVisibility(View.GONE);
+                        etValue.setVisibility(View.VISIBLE);
+                    }
+                }
             }
             @Override
             public void onNothingSelected(AdapterView<?> parent) {}
         });
 
-        // 删除操作 (需要确认)
+        // 删除操作
         btnDelete.setOnClickListener(v -> {
             new AlertDialog.Builder(SettingsActivity.this)
                     .setTitle("删除操作")

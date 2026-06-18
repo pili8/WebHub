@@ -3,146 +3,101 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@drawable/input_bg"
+    android:background="@drawable/card_white"
     android:layout_marginBottom="6dp"
     android:padding="10dp">
 
-    <!-- 第一行：操作类型 + 删除按钮 -->
+    <!-- 第一行：类型 + 选择器 + 删除 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="类型:"
-            android:textSize="11sp"
-            android:textColor="#999999"
-            android:layout_marginEnd="6dp" />
-
         <Spinner
             android:id="@+id/spinnerAction"
-            android:layout_width="70dp"
-            android:layout_height="34dp"
+            android:layout_width="65dp"
+            android:layout_height="32dp"
             android:background="@drawable/input_bg_small" />
-
-        <View
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
-
-        <!-- 删除按钮移到右上角，增加误触难度 -->
-        <TextView
-            android:id="@+id/btnDelete"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:gravity="center"
-            android:text="✕"
-            android:textSize="12sp"
-            android:textColor="#BDBDBD"
-            android:background="?attr/selectableItemBackgroundBorderless" />
-
-    </LinearLayout>
-
-    <!-- 第二行：选择器 -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginTop="8dp">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="选择器:"
-            android:textSize="11sp"
-            android:textColor="#999999"
-            android:layout_marginEnd="6dp" />
 
         <EditText
             android:id="@+id/etSelector"
             android:layout_width="0dp"
-            android:layout_height="34dp"
+            android:layout_height="32dp"
             android:layout_weight="1"
-            android:hint=".class / #id / tag"
+            android:hint="选择器"
             android:textSize="12sp"
             android:inputType="text"
             android:paddingStart="8dp"
             android:paddingEnd="8dp"
-            android:background="@drawable/input_bg_small" />
-
-    </LinearLayout>
-
-    <!-- 第三行：延迟 (仅点击类型显示) -->
-    <LinearLayout
-        android:id="@+id/layoutDelay"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginTop="8dp"
-        android:visibility="gone">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="延迟:"
-            android:textSize="11sp"
-            android:textColor="#999999"
+            android:background="@drawable/input_bg_small"
+            android:layout_marginStart="6dp"
             android:layout_marginEnd="6dp" />
 
-        <EditText
-            android:id="@+id/etDelay"
-            android:layout_width="50dp"
-            android:layout_height="34dp"
-            android:hint="0"
-            android:textSize="12sp"
-            android:inputType="number"
+        <TextView
+            android:id="@+id/btnDelete"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
             android:gravity="center"
-            android:background="@drawable/input_bg_small" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text=" 秒后执行"
+            android:text="✕"
             android:textSize="11sp"
-            android:textColor="#999999"
-            android:layout_marginStart="4dp" />
+            android:textColor="#CCCCCC"
+            android:background="?attr/selectableItemBackgroundBorderless" />
 
     </LinearLayout>
 
-    <!-- 第四行：新值 (仅修改类型显示) -->
+    <!-- 第二行：延迟 + 新值（根据类型显示） -->
     <LinearLayout
-        android:id="@+id/layoutValue"
+        android:id="@+id/layoutExtra"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="6dp"
         android:visibility="gone">
 
-        <TextView
+        <!-- 延迟 -->
+        <LinearLayout
+            android:id="@+id/layoutDelay"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="新值:"
-            android:textSize="11sp"
-            android:textColor="#999999"
-            android:layout_marginEnd="6dp" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:visibility="gone">
 
+            <EditText
+                android:id="@+id/etDelay"
+                android:layout_width="40dp"
+                android:layout_height="28dp"
+                android:hint="0"
+                android:textSize="11sp"
+                android:inputType="number"
+                android:gravity="center"
+                android:background="@drawable/input_bg_small" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="秒"
+                android:textSize="11sp"
+                android:textColor="#999999"
+                android:layout_marginStart="4dp" />
+
+        </LinearLayout>
+
+        <!-- 新值 -->
         <EditText
             android:id="@+id/etValue"
             android:layout_width="0dp"
-            android:layout_height="34dp"
+            android:layout_height="28dp"
             android:layout_weight="1"
-            android:hint="输入新值"
-            android:textSize="12sp"
+            android:hint="新值"
+            android:textSize="11sp"
             android:inputType="text"
             android:paddingStart="8dp"
             android:paddingEnd="8dp"
-            android:background="@drawable/input_bg_small" />
+            android:background="@drawable/input_bg_small"
+            android:visibility="gone" />
 
     </LinearLayout>
 
