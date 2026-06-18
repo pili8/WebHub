@@ -413,13 +413,13 @@ public class MainActivity extends AppCompatActivity {
         popup.getMenu().add(0, 2, 0, "🔍 搜索链接");
 
         // 分割线
-        popup.getMenu().addSeparator(0, 100, 0);
+        popup.getMenu().add(0, 100, 100, "").setEnabled(false);
 
         // 第二组：夜间模式、定时刷新
-        popup.getMenu().add(0, 3, 0, isNightMode ? "☀️ 日间模式" : "🌙 夜间模式");
+        popup.getMenu().add(0, 3, 101, isNightMode ? "☀️ 日间模式" : "🌙 夜间模式");
 
         String refreshTitle = autoRefreshInterval > 0 ? "⏰ 定时刷新中" : "⏰ 定时刷新";
-        android.view.SubMenu refreshMenu = popup.getMenu().addSubMenu(0, 4, 0, refreshTitle);
+        android.view.SubMenu refreshMenu = popup.getMenu().addSubMenu(0, 4, 102, refreshTitle);
         refreshMenu.add(1, 50, 0, "关闭").setChecked(autoRefreshInterval == 0);
         refreshMenu.add(1, 51, 0, "每30秒").setChecked(autoRefreshInterval == 30);
         refreshMenu.add(1, 52, 0, "每1分钟").setChecked(autoRefreshInterval == 60);
@@ -427,12 +427,12 @@ public class MainActivity extends AppCompatActivity {
         refreshMenu.setGroupCheckable(1, true, true);
 
         // 分割线
-        popup.getMenu().addSeparator(0, 101, 0);
+        popup.getMenu().add(0, 101, 200, "").setEnabled(false);
 
         // 第三组：查找元素、设置、退出
-        popup.getMenu().add(0, 5, 0, isInspectMode ? "🎯 退出查找元素" : "🎯 查找元素");
-        popup.getMenu().add(0, 6, 0, "⚙️ 设置");
-        popup.getMenu().add(0, 7, 0, "🚪 退出");
+        popup.getMenu().add(0, 5, 201, isInspectMode ? "🎯 退出查找元素" : "🎯 查找元素");
+        popup.getMenu().add(0, 6, 202, "⚙️ 设置");
+        popup.getMenu().add(0, 7, 203, "🚪 退出");
 
         popup.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == 1) {
