@@ -48,13 +48,12 @@
 
         </LinearLayout>
 
-        <!-- 定时刷新指示器 -->
-        <TextView
-            android:id="@+id/tvAutoRefresh"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="🔄"
-            android:textSize="14sp"
+        <!-- 定时刷新指示器（小绿点） -->
+        <View
+            android:id="@+id/autoRefreshDot"
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:background="@drawable/dot_green"
             android:visibility="gone"
             android:layout_marginEnd="4dp" />
 

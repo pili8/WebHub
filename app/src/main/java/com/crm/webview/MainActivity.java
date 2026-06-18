@@ -83,7 +83,7 @@ public class MainActivity extends AppCompatActivity {
     private android.os.Handler autoRefreshHandler = new android.os.Handler();
     private Runnable autoRefreshRunnable;
     private int autoRefreshInterval = 0; // 0=关闭, 30=30秒, 60=1分钟, 300=5分钟
-    private TextView tvAutoRefresh;
+    private View autoRefreshDot;
 
     // 搜索相关
     private LinearLayout searchBar;
@@ -161,6 +161,15 @@ public class MainActivity extends AppCompatActivity {
         if (autoRefreshInterval > 0) {
             setAutoRefresh(autoRefreshInterval);
         }
+
+        // 重新加载配置（页面操作可能在设置中修改）
+        loadConfig();
+
+        // 重新执行页面操作（APP从后台返回时WebView可能重新加载）
+        WebView wv = getCurrentWebView();
+        if (wv != null) {
+            executeCustomScript(wv);
+        }
     }
 
     private void initViews() {
@@ -187,7 +196,7 @@ public class MainActivity extends AppCompatActivity {
         isNightModeCSS = prefs.getBoolean("night_mode_css", false);
 
         // 定时刷新
-        tvAutoRefresh = findViewById(R.id.tvAutoRefresh);
+        autoRefreshDot = findViewById(R.id.autoRefreshDot);
         autoRefreshInterval = prefs.getInt("auto_refresh_interval", 0);
         updateAutoRefreshIndicator();
     }
@@ -456,8 +465,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateAutoRefreshIndicator() {
-        if (tvAutoRefresh != null) {
-            tvAutoRefresh.setVisibility(autoRefreshInterval > 0 ? View.VISIBLE : View.GONE);
+        if (autoRefreshDot != null) {
+            autoRefreshDot.setVisibility(autoRefreshInterval > 0 ? View.VISIBLE : View.GONE);
         }
     }
 
@@ -1357,6 +1366,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void executeCustomScript(WebView webView) {
+        // 检查页面操作开关
+        boolean pageActionsEnabled = prefs.getBoolean("page_actions_enabled", true);
+        if (!pageActionsEnabled) return;
+
         // 获取当前链接的操作
         if (currentTab >= 0 && currentTab < tabLinks.size()) {
             List<LinkItem> links = tabLinks.get(currentTab);
