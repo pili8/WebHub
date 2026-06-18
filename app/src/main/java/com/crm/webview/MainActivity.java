@@ -409,30 +409,24 @@ public class MainActivity extends AppCompatActivity {
         android.widget.PopupMenu popup = new android.widget.PopupMenu(this, btnMenu);
 
         // 第一组：复制链接、搜索链接
-        popup.getMenu().add(0, 1, 0, "📋 复制链接");
-        popup.getMenu().add(0, 2, 0, "🔍 搜索链接");
-
-        // 分割线
-        popup.getMenu().add(0, 100, 100, "").setEnabled(false);
+        popup.getMenu().add(1, 1, 0, "📋 复制链接");
+        popup.getMenu().add(1, 2, 0, "🔍 搜索链接");
 
         // 第二组：夜间模式、定时刷新
-        popup.getMenu().add(0, 3, 101, isNightMode ? "☀️ 日间模式" : "🌙 夜间模式");
+        popup.getMenu().add(2, 3, 0, isNightMode ? "☀️ 日间模式" : "🌙 夜间模式");
 
         String refreshTitle = autoRefreshInterval > 0 ? "⏰ 定时刷新中" : "⏰ 定时刷新";
-        android.view.SubMenu refreshMenu = popup.getMenu().addSubMenu(0, 4, 102, refreshTitle);
+        android.view.SubMenu refreshMenu = popup.getMenu().addSubMenu(2, 4, 0, refreshTitle);
         refreshMenu.add(1, 50, 0, "关闭").setChecked(autoRefreshInterval == 0);
         refreshMenu.add(1, 51, 0, "每30秒").setChecked(autoRefreshInterval == 30);
         refreshMenu.add(1, 52, 0, "每1分钟").setChecked(autoRefreshInterval == 60);
         refreshMenu.add(1, 53, 0, "每5分钟").setChecked(autoRefreshInterval == 300);
         refreshMenu.setGroupCheckable(1, true, true);
 
-        // 分割线
-        popup.getMenu().add(0, 101, 200, "").setEnabled(false);
-
         // 第三组：查找元素、设置、退出
-        popup.getMenu().add(0, 5, 201, isInspectMode ? "🎯 退出查找元素" : "🎯 查找元素");
-        popup.getMenu().add(0, 6, 202, "⚙️ 设置");
-        popup.getMenu().add(0, 7, 203, "🚪 退出");
+        popup.getMenu().add(3, 5, 0, isInspectMode ? "🎯 退出查找元素" : "🎯 查找元素");
+        popup.getMenu().add(3, 6, 0, "⚙️ 设置");
+        popup.getMenu().add(3, 7, 0, "🚪 退出");
 
         popup.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == 1) {
@@ -455,12 +449,7 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
                 return true;
             } else if (item.getItemId() == 7) {
-                new AlertDialog.Builder(this)
-                    .setTitle("退出")
-                    .setMessage("确定退出应用？")
-                    .setPositiveButton("退出", (d, w) -> finish())
-                    .setNegativeButton("取消", null)
-                    .show();
+                finish();
                 return true;
             } else if (item.getItemId() >= 50 && item.getItemId() <= 53) {
                 int[] intervals = {0, 30, 60, 300};
