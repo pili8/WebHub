@@ -72,6 +72,7 @@ public class MainActivity extends AppCompatActivity {
 
     private int currentTab = 0;
     private int currentLinkIndex = 0;
+    private int activeLinkIndex = -1; // 当前活跃的链接索引（用于页面操作）
     private boolean isDropdownOpen = false;
     private boolean isInspectMode = false;
     private boolean isBottomMenuOpen = false;
@@ -347,14 +348,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupListeners() {
+        // 短按刷新：强制联网刷新
         btnRefresh.setOnClickListener(v -> {
-            WebView wv = getCurrentWebView();
-            if (wv != null) {
-                wv.reload();
-            }
-        });
-
-        btnRefresh.setOnLongClickListener(v -> {
             WebView wv = getCurrentWebView();
             if (wv != null) {
                 wv.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
@@ -364,8 +359,14 @@ public class MainActivity extends AppCompatActivity {
                         wv.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
                     }
                 }, 1000);
+                Toast.makeText(this, "刷新中...", Toast.LENGTH_SHORT).show();
             }
-            Toast.makeText(this, "正在刷新最新数据...", Toast.LENGTH_SHORT).show();
+        });
+
+        // 长按刷新：回到配置的链接
+        btnRefresh.setOnLongClickListener(v -> {
+            loadCurrentLink();
+            Toast.makeText(this, "已回到首页", Toast.LENGTH_SHORT).show();
             return true;
         });
 
@@ -401,6 +402,7 @@ public class MainActivity extends AppCompatActivity {
         refreshMenu.add(1, 53, 0, "每5分钟").setChecked(autoRefreshInterval == 300);
         refreshMenu.setGroupCheckable(1, true, true);
 
+        popup.getMenu().add(0, 6, 0, "📋 复制地址");
         popup.getMenu().add(0, 4, 0, "⚙️ 设置");
 
         popup.setOnMenuItemClickListener(item -> {
@@ -418,6 +420,9 @@ public class MainActivity extends AppCompatActivity {
                 intent.putExtra("night_mode", isNightMode);
                 startActivity(intent);
                 return true;
+            } else if (item.getItemId() == 6) {
+                copyCurrentUrl();
+                return true;
             } else if (item.getItemId() >= 50 && item.getItemId() <= 53) {
                 // 定时刷新
                 int[] intervals = {0, 30, 60, 300};
@@ -429,6 +434,23 @@ public class MainActivity extends AppCompatActivity {
         });
 
         popup.show();
+    }
+
+    // ========== 复制地址 ==========
+
+    private void copyCurrentUrl() {
+        WebView wv = getCurrentWebView();
+        if (wv != null) {
+            String url = wv.getUrl();
+            if (url != null && !url.isEmpty()) {
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                ClipData clip = ClipData.newPlainText("url", url);
+                clipboard.setPrimaryClip(clip);
+                Toast.makeText(this, "已复制: " + url, Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "当前页面没有URL", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     // ========== 定时刷新 ==========
@@ -900,6 +922,7 @@ public class MainActivity extends AppCompatActivity {
 
         currentTab = index;
         currentLinkIndex = 0;
+        activeLinkIndex = -1; // 重置活跃链接
         isDropdownOpen = false;
 
         // 切换选项卡样式
@@ -1044,6 +1067,7 @@ public class MainActivity extends AppCompatActivity {
         WebView wv = getCurrentWebView();
         if (currentLinkIndex < links.size() && wv != null) {
             String url = links.get(currentLinkIndex).url;
+            activeLinkIndex = currentLinkIndex; // 设置活跃链接
             wv.loadUrl(url);
         }
     }
@@ -1370,11 +1394,11 @@ public class MainActivity extends AppCompatActivity {
         boolean pageActionsEnabled = prefs.getBoolean("page_actions_enabled", true);
         if (!pageActionsEnabled) return;
 
-        // 获取当前链接的操作
+        // 使用活跃链接索引获取操作
         if (currentTab >= 0 && currentTab < tabLinks.size()) {
             List<LinkItem> links = tabLinks.get(currentTab);
-            if (currentLinkIndex >= 0 && currentLinkIndex < links.size()) {
-                String actions = links.get(currentLinkIndex).actions;
+            if (activeLinkIndex >= 0 && activeLinkIndex < links.size()) {
+                String actions = links.get(activeLinkIndex).actions;
                 if (actions != null && !actions.isEmpty()) {
                     String js = buildScriptFromActions(actions);
                     if (!js.isEmpty()) {
