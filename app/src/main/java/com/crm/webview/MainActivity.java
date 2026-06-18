@@ -1410,16 +1410,26 @@ public class MainActivity extends AppCompatActivity {
         if (currentTab >= 0 && currentTab < tabLinks.size()) {
             List<LinkItem> links = tabLinks.get(currentTab);
 
-            if (pageActionsAll) {
-                // 对所有页面生效：使用当前链接的操作
-                if (currentLinkIndex >= 0 && currentLinkIndex < links.size()) {
-                    actions = links.get(currentLinkIndex).actions;
+            // 优先使用活跃链接，其次使用当前链接
+            int linkIndex = activeLinkIndex >= 0 ? activeLinkIndex : currentLinkIndex;
+
+            if (linkIndex >= 0 && linkIndex < links.size()) {
+                actions = links.get(linkIndex).actions;
+            }
+        }
+
+        // 如果当前选项卡没有操作，检查其他选项卡（对所有页面生效模式）
+        if (pageActionsAll && (actions == null || actions.isEmpty())) {
+            for (int i = 0; i < tabLinks.size(); i++) {
+                if (i == currentTab) continue;
+                List<LinkItem> links = tabLinks.get(i);
+                for (LinkItem link : links) {
+                    if (link.actions != null && !link.actions.isEmpty()) {
+                        actions = link.actions;
+                        break;
+                    }
                 }
-            } else {
-                // 只对活跃链接生效
-                if (activeLinkIndex >= 0 && activeLinkIndex < links.size()) {
-                    actions = links.get(activeLinkIndex).actions;
-                }
+                if (actions != null && !actions.isEmpty()) break;
             }
         }
 
