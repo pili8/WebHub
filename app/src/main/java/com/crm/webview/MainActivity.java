@@ -166,7 +166,7 @@ public class MainActivity extends AppCompatActivity {
         loadConfig();
 
         // 重新执行页面操作（APP从后台返回时WebView可能重新加载）
-        WebView wv = getCurrentWebView();
+        wv = getCurrentWebView();
         if (wv != null) {
             executeCustomScript(wv);
         }
