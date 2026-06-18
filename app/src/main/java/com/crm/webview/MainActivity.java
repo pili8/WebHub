@@ -1405,36 +1405,36 @@ public class MainActivity extends AppCompatActivity {
         // 检查是否对所有页面生效
         boolean pageActionsAll = prefs.getBoolean("page_actions_all", false);
 
-        // 获取操作
-        String actions = null;
-        if (currentTab >= 0 && currentTab < tabLinks.size()) {
-            List<LinkItem> links = tabLinks.get(currentTab);
+        // 收集所有需要执行的操作
+        StringBuilder allActions = new StringBuilder();
 
-            // 优先使用活跃链接，其次使用当前链接
-            int linkIndex = activeLinkIndex >= 0 ? activeLinkIndex : currentLinkIndex;
-
-            if (linkIndex >= 0 && linkIndex < links.size()) {
-                actions = links.get(linkIndex).actions;
-            }
-        }
-
-        // 如果当前选项卡没有操作，检查其他选项卡（对所有页面生效模式）
-        if (pageActionsAll && (actions == null || actions.isEmpty())) {
+        if (pageActionsAll) {
+            // 对所有页面生效：收集所有选项卡的操作
             for (int i = 0; i < tabLinks.size(); i++) {
-                if (i == currentTab) continue;
                 List<LinkItem> links = tabLinks.get(i);
                 for (LinkItem link : links) {
                     if (link.actions != null && !link.actions.isEmpty()) {
-                        actions = link.actions;
-                        break;
+                        if (allActions.length() > 0) allActions.append("\n");
+                        allActions.append(link.actions);
                     }
                 }
-                if (actions != null && !actions.isEmpty()) break;
+            }
+        } else {
+            // 只对当前链接生效
+            if (currentTab >= 0 && currentTab < tabLinks.size()) {
+                List<LinkItem> links = tabLinks.get(currentTab);
+                int linkIndex = activeLinkIndex >= 0 ? activeLinkIndex : currentLinkIndex;
+                if (linkIndex >= 0 && linkIndex < links.size()) {
+                    String actions = links.get(linkIndex).actions;
+                    if (actions != null && !actions.isEmpty()) {
+                        allActions.append(actions);
+                    }
+                }
             }
         }
 
-        if (actions != null && !actions.isEmpty()) {
-            String js = buildScriptFromActions(actions);
+        if (allActions.length() > 0) {
+            String js = buildScriptFromActions(allActions.toString());
             if (!js.isEmpty()) {
                 // 先执行一次
                 webView.evaluateJavascript(js, null);
