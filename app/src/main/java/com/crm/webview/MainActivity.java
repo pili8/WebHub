@@ -914,9 +914,10 @@ public class MainActivity extends AppCompatActivity {
             inspectBanner.setVisibility(View.GONE);
         }
 
-        // 隐藏当前 WebView
+        // 隐藏当前 WebView 并停止 MutationObserver
         WebView oldWebView = getCurrentWebView();
         if (oldWebView != null) {
+            stopMutationObserver(oldWebView);
             oldWebView.setVisibility(View.GONE);
         }
 
@@ -1402,12 +1403,47 @@ public class MainActivity extends AppCompatActivity {
                 if (actions != null && !actions.isEmpty()) {
                     String js = buildScriptFromActions(actions);
                     if (!js.isEmpty()) {
-                        webView.postDelayed(() -> {
-                            webView.evaluateJavascript(js, null);
-                        }, 500);
+                        // 先执行一次
+                        webView.evaluateJavascript(js, null);
+
+                        // 启动 MutationObserver 监听页面变化
+                        startMutationObserver(webView, js);
                     }
                 }
             }
+        }
+    }
+
+    private void startMutationObserver(WebView webView, String actionJs) {
+        // 使用 MutationObserver 监听页面内容变化
+        String observerJs = "(function() {" +
+                "if (window._webhubObserver) return;" + // 避免重复创建
+                "var timeout = null;" +
+                "window._webhubObserver = new MutationObserver(function(mutations) {" +
+                "  if (timeout) clearTimeout(timeout);" +
+                "  timeout = setTimeout(function() {" +
+                "    " + actionJs +
+                "  }, 500);" + // 防抖：500ms 后执行
+                "});" +
+                "window._webhubObserver.observe(document.body, {" +
+                "  childList: true," +
+                "  subtree: true," +
+                "  characterData: true" +
+                "});" +
+                "})()";
+
+        webView.evaluateJavascript(observerJs, null);
+    }
+
+    private void stopMutationObserver(WebView webView) {
+        if (webView != null) {
+            webView.evaluateJavascript(
+                "(function() {" +
+                "if (window._webhubObserver) {" +
+                "  window._webhubObserver.disconnect();" +
+                "  window._webhubObserver = null;" +
+                "}" +
+                "})()", null);
         }
     }
 
