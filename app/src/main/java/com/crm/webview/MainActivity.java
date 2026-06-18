@@ -600,59 +600,53 @@ public class MainActivity extends AppCompatActivity {
         // 先搜索标题和URL
         results.addAll(searchLinksOnly(query));
 
-        // 然后搜索网页内容
-        for (int i = 0; i < tabLinks.size(); i++) {
-            List<LinkItem> links = tabLinks.get(i);
-            for (int j = 0; j < links.size(); j++) {
-                LinkItem link = links.get(j);
-                if (link.url.equals("about:blank")) continue;
+        // 只搜索当前已打开的WebView内容
+        WebView wv = getCurrentWebView();
+        if (wv != null) {
+            try {
+                final String[] content = {""};
+                final boolean[] done = {false};
 
-                try {
-                    // 创建临时 WebView 加载网页
-                    final int tabIndex = i;
-                    final int linkIndex = j;
-                    final String[] content = {""};
-
-                    runOnUiThread(() -> {
-                        WebView tempWebView = new WebView(MainActivity.this);
-                        tempWebView.getSettings().setJavaScriptEnabled(true);
-                        tempWebView.setWebViewClient(new WebViewClient() {
-                            @Override
-                            public void onPageFinished(WebView view, String url) {
-                                view.evaluateJavascript(
-                                        "(function() { return document.body.innerText; })();",
-                                        value -> {
-                                            content[0] = value;
-                                            synchronized (content) {
-                                                content.notify();
-                                            }
-                                        }
-                                );
+                runOnUiThread(() -> {
+                    wv.evaluateJavascript(
+                            "(function() { return document.body.innerText; })();",
+                            value -> {
+                                content[0] = value != null ? value : "";
+                                synchronized (done) {
+                                    done[0] = true;
+                                    done.notify();
+                                }
                             }
-                        });
-                        tempWebView.loadUrl(link.url);
-                    });
+                    );
+                });
 
-                    synchronized (content) {
-                        content.wait(5000); // 最多等待5秒
-                    }
-
-                    if (!content[0].isEmpty() && content[0].toLowerCase().contains(query)) {
-                        // 检查是否已在结果中
-                        boolean exists = false;
-                        for (SearchResult r : results) {
-                            if (r.tabIndex == i && r.linkIndex == j) {
-                                exists = true;
-                                break;
-                            }
-                        }
-                        if (!exists) {
-                            results.add(new SearchResult(i, j, link.title, link.url, "网页内容"));
-                        }
-                    }
-                } catch (Exception e) {
-                    // 忽略加载失败的网页
+                synchronized (done) {
+                    if (!done[0]) done.wait(3000); // 最多等待3秒
                 }
+
+                if (!content[0].isEmpty() && content[0].toLowerCase().contains(query)) {
+                    // 获取当前链接信息
+                    if (currentTab >= 0 && currentTab < tabLinks.size()) {
+                        List<LinkItem> links = tabLinks.get(currentTab);
+                        int linkIndex = activeLinkIndex >= 0 ? activeLinkIndex : currentLinkIndex;
+                        if (linkIndex >= 0 && linkIndex < links.size()) {
+                            LinkItem link = links.get(linkIndex);
+                            // 检查是否已在结果中
+                            boolean exists = false;
+                            for (SearchResult r : results) {
+                                if (r.tabIndex == currentTab && r.linkIndex == linkIndex) {
+                                    exists = true;
+                                    break;
+                                }
+                            }
+                            if (!exists) {
+                                results.add(new SearchResult(currentTab, linkIndex, link.title, link.url, "页面内容"));
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // 忽略错误
             }
         }
 

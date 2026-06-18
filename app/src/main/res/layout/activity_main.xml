@@ -101,7 +101,7 @@
                 android:layout_width="0dp"
                 android:layout_height="40dp"
                 android:layout_weight="1"
-                android:hint="搜索链接..."
+                android:hint="搜索标题/URL..."
                 android:textSize="14sp"
                 android:background="@drawable/input_bg"
                 android:paddingStart="12dp"
@@ -135,7 +135,7 @@
                 android:id="@+id/cbSearchContent"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="搜索网页内容"
+                android:text="同时搜索当前页面内容"
                 android:textSize="12sp"
                 android:textColor="#666666" />
 
