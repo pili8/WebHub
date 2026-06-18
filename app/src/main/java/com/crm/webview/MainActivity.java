@@ -407,42 +407,62 @@ public class MainActivity extends AppCompatActivity {
 
     private void showPopupMenu() {
         android.widget.PopupMenu popup = new android.widget.PopupMenu(this, btnMenu);
-        popup.getMenu().add(0, 1, 0, "🔍 搜索");
-        popup.getMenu().add(0, 2, 0, isInspectMode ? "退出查找元素" : "🎯 查找元素");
+
+        // 第一组：复制链接、搜索链接
+        popup.getMenu().add(0, 1, 0, "📋 复制链接");
+        popup.getMenu().add(0, 2, 0, "🔍 搜索链接");
+
+        // 分割线
+        popup.getMenu().addSeparator(0, 100, 0);
+
+        // 第二组：夜间模式、定时刷新
         popup.getMenu().add(0, 3, 0, isNightMode ? "☀️ 日间模式" : "🌙 夜间模式");
 
-        // 定时刷新子菜单
         String refreshTitle = autoRefreshInterval > 0 ? "⏰ 定时刷新中" : "⏰ 定时刷新";
-        android.view.SubMenu refreshMenu = popup.getMenu().addSubMenu(0, 5, 0, refreshTitle);
+        android.view.SubMenu refreshMenu = popup.getMenu().addSubMenu(0, 4, 0, refreshTitle);
         refreshMenu.add(1, 50, 0, "关闭").setChecked(autoRefreshInterval == 0);
         refreshMenu.add(1, 51, 0, "每30秒").setChecked(autoRefreshInterval == 30);
         refreshMenu.add(1, 52, 0, "每1分钟").setChecked(autoRefreshInterval == 60);
         refreshMenu.add(1, 53, 0, "每5分钟").setChecked(autoRefreshInterval == 300);
         refreshMenu.setGroupCheckable(1, true, true);
 
-        popup.getMenu().add(0, 6, 0, "📋 复制地址");
-        popup.getMenu().add(0, 4, 0, "⚙️ 设置");
+        // 分割线
+        popup.getMenu().addSeparator(0, 101, 0);
+
+        // 第三组：查找元素、设置、退出
+        popup.getMenu().add(0, 5, 0, isInspectMode ? "🎯 退出查找元素" : "🎯 查找元素");
+        popup.getMenu().add(0, 6, 0, "⚙️ 设置");
+        popup.getMenu().add(0, 7, 0, "🚪 退出");
 
         popup.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == 1) {
-                toggleSearch();
+                copyCurrentUrl();
                 return true;
             } else if (item.getItemId() == 2) {
-                toggleInspectMode();
+                toggleSearch();
                 return true;
             } else if (item.getItemId() == 3) {
                 toggleNightMode();
                 return true;
             } else if (item.getItemId() == 4) {
+                return true;
+            } else if (item.getItemId() == 5) {
+                toggleInspectMode();
+                return true;
+            } else if (item.getItemId() == 6) {
                 Intent intent = new Intent(this, SettingsActivity.class);
                 intent.putExtra("night_mode", isNightMode);
                 startActivity(intent);
                 return true;
-            } else if (item.getItemId() == 6) {
-                copyCurrentUrl();
+            } else if (item.getItemId() == 7) {
+                new AlertDialog.Builder(this)
+                    .setTitle("退出")
+                    .setMessage("确定退出应用？")
+                    .setPositiveButton("退出", (d, w) -> finish())
+                    .setNegativeButton("取消", null)
+                    .show();
                 return true;
             } else if (item.getItemId() >= 50 && item.getItemId() <= 53) {
-                // 定时刷新
                 int[] intervals = {0, 30, 60, 300};
                 int index = item.getItemId() - 50;
                 setAutoRefresh(intervals[index]);
@@ -600,12 +620,15 @@ public class MainActivity extends AppCompatActivity {
         // 先搜索标题和URL
         results.addAll(searchLinksOnly(query));
 
-        // 只搜索当前已打开的WebView内容
-        WebView wv = getCurrentWebView();
-        if (wv != null) {
+        // 遍历所有已创建的 WebView
+        for (int i = 0; i < MAX_TABS; i++) {
+            WebView wv = webViews[i];
+            if (wv == null) continue;
+
             try {
                 final String[] content = {""};
                 final boolean[] done = {false};
+                final int tabIndex = i;
 
                 runOnUiThread(() -> {
                     wv.evaluateJavascript(
@@ -621,26 +644,27 @@ public class MainActivity extends AppCompatActivity {
                 });
 
                 synchronized (done) {
-                    if (!done[0]) done.wait(3000); // 最多等待3秒
+                    if (!done[0]) done.wait(3000);
                 }
 
                 if (!content[0].isEmpty() && content[0].toLowerCase().contains(query)) {
-                    // 获取当前链接信息
-                    if (currentTab >= 0 && currentTab < tabLinks.size()) {
-                        List<LinkItem> links = tabLinks.get(currentTab);
-                        int linkIndex = activeLinkIndex >= 0 ? activeLinkIndex : currentLinkIndex;
+                    // 查找这个 WebView 对应的链接
+                    if (tabIndex < tabLinks.size()) {
+                        List<LinkItem> links = tabLinks.get(tabIndex);
+                        int linkIndex = (tabIndex == currentTab) ?
+                                (activeLinkIndex >= 0 ? activeLinkIndex : currentLinkIndex) : 0;
+
                         if (linkIndex >= 0 && linkIndex < links.size()) {
                             LinkItem link = links.get(linkIndex);
-                            // 检查是否已在结果中
                             boolean exists = false;
                             for (SearchResult r : results) {
-                                if (r.tabIndex == currentTab && r.linkIndex == linkIndex) {
+                                if (r.tabIndex == tabIndex && r.linkIndex == linkIndex) {
                                     exists = true;
                                     break;
                                 }
                             }
                             if (!exists) {
-                                results.add(new SearchResult(currentTab, linkIndex, link.title, link.url, "页面内容"));
+                                results.add(new SearchResult(tabIndex, linkIndex, link.title, link.url, "页面内容"));
                             }
                         }
                     }
