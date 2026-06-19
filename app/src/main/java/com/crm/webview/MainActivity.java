@@ -230,9 +230,9 @@ public class MainActivity extends AppCompatActivity {
         String[] defaultIcons = {"📊", "📋", "➕", "📁", "👤"};
         String[] defaultTitles = {"工作区1", "工作区2", "工作区3", "工作区4", "工作区5"};
         String[] defaultUrls = {
-                "https://www.kdocs.cn/wo/sl/v12CEOZt",
-                "https://www.kdocs.cn/wo/sl/v14T2gpD",
-                "https://www.kdocs.cn/wo/sl/v13iHfr4",
+                "about:blank",
+                "about:blank",
+                "about:blank",
                 "about:blank",
                 "about:blank"
         };
@@ -1575,36 +1575,40 @@ public class MainActivity extends AppCompatActivity {
         StringBuilder js = new StringBuilder();
         js.append("(function(){");
 
-        String[] lines = actions.split("\n");
-        for (String line : lines) {
-            line = line.trim();
-            if (line.isEmpty()) continue;
+        // 用分号分隔多个操作（与保存格式一致）
+        String[] actionGroups = actions.split(";");
+        for (String group : actionGroups) {
+            group = group.trim();
+            if (group.isEmpty()) continue;
 
-            String[] parts = line.split("\\|");
+            String[] parts = group.split("\\|");
             if (parts.length < 2) continue;
 
             String action = parts[0];
             String selector = parts[1];
             selector = selector.replace("'", "\\'");
 
+            // 跳过备注部分（@开头）
+            if (selector.startsWith("@")) continue;
+
             if ("hide".equals(action)) {
-                js.append("document.querySelectorAll('").append(selector).append("').forEach(el=>el.style.display='none');");
+                js.append("try{document.querySelectorAll('").append(selector).append("').forEach(el=>el.style.display='none');}catch(e){}");
             } else if ("click".equals(action)) {
                 int delay = 0;
-                if (parts.length > 2) {
+                if (parts.length > 2 && !parts[2].startsWith("@")) {
                     try {
                         delay = Integer.parseInt(parts[2]);
                     } catch (Exception e) {}
                 }
                 if (delay > 0) {
-                    js.append("setTimeout(function(){document.querySelectorAll('").append(selector).append("').forEach(el=>el.click());},").append(delay * 1000).append(");");
+                    js.append("setTimeout(function(){try{document.querySelectorAll('").append(selector).append("').forEach(el=>el.click());}catch(e){}},").append(delay * 1000).append(");");
                 } else {
-                    js.append("document.querySelectorAll('").append(selector).append("').forEach(el=>el.click());");
+                    js.append("try{document.querySelectorAll('").append(selector).append("').forEach(el=>el.click());}catch(e){}");
                 }
             } else if ("modify".equals(action)) {
-                String value = parts.length > 2 ? parts[2] : "";
+                String value = parts.length > 2 && !parts[2].startsWith("@") ? parts[2] : "";
                 value = value.replace("'", "\\'");
-                js.append("document.querySelectorAll('").append(selector).append("').forEach(el=>el.textContent='").append(value).append("');");
+                js.append("try{document.querySelectorAll('").append(selector).append("').forEach(el=>el.textContent='").append(value).append("');}catch(e){}");
             }
         }
 
