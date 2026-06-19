@@ -50,7 +50,7 @@ public class SettingsActivity extends AppCompatActivity {
 
     private static final String[] ACTION_TYPES = {"隐藏", "点击", "修改"};
     private static final String[] DEFAULT_TAB_ICONS = {"📊", "📋", "➕", "📁", "👤"};
-    private static final String[] DEFAULT_TAB_TITLES = {"工作空间", "最近新增", "录入线索", "选项卡4", "选项卡5"};
+    private static final String[] DEFAULT_TAB_TITLES = {"工作区1", "工作区2", "工作区3", "工作区4", "工作区5"};
 
     private List<TabData> tabsData = new ArrayList<>();
 
@@ -779,6 +779,22 @@ public class SettingsActivity extends AppCompatActivity {
         tab.linksContainer.addView(cardView);
     }
 
+    private void updateActionFields(int position, LinearLayout layoutDelay, EditText etValue) {
+        if (position == 0) {
+            // 隐藏：不显示延迟和新值
+            layoutDelay.setVisibility(View.GONE);
+            etValue.setVisibility(View.GONE);
+        } else if (position == 1) {
+            // 点击：显示延迟
+            layoutDelay.setVisibility(View.VISIBLE);
+            etValue.setVisibility(View.GONE);
+        } else {
+            // 修改：显示新值
+            layoutDelay.setVisibility(View.GONE);
+            etValue.setVisibility(View.VISIBLE);
+        }
+    }
+
     private void addActionRow(LinkData link, ActionData action) {
         // ========== 第三级：操作 ==========
         View row = LayoutInflater.from(this).inflate(R.layout.item_tab_level3, link.actionsContainer, false);
@@ -809,33 +825,12 @@ public class SettingsActivity extends AppCompatActivity {
         etDelay.setText(String.valueOf(action.delay));
 
         // 根据类型显示/隐藏相关字段
-        if (actionIndex == 0) {
-            // 隐藏：只显示备注
-            layoutDelay.setVisibility(View.GONE);
-            etValue.setVisibility(View.GONE);
-        } else if (actionIndex == 1) {
-            // 点击：显示延迟
-            layoutDelay.setVisibility(View.VISIBLE);
-            etValue.setVisibility(View.GONE);
-        } else {
-            // 修改：显示新值
-            layoutDelay.setVisibility(View.GONE);
-            etValue.setVisibility(View.VISIBLE);
-        }
+        updateActionFields(actionIndex, layoutDelay, etValue);
 
         spinnerAction.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (position == 0) {
-                    layoutDelay.setVisibility(View.GONE);
-                    etValue.setVisibility(View.GONE);
-                } else if (position == 1) {
-                    layoutDelay.setVisibility(View.VISIBLE);
-                    etValue.setVisibility(View.GONE);
-                } else {
-                    layoutDelay.setVisibility(View.GONE);
-                    etValue.setVisibility(View.VISIBLE);
-                }
+                updateActionFields(position, layoutDelay, etValue);
             }
             @Override
             public void onNothingSelected(AdapterView<?> parent) {}

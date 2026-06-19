@@ -228,7 +228,7 @@ public class MainActivity extends AppCompatActivity {
         if (tabCount > MAX_TABS) tabCount = MAX_TABS;
 
         String[] defaultIcons = {"📊", "📋", "➕", "📁", "👤"};
-        String[] defaultTitles = {"工作空间", "最近新增", "录入线索", "选项卡4", "选项卡5"};
+        String[] defaultTitles = {"工作区1", "工作区2", "工作区3", "工作区4", "工作区5"};
         String[] defaultUrls = {
                 "https://www.kdocs.cn/wo/sl/v12CEOZt",
                 "https://www.kdocs.cn/wo/sl/v14T2gpD",

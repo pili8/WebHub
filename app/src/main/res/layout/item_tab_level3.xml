@@ -10,20 +10,20 @@
     <!-- 第一行：类型 + 选择器 + 删除 -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="32dp"
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
         <Spinner
             android:id="@+id/spinnerAction"
             android:layout_width="65dp"
-            android:layout_height="32dp"
+            android:layout_height="match_parent"
             android:background="@drawable/input_bg_small" />
 
         <EditText
             android:id="@+id/etSelector"
             android:layout_width="0dp"
-            android:layout_height="32dp"
+            android:layout_height="match_parent"
             android:layout_weight="1"
             android:hint="选择器"
             android:textSize="12sp"
@@ -36,42 +36,29 @@
 
         <TextView
             android:id="@+id/btnDelete"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
+            android:layout_width="32dp"
+            android:layout_height="match_parent"
             android:gravity="center"
             android:text="✕"
-            android:textSize="11sp"
+            android:textSize="12sp"
             android:textColor="#CCCCCC"
             android:background="?attr/selectableItemBackgroundBorderless" />
 
     </LinearLayout>
 
-    <!-- 第二行：备注 + 延迟/新值 -->
+    <!-- 第二行：延迟/新值 + 备注 -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="28dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:layout_marginTop="4dp">
-
-        <EditText
-            android:id="@+id/etRemark"
-            android:layout_width="0dp"
-            android:layout_height="26dp"
-            android:layout_weight="1"
-            android:hint="备注"
-            android:textSize="11sp"
-            android:textColor="#999999"
-            android:inputType="text"
-            android:paddingStart="6dp"
-            android:paddingEnd="6dp"
-            android:background="@android:color/transparent" />
 
         <!-- 延迟 -->
         <LinearLayout
             android:id="@+id/layoutDelay"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:visibility="gone">
@@ -79,7 +66,7 @@
             <EditText
                 android:id="@+id/etDelay"
                 android:layout_width="36dp"
-                android:layout_height="26dp"
+                android:layout_height="match_parent"
                 android:hint="0"
                 android:textSize="11sp"
                 android:inputType="number"
@@ -100,7 +87,7 @@
         <EditText
             android:id="@+id/etValue"
             android:layout_width="0dp"
-            android:layout_height="26dp"
+            android:layout_height="match_parent"
             android:layout_weight="1"
             android:hint="新值"
             android:textSize="11sp"
@@ -109,6 +96,20 @@
             android:paddingEnd="6dp"
             android:background="@drawable/input_bg_small"
             android:visibility="gone" />
+
+        <!-- 备注 -->
+        <EditText
+            android:id="@+id/etRemark"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:hint="备注"
+            android:textSize="11sp"
+            android:textColor="#666666"
+            android:inputType="text"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp"
+            android:background="@android:color/transparent" />
 
     </LinearLayout>
 
