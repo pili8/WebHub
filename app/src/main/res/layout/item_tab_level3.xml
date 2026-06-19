@@ -46,7 +46,21 @@
 
     </LinearLayout>
 
-    <!-- 第二行：延迟 + 新值（根据类型显示） -->
+    <!-- 第二行：备注 -->
+    <EditText
+        android:id="@+id/etRemark"
+        android:layout_width="match_parent"
+        android:layout_height="28dp"
+        android:hint="备注（可选）"
+        android:textSize="11sp"
+        android:textColor="#999999"
+        android:inputType="text"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:background="@android:color/transparent"
+        android:layout_marginTop="4dp" />
+
+    <!-- 第三行：延迟 + 新值（根据类型显示） -->
     <LinearLayout
         android:id="@+id/layoutExtra"
         android:layout_width="match_parent"

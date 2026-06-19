@@ -76,6 +76,7 @@ public class SettingsActivity extends AppCompatActivity {
         String type;
         String selector;
         String value;
+        String remark = "";
         int delay = 0;
         View actionView;
     }
@@ -363,26 +364,35 @@ public class SettingsActivity extends AppCompatActivity {
                     }
 
                     if (!actionsStr.isEmpty()) {
-                        String[] actionParts = actionsStr.split("\\|");
-                        for (int j = 0; j < actionParts.length; ) {
-                            if (j + 1 >= actionParts.length) break;
+                        // 用分号分隔多个操作
+                        String[] actionGroups = actionsStr.split(";");
+                        for (String group : actionGroups) {
+                            group = group.trim();
+                            if (group.isEmpty()) continue;
+
+                            String[] actionParts = group.split("\\|");
+                            if (actionParts.length < 2) continue;
 
                             ActionData action = new ActionData();
-                            action.type = actionParts[j];
-                            action.selector = actionParts[j + 1];
+                            action.type = actionParts[0];
+                            action.selector = actionParts[1];
                             action.value = "";
+                            action.remark = "";
                             action.delay = 0;
 
-                            if ("click".equals(action.type)) {
-                                if (j + 2 < actionParts.length) {
-                                    try { action.delay = Integer.parseInt(actionParts[j + 2]); } catch (Exception e) {}
+                            // 解析剩余部分
+                            for (int k = 2; k < actionParts.length; k++) {
+                                String part = actionParts[k];
+                                if (part.startsWith("@")) {
+                                    // 备注
+                                    action.remark = part.substring(1);
+                                } else if ("click".equals(action.type)) {
+                                    // 延迟
+                                    try { action.delay = Integer.parseInt(part); } catch (Exception e) {}
+                                } else if ("modify".equals(action.type)) {
+                                    // 新值
+                                    action.value = part;
                                 }
-                                j += 3;
-                            } else if ("modify".equals(action.type)) {
-                                if (j + 2 < actionParts.length) action.value = actionParts[j + 2];
-                                j += 3;
-                            } else {
-                                j += 2;
                             }
 
                             link.actions.add(action);
@@ -776,6 +786,7 @@ public class SettingsActivity extends AppCompatActivity {
 
         Spinner spinnerAction = row.findViewById(R.id.spinnerAction);
         EditText etSelector = row.findViewById(R.id.etSelector);
+        EditText etRemark = row.findViewById(R.id.etRemark);
         EditText etValue = row.findViewById(R.id.etValue);
         LinearLayout layoutExtra = row.findViewById(R.id.layoutExtra);
         LinearLayout layoutDelay = row.findViewById(R.id.layoutDelay);
@@ -794,6 +805,7 @@ public class SettingsActivity extends AppCompatActivity {
         spinnerAction.setSelection(actionIndex);
 
         etSelector.setText(action.selector);
+        etRemark.setText(action.remark);
         etValue.setText(action.value);
         etDelay.setText(String.valueOf(action.delay));
 
@@ -886,11 +898,14 @@ public class SettingsActivity extends AppCompatActivity {
 
                     Spinner spinner = action.actionView.findViewById(R.id.spinnerAction);
                     EditText etSelector = action.actionView.findViewById(R.id.etSelector);
+                    EditText etRemark = action.actionView.findViewById(R.id.etRemark);
                     EditText etValue = action.actionView.findViewById(R.id.etValue);
                     EditText etDelay = action.actionView.findViewById(R.id.etDelay);
 
                     String selector = etSelector.getText().toString().trim();
                     if (selector.isEmpty()) continue;
+
+                    String remark = etRemark.getText().toString().trim();
 
                     String type;
                     int pos = spinner.getSelectedItemPosition();
@@ -902,9 +917,11 @@ public class SettingsActivity extends AppCompatActivity {
                     int delay = 0;
                     try { delay = Integer.parseInt(etDelay.getText().toString().trim()); } catch (Exception e) {}
 
-                    actionsStr.append("|").append(type).append("|").append(selector);
+                    if (actionsStr.length() > 0) actionsStr.append(";");
+                    actionsStr.append(type).append("|").append(selector);
                     if (pos == 1) actionsStr.append("|").append(delay);
                     else if (pos == 2 && !value.isEmpty()) actionsStr.append("|").append(value);
+                    if (!remark.isEmpty()) actionsStr.append("|@").append(remark);
                 }
 
                 linksStr.append(actionsStr);
