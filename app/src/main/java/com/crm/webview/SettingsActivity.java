@@ -384,8 +384,10 @@ public class SettingsActivity extends AppCompatActivity {
                             for (int k = 2; k < actionParts.length; k++) {
                                 String part = actionParts[k];
                                 if (part.startsWith("@")) {
-                                    // 备注
-                                    action.remark = part.substring(1);
+                                    // 备注（反转义特殊字符）
+                                    action.remark = part.substring(1)
+                                        .replace("｜", "|")
+                                        .replace("；", ";");
                                 } else if ("click".equals(action.type)) {
                                     // 延迟
                                     try { action.delay = Integer.parseInt(part); } catch (Exception e) {}
