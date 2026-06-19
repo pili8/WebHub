@@ -885,6 +885,7 @@ public class SettingsActivity extends AppCompatActivity {
                 linksStr.append(linkTitle).append(",").append(linkUrl).append(",").append(link.scope);
 
                 StringBuilder actionsStr = new StringBuilder();
+                boolean hasActions = false;
                 for (ActionData action : link.actions) {
                     if (action.actionView == null) continue;
 
@@ -918,9 +919,12 @@ public class SettingsActivity extends AppCompatActivity {
                         String safeRemark = remark.replace("|", "｜").replace(";", "；");
                         actionsStr.append("|@").append(safeRemark);
                     }
+                    hasActions = true;
                 }
 
-                linksStr.append(actionsStr);
+                if (hasActions) {
+                    linksStr.append("|").append(actionsStr);
+                }
             }
 
             editor.putString("links" + (i + 1), linksStr.toString());
