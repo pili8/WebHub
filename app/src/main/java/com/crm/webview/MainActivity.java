@@ -411,9 +411,9 @@ public class MainActivity extends AppCompatActivity {
     private void showPopupMenu() {
         android.widget.PopupMenu popup = new android.widget.PopupMenu(this, btnMenu);
 
-        // 第一组：复制、搜索
-        popup.getMenu().add(1, 1, 0, "📋 复制链接");
+        // 第一组：搜索、复制
         popup.getMenu().add(1, 2, 0, "🔍 搜索");
+        popup.getMenu().add(1, 1, 0, "📋 复制链接");
 
         // 第二组：夜间、刷新
         popup.getMenu().add(2, 3, 0, isNightMode ? "☀️ 日间模式" : "🌙 夜间模式");
