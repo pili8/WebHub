@@ -911,7 +911,11 @@ public class SettingsActivity extends AppCompatActivity {
                     actionsStr.append(type).append("|").append(selector);
                     if (pos == 1) actionsStr.append("|").append(delay);
                     else if (pos == 2 && !value.isEmpty()) actionsStr.append("|").append(value);
-                    if (!remark.isEmpty()) actionsStr.append("|@").append(remark);
+                    if (!remark.isEmpty()) {
+                        // 转义备注中的特殊字符
+                        String safeRemark = remark.replace("|", "｜").replace(";", "；");
+                        actionsStr.append("|@").append(safeRemark);
+                    }
                 }
 
                 linksStr.append(actionsStr);
