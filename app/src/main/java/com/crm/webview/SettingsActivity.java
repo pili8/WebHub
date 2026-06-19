@@ -50,7 +50,7 @@ public class SettingsActivity extends AppCompatActivity {
 
     private static final String[] ACTION_TYPES = {"隐藏", "点击", "修改"};
     private static final String[] DEFAULT_TAB_ICONS = {"📊", "📋", "➕", "📁", "👤"};
-    private static final String[] DEFAULT_TAB_TITLES = {"销售机会", "最近新增", "录入线索", "选项卡4", "选项卡5"};
+    private static final String[] DEFAULT_TAB_TITLES = {"工作空间", "最近新增", "录入线索", "选项卡4", "选项卡5"};
 
     private List<TabData> tabsData = new ArrayList<>();
 
@@ -788,7 +788,6 @@ public class SettingsActivity extends AppCompatActivity {
         EditText etSelector = row.findViewById(R.id.etSelector);
         EditText etRemark = row.findViewById(R.id.etRemark);
         EditText etValue = row.findViewById(R.id.etValue);
-        LinearLayout layoutExtra = row.findViewById(R.id.layoutExtra);
         LinearLayout layoutDelay = row.findViewById(R.id.layoutDelay);
         EditText etDelay = row.findViewById(R.id.etDelay);
         TextView btnDelete = row.findViewById(R.id.btnDelete);
@@ -811,35 +810,31 @@ public class SettingsActivity extends AppCompatActivity {
 
         // 根据类型显示/隐藏相关字段
         if (actionIndex == 0) {
-            // 隐藏：不显示额外字段
-            layoutExtra.setVisibility(View.GONE);
+            // 隐藏：只显示备注
+            layoutDelay.setVisibility(View.GONE);
+            etValue.setVisibility(View.GONE);
+        } else if (actionIndex == 1) {
+            // 点击：显示延迟
+            layoutDelay.setVisibility(View.VISIBLE);
+            etValue.setVisibility(View.GONE);
         } else {
-            layoutExtra.setVisibility(View.VISIBLE);
-            if (actionIndex == 1) {
-                // 点击：显示延迟
-                layoutDelay.setVisibility(View.VISIBLE);
-                etValue.setVisibility(View.GONE);
-            } else {
-                // 修改：显示新值
-                layoutDelay.setVisibility(View.GONE);
-                etValue.setVisibility(View.VISIBLE);
-            }
+            // 修改：显示新值
+            layoutDelay.setVisibility(View.GONE);
+            etValue.setVisibility(View.VISIBLE);
         }
 
         spinnerAction.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 if (position == 0) {
-                    layoutExtra.setVisibility(View.GONE);
+                    layoutDelay.setVisibility(View.GONE);
+                    etValue.setVisibility(View.GONE);
+                } else if (position == 1) {
+                    layoutDelay.setVisibility(View.VISIBLE);
+                    etValue.setVisibility(View.GONE);
                 } else {
-                    layoutExtra.setVisibility(View.VISIBLE);
-                    if (position == 1) {
-                        layoutDelay.setVisibility(View.VISIBLE);
-                        etValue.setVisibility(View.GONE);
-                    } else {
-                        layoutDelay.setVisibility(View.GONE);
-                        etValue.setVisibility(View.VISIBLE);
-                    }
+                    layoutDelay.setVisibility(View.GONE);
+                    etValue.setVisibility(View.VISIBLE);
                 }
             }
             @Override
