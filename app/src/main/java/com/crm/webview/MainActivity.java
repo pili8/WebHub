@@ -185,6 +185,9 @@ public class MainActivity extends AppCompatActivity {
             // 重新执行页面操作（APP从后台返回时WebView可能重新加载）
             wv = getCurrentWebView();
             if (wv != null) {
+                // 先停止旧的 MutationObserver
+                stopMutationObserver(wv);
+                // 重新执行页面操作
                 executeCustomScript(wv);
             }
         }
@@ -408,23 +411,16 @@ public class MainActivity extends AppCompatActivity {
     private void showPopupMenu() {
         android.widget.PopupMenu popup = new android.widget.PopupMenu(this, btnMenu);
 
-        // 第一组：复制链接、搜索链接
+        // 第一组：复制、搜索
         popup.getMenu().add(1, 1, 0, "📋 复制链接");
-        popup.getMenu().add(1, 2, 0, "🔍 搜索链接");
+        popup.getMenu().add(1, 2, 0, "🔍 搜索");
 
-        // 第二组：夜间模式、定时刷新
+        // 第二组：夜间、刷新
         popup.getMenu().add(2, 3, 0, isNightMode ? "☀️ 日间模式" : "🌙 夜间模式");
+        popup.getMenu().add(2, 4, 0, autoRefreshInterval > 0 ? "⏰ 刷新中" : "⏰ 定时刷新");
 
-        String refreshTitle = autoRefreshInterval > 0 ? "⏰ 定时刷新中" : "⏰ 定时刷新";
-        android.view.SubMenu refreshMenu = popup.getMenu().addSubMenu(2, 4, 0, refreshTitle);
-        refreshMenu.add(1, 50, 0, "关闭").setChecked(autoRefreshInterval == 0);
-        refreshMenu.add(1, 51, 0, "每30秒").setChecked(autoRefreshInterval == 30);
-        refreshMenu.add(1, 52, 0, "每1分钟").setChecked(autoRefreshInterval == 60);
-        refreshMenu.add(1, 53, 0, "每5分钟").setChecked(autoRefreshInterval == 300);
-        refreshMenu.setGroupCheckable(1, true, true);
-
-        // 第三组：查找元素、设置、退出
-        popup.getMenu().add(3, 5, 0, isInspectMode ? "🎯 退出查找元素" : "🎯 查找元素");
+        // 第三组：工具、设置、退出
+        popup.getMenu().add(3, 5, 0, "🎯 查找元素");
         popup.getMenu().add(3, 6, 0, "⚙️ 设置");
         popup.getMenu().add(3, 7, 0, "🚪 退出");
 
@@ -439,6 +435,8 @@ public class MainActivity extends AppCompatActivity {
                 toggleNightMode();
                 return true;
             } else if (item.getItemId() == 4) {
+                // 显示定时刷新选项
+                showAutoRefreshMenu();
                 return true;
             } else if (item.getItemId() == 5) {
                 toggleInspectMode();
@@ -458,6 +456,26 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
             return false;
+        });
+
+        popup.show();
+    }
+
+    private void showAutoRefreshMenu() {
+        android.widget.PopupMenu popup = new android.widget.PopupMenu(this, btnMenu);
+        popup.getMenu().add(1, 50, 0, "关闭").setChecked(autoRefreshInterval == 0);
+        popup.getMenu().add(1, 51, 0, "每30秒").setChecked(autoRefreshInterval == 30);
+        popup.getMenu().add(1, 52, 0, "每1分钟").setChecked(autoRefreshInterval == 60);
+        popup.getMenu().add(1, 53, 0, "每5分钟").setChecked(autoRefreshInterval == 300);
+        popup.getMenu().setGroupCheckable(1, true, true);
+
+        popup.setOnMenuItemClickListener(item -> {
+            int[] intervals = {0, 30, 60, 300};
+            int index = item.getItemId() - 50;
+            if (index >= 0 && index < intervals.length) {
+                setAutoRefresh(intervals[index]);
+            }
+            return true;
         });
 
         popup.show();
@@ -1519,19 +1537,23 @@ public class MainActivity extends AppCompatActivity {
     private void startMutationObserver(WebView webView, String actionJs) {
         // 使用 MutationObserver 监听页面内容变化
         String observerJs = "(function() {" +
-                "if (window._webhubObserver) return;" + // 避免重复创建
+                "if (window._webhubObserver) return;" +
                 "var timeout = null;" +
+                "var actionFn = function() {" +
+                "  try { " + actionJs + " } catch(e) {}" +
+                "};" +
                 "window._webhubObserver = new MutationObserver(function(mutations) {" +
                 "  if (timeout) clearTimeout(timeout);" +
-                "  timeout = setTimeout(function() {" +
-                "    " + actionJs +
-                "  }, 500);" + // 防抖：500ms 后执行
+                "  timeout = setTimeout(actionFn, 300);" +
                 "});" +
-                "window._webhubObserver.observe(document.body, {" +
-                "  childList: true," +
-                "  subtree: true," +
-                "  characterData: true" +
-                "});" +
+                "if (document.body) {" +
+                "  window._webhubObserver.observe(document.body, {" +
+                "    childList: true," +
+                "    subtree: true," +
+                "    characterData: true" +
+                "  });" +
+                "  actionFn();" + // 立即执行一次
+                "}" +
                 "})()";
 
         webView.evaluateJavascript(observerJs, null);
