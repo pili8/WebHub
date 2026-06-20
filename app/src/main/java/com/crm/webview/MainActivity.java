@@ -43,6 +43,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -107,6 +110,7 @@ public class MainActivity extends AppCompatActivity {
         String url;
         String actions;
         String scope; // link/domain/tab/all
+        List<ActionItem> actionItems = new ArrayList<>();
 
         LinkItem(String title, String url) {
             this.title = title;
@@ -120,6 +124,7 @@ public class MainActivity extends AppCompatActivity {
             this.url = url;
             this.actions = actions;
             this.scope = "link";
+            this.actionItems = parseLegacyActions(actions);
         }
 
         LinkItem(String title, String url, String actions, String scope) {
@@ -127,6 +132,29 @@ public class MainActivity extends AppCompatActivity {
             this.url = url;
             this.actions = actions;
             this.scope = scope;
+            this.actionItems = parseLegacyActions(actions);
+        }
+
+        LinkItem(String title, String url, String scope, List<ActionItem> actionItems) {
+            this.title = title;
+            this.url = url;
+            this.scope = scope;
+            this.actionItems = actionItems != null ? actionItems : new ArrayList<>();
+            this.actions = "";
+        }
+    }
+
+    static class ActionItem {
+        String type;
+        String selector;
+        String value;
+        int delay;
+
+        ActionItem(String type, String selector, String value, int delay) {
+            this.type = type;
+            this.selector = selector;
+            this.value = value;
+            this.delay = delay;
         }
     }
 
@@ -237,6 +265,12 @@ public class MainActivity extends AppCompatActivity {
                 "about:blank"
         };
 
+        String tabsJson = prefs.getString("tabs_config", "");
+
+        if (!tabsJson.isEmpty() && loadConfigFromJson(tabsJson, defaultIcons, defaultTitles, defaultUrls)) {
+            return;
+        }
+
         for (int i = 0; i < tabCount; i++) {
             tabIcons[i] = prefs.getString("icon" + (i + 1), defaultIcons[i]);
             tabTitles[i] = prefs.getString("title" + (i + 1), defaultTitles[i]);
@@ -275,6 +309,70 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 tabLinks.add(links);
             }
+        }
+
+        while (tabLinks.size() > tabCount) {
+            tabLinks.remove(tabLinks.size() - 1);
+        }
+    }
+
+    private boolean loadConfigFromJson(String tabsJson, String[] defaultIcons, String[] defaultTitles, String[] defaultUrls) {
+        try {
+            JSONArray tabsArray = new JSONArray(tabsJson);
+            tabCount = Math.max(2, Math.min(MAX_TABS, tabsArray.length()));
+
+            for (int i = 0; i < tabCount; i++) {
+                JSONObject tab = tabsArray.getJSONObject(i);
+                tabIcons[i] = tab.optString("icon", defaultIcons[i]);
+                tabTitles[i] = tab.optString("title", defaultTitles[i]);
+                tabActions[i] = "";
+
+                List<LinkItem> links = new ArrayList<>();
+                JSONArray linksArray = tab.optJSONArray("links");
+                if (linksArray != null) {
+                    for (int j = 0; j < linksArray.length(); j++) {
+                        JSONObject linkJson = linksArray.getJSONObject(j);
+                        String title = linkJson.optString("title", "");
+                        String url = linkJson.optString("url", "");
+                        if (title.isEmpty() || url.isEmpty()) continue;
+
+                        List<ActionItem> actions = new ArrayList<>();
+                        JSONArray actionsArray = linkJson.optJSONArray("actions");
+                        if (actionsArray != null) {
+                            for (int k = 0; k < actionsArray.length(); k++) {
+                                JSONObject actionJson = actionsArray.getJSONObject(k);
+                                String selector = actionJson.optString("selector", "");
+                                if (selector.isEmpty()) continue;
+                                actions.add(new ActionItem(
+                                        actionJson.optString("type", "hide"),
+                                        selector,
+                                        actionJson.optString("value", ""),
+                                        actionJson.optInt("delay", 0)
+                                ));
+                            }
+                        }
+
+                        links.add(new LinkItem(title, url, linkJson.optString("scope", "link"), actions));
+                    }
+                }
+
+                if (links.isEmpty()) {
+                    links.add(new LinkItem(tabTitles[i], defaultUrls[i]));
+                }
+
+                if (tabLinks.size() > i) {
+                    tabLinks.set(i, links);
+                } else {
+                    tabLinks.add(links);
+                }
+            }
+
+            while (tabLinks.size() > tabCount) {
+                tabLinks.remove(tabLinks.size() - 1);
+            }
+            return true;
+        } catch (Exception e) {
+            return false;
         }
     }
 
@@ -505,7 +603,9 @@ public class MainActivity extends AppCompatActivity {
         prefs.edit().putInt("auto_refresh_interval", interval).apply();
 
         // 停止之前的定时器
-        autoRefreshHandler.removeCallbacks(autoRefreshRunnable);
+        if (autoRefreshRunnable != null) {
+            autoRefreshHandler.removeCallbacks(autoRefreshRunnable);
+        }
 
         if (interval > 0) {
             // 启动定时刷新
@@ -1016,6 +1116,7 @@ public class MainActivity extends AppCompatActivity {
         WebView wv = getCurrentWebView();
         if (wv != null) {
             LinkItem link = links.get(linkIndex);
+            if (!isAllowedUrl(link.url)) return;
             wv.loadUrl(link.url);
             tvTitle.setText(link.title);
         }
@@ -1111,6 +1212,7 @@ public class MainActivity extends AppCompatActivity {
         WebView wv = getCurrentWebView();
         if (currentLinkIndex < links.size() && wv != null) {
             String url = links.get(currentLinkIndex).url;
+            if (!isAllowedUrl(url)) return;
             activeLinkIndex = currentLinkIndex; // 设置活跃链接
             wv.loadUrl(url);
         }
@@ -1188,7 +1290,8 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
-                handler.proceed();
+                handler.cancel();
+                Toast.makeText(MainActivity.this, "证书错误，已停止加载", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -1427,7 +1530,11 @@ public class MainActivity extends AppCompatActivity {
             return false;
         }
 
-        if (url.startsWith("http://") || url.startsWith("https://")) return true;
+        if (url.startsWith("http://")) {
+            Toast.makeText(this, "当前仅允许加载 HTTPS 链接", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        if (url.startsWith("https://")) return true;
         if (url.startsWith("javascript:") || url.startsWith("about:blank") || url.startsWith("data:")) return true;
 
         return false;
@@ -1439,7 +1546,7 @@ public class MainActivity extends AppCompatActivity {
         if (!pageActionsEnabled) return;
 
         // 收集所有需要执行的操作
-        StringBuilder allActions = new StringBuilder();
+        List<ActionItem> allActions = new ArrayList<>();
 
         // 获取当前链接的 scope
         String currentScope = "link";
@@ -1471,11 +1578,10 @@ public class MainActivity extends AppCompatActivity {
                     String currentDomain = getDomain(links.get(linkIndex).url);
                     for (List<LinkItem> tabLinksList : tabLinks) {
                         for (LinkItem link : tabLinksList) {
-                            if (link.actions != null && !link.actions.isEmpty()) {
+                            if (hasActions(link)) {
                                 String domain = getDomain(link.url);
                                 if (currentDomain.equals(domain)) {
-                                    if (allActions.length() > 0) allActions.append("\n");
-                                    allActions.append(link.actions);
+                                    collectActions(link, allActions);
                                 }
                             }
                         }
@@ -1488,16 +1594,13 @@ public class MainActivity extends AppCompatActivity {
                 List<LinkItem> links = tabLinks.get(currentTab);
                 int linkIndex = activeLinkIndex >= 0 ? activeLinkIndex : currentLinkIndex;
                 if (linkIndex >= 0 && linkIndex < links.size()) {
-                    String actions = links.get(linkIndex).actions;
-                    if (actions != null && !actions.isEmpty()) {
-                        allActions.append(actions);
-                    }
+                    collectActions(links.get(linkIndex), allActions);
                 }
             }
         }
 
-        if (allActions.length() > 0) {
-            String js = buildScriptFromActions(allActions.toString());
+        if (!allActions.isEmpty()) {
+            String js = buildScriptFromActions(allActions);
             if (!js.isEmpty()) {
                 // 先执行一次
                 webView.evaluateJavascript(js, null);
@@ -1508,13 +1611,23 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void collectActions(List<LinkItem> links, StringBuilder allActions) {
+    private void collectActions(List<LinkItem> links, List<ActionItem> allActions) {
         for (LinkItem link : links) {
-            if (link.actions != null && !link.actions.isEmpty()) {
-                if (allActions.length() > 0) allActions.append("\n");
-                allActions.append(link.actions);
-            }
+            collectActions(link, allActions);
         }
+    }
+
+    private void collectActions(LinkItem link, List<ActionItem> allActions) {
+        if (link.actionItems != null && !link.actionItems.isEmpty()) {
+            allActions.addAll(link.actionItems);
+        } else if (link.actions != null && !link.actions.isEmpty()) {
+            allActions.addAll(parseLegacyActions(link.actions));
+        }
+    }
+
+    private boolean hasActions(LinkItem link) {
+        return (link.actionItems != null && !link.actionItems.isEmpty())
+                || (link.actions != null && !link.actions.isEmpty());
     }
 
     private String getDomain(String url) {
@@ -1571,11 +1684,36 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private String buildScriptFromActions(String actions) {
+    private String buildScriptFromActions(List<ActionItem> actions) {
         StringBuilder js = new StringBuilder();
         js.append("(function(){");
 
-        // 用分号分隔多个操作（与保存格式一致）
+        for (ActionItem action : actions) {
+            if (action == null || action.selector == null || action.selector.isEmpty()) continue;
+
+            String selector = jsString(action.selector);
+            if ("hide".equals(action.type)) {
+                js.append("try{document.querySelectorAll(").append(selector).append(").forEach(el=>el.style.display='none');}catch(e){}");
+            } else if ("click".equals(action.type)) {
+                int delay = Math.max(0, action.delay);
+                if (delay > 0) {
+                    js.append("setTimeout(function(){try{document.querySelectorAll(").append(selector).append(").forEach(el=>el.click());}catch(e){}},").append(delay * 1000).append(");");
+                } else {
+                    js.append("try{document.querySelectorAll(").append(selector).append(").forEach(el=>el.click());}catch(e){}");
+                }
+            } else if ("modify".equals(action.type)) {
+                js.append("try{document.querySelectorAll(").append(selector).append(").forEach(el=>el.textContent=").append(jsString(action.value)).append(");}catch(e){}");
+            }
+        }
+
+        js.append("})()");
+        return js.toString();
+    }
+
+    private static List<ActionItem> parseLegacyActions(String actions) {
+        List<ActionItem> items = new ArrayList<>();
+        if (actions == null || actions.isEmpty()) return items;
+
         String[] actionGroups = actions.split(";");
         for (String group : actionGroups) {
             group = group.trim();
@@ -1584,36 +1722,27 @@ public class MainActivity extends AppCompatActivity {
             String[] parts = group.split("\\|");
             if (parts.length < 2) continue;
 
-            String action = parts[0];
+            String type = parts[0];
             String selector = parts[1];
-            selector = selector.replace("'", "\\'");
-
-            // 跳过备注部分（@开头）
             if (selector.startsWith("@")) continue;
 
-            if ("hide".equals(action)) {
-                js.append("try{document.querySelectorAll('").append(selector).append("').forEach(el=>el.style.display='none');}catch(e){}");
-            } else if ("click".equals(action)) {
-                int delay = 0;
-                if (parts.length > 2 && !parts[2].startsWith("@")) {
-                    try {
-                        delay = Integer.parseInt(parts[2]);
-                    } catch (Exception e) {}
-                }
-                if (delay > 0) {
-                    js.append("setTimeout(function(){try{document.querySelectorAll('").append(selector).append("').forEach(el=>el.click());}catch(e){}},").append(delay * 1000).append(");");
-                } else {
-                    js.append("try{document.querySelectorAll('").append(selector).append("').forEach(el=>el.click());}catch(e){}");
-                }
-            } else if ("modify".equals(action)) {
-                String value = parts.length > 2 && !parts[2].startsWith("@") ? parts[2] : "";
-                value = value.replace("'", "\\'");
-                js.append("try{document.querySelectorAll('").append(selector).append("').forEach(el=>el.textContent='").append(value).append("');}catch(e){}");
+            int delay = 0;
+            String value = "";
+            if ("click".equals(type) && parts.length > 2 && !parts[2].startsWith("@")) {
+                try {
+                    delay = Integer.parseInt(parts[2]);
+                } catch (Exception e) {}
+            } else if ("modify".equals(type) && parts.length > 2 && !parts[2].startsWith("@")) {
+                value = parts[2];
             }
+            items.add(new ActionItem(type, selector, value, delay));
         }
+        return items;
+    }
 
-        js.append("})()");
-        return js.toString();
+    private String jsString(String value) {
+        if (value == null) value = "";
+        return JSONObject.quote(value);
     }
 
     @Override
@@ -1703,6 +1832,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (autoRefreshRunnable != null) {
+            autoRefreshHandler.removeCallbacks(autoRefreshRunnable);
+            autoRefreshRunnable = null;
+        }
         for (int i = 0; i < MAX_TABS; i++) {
             if (webViews[i] != null) {
                 webViews[i].destroy();

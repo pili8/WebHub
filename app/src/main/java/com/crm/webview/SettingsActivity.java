@@ -6,13 +6,10 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.view.DragEvent;
 import android.view.Gravity;
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
 import android.webkit.CookieManager;
 import android.webkit.WebStorage;
 import android.widget.AdapterView;
@@ -33,7 +30,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -165,11 +161,16 @@ public class SettingsActivity extends AppCompatActivity {
         try {
             JSONObject json = new JSONObject();
 
-            // 导出通用设置
+            json.put("version", 2);
             json.put("kdocs_optimize", prefs.getBoolean("kdocs_optimize", true));
+            json.put("night_mode", prefs.getBoolean("night_mode", false));
+            json.put("night_mode_css", prefs.getBoolean("night_mode_css", false));
+            json.put("page_actions_enabled", prefs.getBoolean("page_actions_enabled", true));
+            json.put("auto_refresh_interval", prefs.getInt("auto_refresh_interval", 0));
             json.put("tab_count", prefs.getInt("tab_count", 3));
+            json.put("tabs_config", prefs.getString("tabs_config", buildTabsJsonFromPrefs().toString()));
 
-            // 导出选项卡配置
+            // 保留旧格式字段，方便旧版本导入。
             JSONArray tabsArray = new JSONArray();
             for (int i = 0; i < prefs.getInt("tab_count", 3); i++) {
                 JSONObject tab = new JSONObject();
@@ -241,10 +242,24 @@ public class SettingsActivity extends AppCompatActivity {
             if (json.has("kdocs_optimize")) {
                 editor.putBoolean("kdocs_optimize", json.getBoolean("kdocs_optimize"));
             }
+            if (json.has("night_mode")) {
+                editor.putBoolean("night_mode", json.getBoolean("night_mode"));
+            }
+            if (json.has("night_mode_css")) {
+                editor.putBoolean("night_mode_css", json.getBoolean("night_mode_css"));
+            }
+            if (json.has("page_actions_enabled")) {
+                editor.putBoolean("page_actions_enabled", json.getBoolean("page_actions_enabled"));
+            }
+            if (json.has("auto_refresh_interval")) {
+                editor.putInt("auto_refresh_interval", json.getInt("auto_refresh_interval"));
+            }
             if (json.has("tab_count")) {
                 editor.putInt("tab_count", json.getInt("tab_count"));
             }
-            if (json.has("tabs")) {
+            if (json.has("tabs_config")) {
+                editor.putString("tabs_config", json.getString("tabs_config"));
+            } else if (json.has("tabs")) {
                 JSONArray tabsArray = json.getJSONArray("tabs");
                 for (int i = 0; i < tabsArray.length(); i++) {
                     JSONObject tab = tabsArray.getJSONObject(i);
@@ -258,6 +273,8 @@ public class SettingsActivity extends AppCompatActivity {
             loadConfig();
             buildUI();
             switchKdocsOptimize.setChecked(prefs.getBoolean("kdocs_optimize", true));
+            switchNightModeCSS.setChecked(prefs.getBoolean("night_mode_css", false));
+            switchPageActions.setChecked(prefs.getBoolean("page_actions_enabled", true));
 
             Toast.makeText(this, "导入成功", Toast.LENGTH_SHORT).show();
 
@@ -334,6 +351,11 @@ public class SettingsActivity extends AppCompatActivity {
         if (tabCount < 2) tabCount = 2;
         if (tabCount > 5) tabCount = 5;
 
+        String tabsJson = prefs.getString("tabs_config", "");
+        if (!tabsJson.isEmpty() && loadConfigFromJson(tabsJson, tabCount)) {
+            return;
+        }
+
         for (int i = 0; i < tabCount; i++) {
             TabData tab = new TabData();
             tab.icon = prefs.getString("icon" + (i + 1), DEFAULT_TAB_ICONS[i]);
@@ -409,6 +431,60 @@ public class SettingsActivity extends AppCompatActivity {
         }
     }
 
+    private boolean loadConfigFromJson(String tabsJson, int tabCount) {
+        try {
+            JSONArray tabsArray = new JSONArray(tabsJson);
+            int count = Math.max(2, Math.min(5, Math.min(tabCount, tabsArray.length())));
+            for (int i = 0; i < count; i++) {
+                JSONObject tabJson = tabsArray.getJSONObject(i);
+                TabData tab = new TabData();
+                tab.icon = tabJson.optString("icon", DEFAULT_TAB_ICONS[i]);
+                tab.title = tabJson.optString("title", DEFAULT_TAB_TITLES[i]);
+
+                JSONArray linksArray = tabJson.optJSONArray("links");
+                if (linksArray != null) {
+                    for (int j = 0; j < linksArray.length(); j++) {
+                        JSONObject linkJson = linksArray.getJSONObject(j);
+                        LinkData link = new LinkData();
+                        link.title = linkJson.optString("title", "");
+                        link.url = linkJson.optString("url", "");
+                        link.scope = linkJson.optString("scope", "link");
+                        if (link.title.isEmpty() || link.url.isEmpty()) continue;
+
+                        JSONArray actionsArray = linkJson.optJSONArray("actions");
+                        if (actionsArray != null) {
+                            for (int k = 0; k < actionsArray.length(); k++) {
+                                JSONObject actionJson = actionsArray.getJSONObject(k);
+                                ActionData action = new ActionData();
+                                action.type = actionJson.optString("type", "hide");
+                                action.selector = actionJson.optString("selector", "");
+                                action.value = actionJson.optString("value", "");
+                                action.remark = actionJson.optString("remark", "");
+                                action.delay = actionJson.optInt("delay", 0);
+                                if (!action.selector.isEmpty()) {
+                                    link.actions.add(action);
+                                }
+                            }
+                        }
+                        tab.links.add(link);
+                    }
+                }
+
+                if (tab.links.isEmpty()) {
+                    LinkData link = new LinkData();
+                    link.title = tab.title;
+                    link.url = "about:blank";
+                    tab.links.add(link);
+                }
+                tabsData.add(tab);
+            }
+            return !tabsData.isEmpty();
+        } catch (Exception e) {
+            tabsData.clear();
+            return false;
+        }
+    }
+
     private boolean isEditMode = false;
 
     private void buildUI() {
@@ -464,7 +540,7 @@ public class SettingsActivity extends AppCompatActivity {
                     };
 
                     // 开始拖动
-                    tabView.startDrag(null, shadow, new int[]{tabIndex, 0}, 0);
+                    tabView.startDrag(null, shadow, tab, 0);
                     tabView.setAlpha(0.3f);
                     return true;
                 });
@@ -480,8 +556,7 @@ public class SettingsActivity extends AppCompatActivity {
                     switch (event.getAction()) {
                         case DragEvent.ACTION_DRAG_STARTED:
                             // 只接受选项卡类型的拖动
-                            int[] state = (int[]) event.getLocalState();
-                            return state != null && state.length > 1 && state[1] == 0;
+                            return event.getLocalState() instanceof TabData;
                         case DragEvent.ACTION_DRAG_ENTERED:
                             v.setBackgroundColor(Color.parseColor("#E3F2FD"));
                             return true;
@@ -490,10 +565,10 @@ public class SettingsActivity extends AppCompatActivity {
                             return true;
                         case DragEvent.ACTION_DROP:
                             v.setBackgroundColor(Color.WHITE);
-                            int[] dropState = (int[]) event.getLocalState();
-                            if (dropState != null && dropState[1] == 0) {
-                                int fromIndex = dropState[0];
-                                int toIndex = tabIndex;
+                            Object dropState = event.getLocalState();
+                            if (dropState instanceof TabData) {
+                                int fromIndex = tabsData.indexOf(dropState);
+                                int toIndex = tabsData.indexOf(tab);
                                 if (fromIndex != toIndex && fromIndex >= 0 && toIndex >= 0) {
                                     TabData temp = tabsData.remove(fromIndex);
                                     tabsData.add(toIndex, temp);
@@ -683,8 +758,6 @@ public class SettingsActivity extends AppCompatActivity {
         // 拖动排序（链接）
         TextView btnDragLink = cardView.findViewById(R.id.btnDragLink);
         if (btnDragLink != null) {
-            final int linkIndex = tab.links.indexOf(link);
-
             btnDragLink.setOnLongClickListener(v -> {
                 View.DragShadowBuilder shadow = new View.DragShadowBuilder(cardView) {
                     @Override
@@ -699,7 +772,7 @@ public class SettingsActivity extends AppCompatActivity {
                     }
                 };
 
-                cardView.startDrag(null, shadow, new int[]{linkIndex, 1}, 0);
+                cardView.startDrag(null, shadow, link, 0);
                 cardView.setAlpha(0.3f);
                 return true;
             });
@@ -708,8 +781,7 @@ public class SettingsActivity extends AppCompatActivity {
                 switch (event.getAction()) {
                     case DragEvent.ACTION_DRAG_STARTED:
                         // 只接受链接类型的拖动
-                        int[] state = (int[]) event.getLocalState();
-                        return state != null && state.length > 1 && state[1] == 1;
+                        return event.getLocalState() instanceof LinkData;
                     case DragEvent.ACTION_DRAG_ENTERED:
                         v.setBackgroundColor(Color.parseColor("#E3F2FD"));
                         return true;
@@ -718,10 +790,10 @@ public class SettingsActivity extends AppCompatActivity {
                         return true;
                     case DragEvent.ACTION_DROP:
                         v.setBackgroundColor(Color.TRANSPARENT);
-                        int[] dropState = (int[]) event.getLocalState();
-                        if (dropState != null && dropState[1] == 1) {
-                            int fromLinkIndex = dropState[0];
-                            int toLinkIndex = linkIndex;
+                        Object dropState = event.getLocalState();
+                        if (dropState instanceof LinkData) {
+                            int fromLinkIndex = tab.links.indexOf(dropState);
+                            int toLinkIndex = tab.links.indexOf(link);
                             if (fromLinkIndex != toLinkIndex && fromLinkIndex >= 0 && toLinkIndex >= 0) {
                                 LinkData temp = tab.links.remove(fromLinkIndex);
                                 tab.links.add(toLinkIndex, temp);
@@ -856,10 +928,10 @@ public class SettingsActivity extends AppCompatActivity {
 
     private void saveConfig() {
         SharedPreferences.Editor editor = prefs.edit();
+        JSONArray tabsJson = buildTabsJsonFromUi();
 
         for (int i = 0; i < tabsData.size(); i++) {
             TabData tab = tabsData.get(i);
-            View sectionView = tab.sectionView;
 
             // 使用 tab 对象中的值（可能已被编辑）
             String icon = tab.icon;
@@ -931,6 +1003,7 @@ public class SettingsActivity extends AppCompatActivity {
         }
 
         editor.putInt("tab_count", tabsData.size());
+        editor.putString("tabs_config", tabsJson.toString());
         editor.putBoolean("kdocs_optimize", switchKdocsOptimize.isChecked());
         editor.putBoolean("night_mode_css", switchNightModeCSS.isChecked());
         editor.putBoolean("page_actions_enabled", switchPageActions.isChecked());
@@ -938,6 +1011,178 @@ public class SettingsActivity extends AppCompatActivity {
         editor.apply();
         Toast.makeText(this, "设置已保存", Toast.LENGTH_SHORT).show();
         finish();
+    }
+
+    private JSONArray buildTabsJsonFromUi() {
+        syncUiToData();
+        return buildTabsJson(tabsData);
+    }
+
+    private JSONArray buildTabsJsonFromPrefs() {
+        List<TabData> data = new ArrayList<>();
+        int tabCount = prefs.getInt("tab_count", 3);
+        if (tabCount < 2) tabCount = 2;
+        if (tabCount > 5) tabCount = 5;
+
+        for (int i = 0; i < tabCount; i++) {
+            TabData tab = new TabData();
+            tab.icon = prefs.getString("icon" + (i + 1), DEFAULT_TAB_ICONS[i]);
+            tab.title = prefs.getString("title" + (i + 1), DEFAULT_TAB_TITLES[i]);
+
+            String linksStr = prefs.getString("links" + (i + 1), "");
+            if (!linksStr.isEmpty()) {
+                parseLegacyLinks(tab, linksStr);
+            }
+            if (tab.links.isEmpty()) {
+                LinkData link = new LinkData();
+                link.title = tab.title;
+                link.url = "about:blank";
+                tab.links.add(link);
+            }
+            data.add(tab);
+        }
+        return buildTabsJson(data);
+    }
+
+    private JSONArray buildTabsJson(List<TabData> data) {
+        JSONArray tabsArray = new JSONArray();
+        try {
+            for (TabData tab : data) {
+                JSONObject tabJson = new JSONObject();
+                tabJson.put("icon", tab.icon);
+                tabJson.put("title", tab.title);
+
+                JSONArray linksArray = new JSONArray();
+                for (LinkData link : tab.links) {
+                    if (link.title == null || link.title.isEmpty() || link.url == null || link.url.isEmpty()) continue;
+
+                    JSONObject linkJson = new JSONObject();
+                    linkJson.put("title", link.title);
+                    linkJson.put("url", link.url);
+                    linkJson.put("scope", link.scope == null || link.scope.isEmpty() ? "link" : link.scope);
+
+                    JSONArray actionsArray = new JSONArray();
+                    for (ActionData action : link.actions) {
+                        if (action.selector == null || action.selector.isEmpty()) continue;
+
+                        JSONObject actionJson = new JSONObject();
+                        actionJson.put("type", action.type == null || action.type.isEmpty() ? "hide" : action.type);
+                        actionJson.put("selector", action.selector);
+                        actionJson.put("value", action.value == null ? "" : action.value);
+                        actionJson.put("remark", action.remark == null ? "" : action.remark);
+                        actionJson.put("delay", Math.max(0, action.delay));
+                        actionsArray.put(actionJson);
+                    }
+                    linkJson.put("actions", actionsArray);
+                    linksArray.put(linkJson);
+                }
+                tabJson.put("links", linksArray);
+                tabsArray.put(tabJson);
+            }
+        } catch (Exception e) {}
+        return tabsArray;
+    }
+
+    private void syncUiToData() {
+        for (TabData tab : tabsData) {
+            if (tab.sectionView != null) {
+                EditText etTabIcon = tab.sectionView.findViewById(R.id.etTabIcon);
+                EditText etTabTitle = tab.sectionView.findViewById(R.id.etTabTitle);
+                String icon = etTabIcon.getText().toString().trim();
+                String title = etTabTitle.getText().toString().trim();
+                if (!icon.isEmpty()) tab.icon = icon;
+                if (!title.isEmpty()) tab.title = title;
+            }
+
+            for (LinkData link : tab.links) {
+                if (link.cardView == null) continue;
+                EditText etLinkTitle = link.cardView.findViewById(R.id.etLinkTitle);
+                EditText etLinkUrl = link.cardView.findViewById(R.id.etLinkUrl);
+                link.title = etLinkTitle.getText().toString().trim();
+                link.url = etLinkUrl.getText().toString().trim();
+
+                for (ActionData action : link.actions) {
+                    if (action.actionView == null) continue;
+                    Spinner spinner = action.actionView.findViewById(R.id.spinnerAction);
+                    EditText etSelector = action.actionView.findViewById(R.id.etSelector);
+                    EditText etRemark = action.actionView.findViewById(R.id.etRemark);
+                    EditText etValue = action.actionView.findViewById(R.id.etValue);
+                    EditText etDelay = action.actionView.findViewById(R.id.etDelay);
+
+                    int pos = spinner.getSelectedItemPosition();
+                    if (pos == 0) action.type = "hide";
+                    else if (pos == 1) action.type = "click";
+                    else action.type = "modify";
+
+                    action.selector = etSelector.getText().toString().trim();
+                    action.remark = etRemark.getText().toString().trim();
+                    action.value = etValue.getText().toString().trim();
+                    try {
+                        action.delay = Integer.parseInt(etDelay.getText().toString().trim());
+                    } catch (Exception e) {
+                        action.delay = 0;
+                    }
+                }
+            }
+        }
+    }
+
+    private void parseLegacyLinks(TabData tab, String linksStr) {
+        String[] lines = linksStr.split("\n");
+        for (String line : lines) {
+            line = line.trim();
+            if (line.isEmpty()) continue;
+
+            LinkData link = new LinkData();
+            String[] parts = line.split("\\|", 2);
+            String titleUrl = parts[0];
+            String actionsStr = parts.length > 1 ? parts[1] : "";
+
+            String[] titleUrlParts = titleUrl.split(",", 3);
+            if (titleUrlParts.length >= 2) {
+                link.title = titleUrlParts[0].trim();
+                link.url = titleUrlParts[1].trim();
+                link.scope = titleUrlParts.length > 2 ? titleUrlParts[2].trim() : "link";
+            }
+            parseLegacyActions(link, actionsStr);
+            if (link.title != null && !link.title.isEmpty() && link.url != null && !link.url.isEmpty()) {
+                tab.links.add(link);
+            }
+        }
+    }
+
+    private void parseLegacyActions(LinkData link, String actionsStr) {
+        if (actionsStr == null || actionsStr.isEmpty()) return;
+
+        String[] actionGroups = actionsStr.split(";");
+        for (String group : actionGroups) {
+            group = group.trim();
+            if (group.isEmpty()) continue;
+
+            String[] actionParts = group.split("\\|");
+            if (actionParts.length < 2) continue;
+
+            ActionData action = new ActionData();
+            action.type = actionParts[0];
+            action.selector = actionParts[1];
+            action.value = "";
+            action.remark = "";
+            action.delay = 0;
+
+            for (int k = 2; k < actionParts.length; k++) {
+                String part = actionParts[k];
+                if (part.startsWith("@")) {
+                    action.remark = part.substring(1)
+                            .replace("｜", "|")
+                            .replace("；", ";");
+                } else if ("click".equals(action.type)) {
+                    try { action.delay = Integer.parseInt(part); } catch (Exception e) {}
+                } else if ("modify".equals(action.type)) {
+                    action.value = part;
+                }
+            }
+            link.actions.add(action);
+        }
     }
 
     private int dpToPx(int dp) {
