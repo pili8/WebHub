@@ -161,25 +161,14 @@ public class SettingsActivity extends AppCompatActivity {
         try {
             JSONObject json = new JSONObject();
 
-            json.put("version", 2);
+            json.put("version", 3);
             json.put("kdocs_optimize", prefs.getBoolean("kdocs_optimize", true));
             json.put("night_mode", prefs.getBoolean("night_mode", false));
             json.put("night_mode_css", prefs.getBoolean("night_mode_css", false));
             json.put("page_actions_enabled", prefs.getBoolean("page_actions_enabled", true));
             json.put("auto_refresh_interval", prefs.getInt("auto_refresh_interval", 0));
             json.put("tab_count", prefs.getInt("tab_count", 3));
-            json.put("tabs_config", prefs.getString("tabs_config", buildTabsJsonFromPrefs().toString()));
-
-            // 保留旧格式字段，方便旧版本导入。
-            JSONArray tabsArray = new JSONArray();
-            for (int i = 0; i < prefs.getInt("tab_count", 3); i++) {
-                JSONObject tab = new JSONObject();
-                tab.put("icon", prefs.getString("icon" + (i + 1), DEFAULT_TAB_ICONS[i]));
-                tab.put("title", prefs.getString("title" + (i + 1), DEFAULT_TAB_TITLES[i]));
-                tab.put("links", prefs.getString("links" + (i + 1), ""));
-                tabsArray.put(tab);
-            }
-            json.put("tabs", tabsArray);
+            json.put("tabs_config", getTabsConfigForExport());
 
             // 写入到用户选择的位置
             OutputStream os = getContentResolver().openOutputStream(uri);
@@ -198,6 +187,59 @@ public class SettingsActivity extends AppCompatActivity {
         } catch (Exception e) {
             Toast.makeText(this, "导出失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private JSONArray getTabsConfigForExport() {
+        String tabsJson = prefs.getString("tabs_config", "");
+        if (!tabsJson.isEmpty()) {
+            try {
+                return new JSONArray(tabsJson);
+            } catch (Exception e) {}
+        }
+        return buildTabsJsonFromPrefs();
+    }
+
+    private void saveTabsConfigFromImport(SharedPreferences.Editor editor, Object tabsConfig) throws Exception {
+        JSONArray tabsArray;
+        if (tabsConfig instanceof JSONArray) {
+            tabsArray = (JSONArray) tabsConfig;
+        } else {
+            tabsArray = new JSONArray(String.valueOf(tabsConfig));
+        }
+
+        editor.putString("tabs_config", tabsArray.toString());
+        editor.putInt("tab_count", Math.max(2, Math.min(5, tabsArray.length())));
+    }
+
+    private void importLegacyTabs(SharedPreferences.Editor editor, JSONArray tabsArray) throws Exception {
+        int count = Math.max(2, Math.min(5, tabsArray.length()));
+        List<TabData> legacyTabs = new ArrayList<>();
+
+        editor.putInt("tab_count", count);
+        for (int i = 0; i < count; i++) {
+            JSONObject tab = i < tabsArray.length() ? tabsArray.getJSONObject(i) : new JSONObject();
+            String icon = tab.optString("icon", DEFAULT_TAB_ICONS[i]);
+            String title = tab.optString("title", DEFAULT_TAB_TITLES[i]);
+            String links = tab.optString("links", "");
+
+            editor.putString("icon" + (i + 1), icon);
+            editor.putString("title" + (i + 1), title);
+            editor.putString("links" + (i + 1), links);
+
+            TabData tabData = new TabData();
+            tabData.icon = icon;
+            tabData.title = title;
+            parseLegacyLinks(tabData, links);
+            if (tabData.links.isEmpty()) {
+                LinkData link = new LinkData();
+                link.title = title;
+                link.url = "about:blank";
+                tabData.links.add(link);
+            }
+            legacyTabs.add(tabData);
+        }
+
+        editor.putString("tabs_config", buildTabsJson(legacyTabs).toString());
     }
 
     private void importSettings() {
@@ -258,15 +300,9 @@ public class SettingsActivity extends AppCompatActivity {
                 editor.putInt("tab_count", json.getInt("tab_count"));
             }
             if (json.has("tabs_config")) {
-                editor.putString("tabs_config", json.getString("tabs_config"));
+                saveTabsConfigFromImport(editor, json.get("tabs_config"));
             } else if (json.has("tabs")) {
-                JSONArray tabsArray = json.getJSONArray("tabs");
-                for (int i = 0; i < tabsArray.length(); i++) {
-                    JSONObject tab = tabsArray.getJSONObject(i);
-                    editor.putString("icon" + (i + 1), tab.getString("icon"));
-                    editor.putString("title" + (i + 1), tab.getString("title"));
-                    editor.putString("links" + (i + 1), tab.getString("links"));
-                }
+                importLegacyTabs(editor, json.getJSONArray("tabs"));
             }
 
             editor.apply();
