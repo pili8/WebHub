@@ -7,7 +7,7 @@
     android:background="@drawable/tab_section_bg"
     android:padding="12dp">
 
-    <!-- 选项卡标题（可点击展开/收起） -->
+    <!-- 工作区标题（可点击展开/收起） -->
     <LinearLayout
         android:id="@+id/btnToggle"
         android:layout_width="match_parent"
@@ -37,7 +37,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="选项卡 1"
+            android:text="工作区 1"
             android:textSize="15sp"
             android:textStyle="bold"
             android:textColor="#333333"
@@ -95,7 +95,7 @@
             android:layout_width="0dp"
             android:layout_height="40dp"
             android:layout_weight="1"
-            android:hint="选项卡名称"
+            android:hint="工作区名称"
             android:textSize="14sp"
             android:background="@drawable/input_bg"
             android:paddingStart="10dp"

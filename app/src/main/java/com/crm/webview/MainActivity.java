@@ -509,6 +509,11 @@ public class MainActivity extends AppCompatActivity {
     private void showPopupMenu() {
         android.widget.PopupMenu popup = new android.widget.PopupMenu(this, btnMenu);
 
+        // 启用分组分隔线（API 28+）
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            popup.getMenu().setGroupDividerEnabled(true);
+        }
+
         // 第一组：搜索、复制
         popup.getMenu().add(1, 2, 0, "🔍 搜索");
         popup.getMenu().add(1, 1, 0, "📋 复制链接");
@@ -517,7 +522,7 @@ public class MainActivity extends AppCompatActivity {
         popup.getMenu().add(2, 3, 0, isNightMode ? "☀️ 日间模式" : "🌙 夜间模式");
         popup.getMenu().add(2, 4, 0, autoRefreshInterval > 0 ? "⏰ 刷新中" : "⏰ 定时刷新");
 
-        // 第三组：工具、设置、退出
+        // 第三组：工具、内存、设置、退出
         popup.getMenu().add(3, 5, 0, isInspectMode ? "🎯 退出查找" : "🎯 查找元素");
         popup.getMenu().add(3, 8, 0, "📊 内存占用");
         popup.getMenu().add(3, 6, 0, "⚙️ 设置");
@@ -593,6 +598,7 @@ public class MainActivity extends AppCompatActivity {
         long totalMemory = runtime.totalMemory();
         long freeMemory = runtime.freeMemory();
         long usedMemory = totalMemory - freeMemory;
+        int appPercent = (int) (usedMemory * 100 / maxMemory);
 
         // 系统内存
         android.app.ActivityManager am = (android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE);
@@ -601,42 +607,141 @@ public class MainActivity extends AppCompatActivity {
         long totalSys = memInfo.totalMem;
         long availSys = memInfo.availMem;
         long usedSys = totalSys - availSys;
+        int sysPercent = (int) (usedSys * 100 / totalSys);
 
-        StringBuilder info = new StringBuilder();
-        info.append("📱 应用内存\n");
-        info.append("已用: ").append(formatBytes(usedMemory)).append("\n");
-        info.append("分配: ").append(formatBytes(totalMemory)).append("\n");
-        info.append("上限: ").append(formatBytes(maxMemory)).append("\n");
-        info.append("使用率: ").append(String.format("%.0f%%", usedMemory * 100.0 / maxMemory)).append("\n\n");
-
-        info.append("💻 系统内存\n");
-        info.append("已用: ").append(formatBytes(usedSys)).append("\n");
-        info.append("可用: ").append(formatBytes(availSys)).append("\n");
-        info.append("总计: ").append(formatBytes(totalSys)).append("\n");
-        info.append("使用率: ").append(String.format("%.0f%%", usedSys * 100.0 / totalSys)).append("\n\n");
-
-        // 每个工作区内核情况
-        info.append("🔧 工作区内核\n");
+        // 工作区状态
         int activeCount = 0;
+        int loadedCount = 0;
         for (int i = 0; i < MAX_TABS; i++) {
             if (webViews[i] != null) {
                 activeCount++;
-                String title = (i < tabTitles.length && tabTitles[i] != null) ? tabTitles[i] : "工作区" + (i + 1);
-                boolean loaded = tabLoaded[i];
-                String url = webViews[i].getUrl();
-                String urlShort = (url != null && url.length() > 40) ? url.substring(0, 40) + "..." : (url != null ? url : "空白");
-                info.append("• ").append(title)
-                    .append(loaded ? " ✅" : " ⬜")
-                    .append("\n  ").append(urlShort).append("\n");
+                if (tabLoaded[i]) loadedCount++;
             }
         }
-        info.append("\n共 ").append(activeCount).append(" / ").append(MAX_TABS).append(" 个工作区已创建");
+
+        // 构建自定义视图
+        float density = getResources().getDisplayMetrics().density;
+        int padding = (int) (20 * density);
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(padding, padding, padding, padding);
+
+        // 圆环区域
+        LinearLayout rings = new LinearLayout(this);
+        rings.setOrientation(LinearLayout.HORIZONTAL);
+        rings.setGravity(android.view.Gravity.CENTER);
+
+        // 应用内存圆环
+        LinearLayout appRing = createRingView("应用", appPercent,
+                formatBytes(usedMemory) + " / " + formatBytes(maxMemory), density);
+        rings.addView(appRing);
+
+        // 间距
+        View spacer = new View(this);
+        spacer.setLayoutParams(new LinearLayout.LayoutParams((int) (30 * density), 1));
+        rings.addView(spacer);
+
+        // 系统内存圆环
+        LinearLayout sysRing = createRingView("系统", sysPercent,
+                formatBytes(usedSys) + " / " + formatBytes(totalSys), density);
+        rings.addView(sysRing);
+
+        root.addView(rings);
+
+        // 分隔线
+        View divider = new View(this);
+        divider.setBackgroundColor(Color.parseColor("#E0E0E0"));
+        LinearLayout.LayoutParams divParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, (int) (1 * density));
+        divParams.topMargin = (int) (16 * density);
+        divParams.bottomMargin = (int) (12 * density);
+        divider.setLayoutParams(divParams);
+        root.addView(divider);
+
+        // 工作区状态
+        TextView tvWorkspace = new TextView(this);
+        tvWorkspace.setText("🔧 工作区: " + loadedCount + " 已加载 / " + activeCount + " 已创建 / " + MAX_TABS + " 最大");
+        tvWorkspace.setTextSize(14);
+        tvWorkspace.setTextColor(Color.parseColor("#333333"));
+        root.addView(tvWorkspace);
 
         new AlertDialog.Builder(this)
                 .setTitle("📊 内存占用")
-                .setMessage(info.toString())
+                .setView(root)
                 .setPositiveButton("确定", null)
                 .show();
+    }
+
+    private LinearLayout createRingView(String label, int percent, String detail, float density) {
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setGravity(android.view.Gravity.CENTER);
+        int size = (int) (100 * density);
+        layout.setLayoutParams(new LinearLayout.LayoutParams(size, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        // 自定义圆环视图
+        View ringView = new View(this) {
+            @Override
+            protected void onDraw(android.graphics.Canvas canvas) {
+                super.onDraw(canvas);
+                int w = getWidth();
+                int h = getHeight();
+                float strokeWidth = 8 * density;
+                float radius = (Math.min(w, h) - strokeWidth) / 2f;
+                float cx = w / 2f;
+                float cy = h / 2f;
+
+                android.graphics.Paint paint = new android.graphics.Paint();
+                paint.setAntiAlias(true);
+                paint.setStyle(android.graphics.Paint.Style.STROKE);
+                paint.setStrokeWidth(strokeWidth);
+                paint.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+
+                // 背景圆环
+                paint.setColor(Color.parseColor("#E0E0E0"));
+                canvas.drawCircle(cx, cy, radius, paint);
+
+                // 进度圆环
+                int color = percent < 60 ? Color.parseColor("#4CAF50") :
+                           percent < 85 ? Color.parseColor("#FF9800") :
+                           Color.parseColor("#F44336");
+                paint.setColor(color);
+                float sweepAngle = 360f * percent / 100f;
+                canvas.drawArc(cx - radius, cy - radius, cx + radius, cy + radius,
+                        -90, sweepAngle, false, paint);
+
+                // 中间百分比文字
+                android.graphics.Paint textPaint = new android.graphics.Paint();
+                textPaint.setAntiAlias(true);
+                textPaint.setTextSize(16 * density);
+                textPaint.setColor(color);
+                textPaint.setTextAlign(android.graphics.Paint.Align.CENTER);
+                android.graphics.Rect bounds = new android.graphics.Rect();
+                textPaint.getTextBounds(percent + "%", 0, (percent + "%").length(), bounds);
+                canvas.drawText(percent + "%", cx, cy + bounds.height() / 2f, textPaint);
+            }
+        };
+        ringView.setLayoutParams(new LinearLayout.LayoutParams(size, size));
+        layout.addView(ringView);
+
+        // 标签
+        TextView tvLabel = new TextView(this);
+        tvLabel.setText(label);
+        tvLabel.setTextSize(12);
+        tvLabel.setTextColor(Color.parseColor("#666666"));
+        tvLabel.setGravity(android.view.Gravity.CENTER);
+        layout.addView(tvLabel);
+
+        // 详情
+        TextView tvDetail = new TextView(this);
+        tvDetail.setText(detail);
+        tvDetail.setTextSize(10);
+        tvDetail.setTextColor(Color.parseColor("#999999"));
+        tvDetail.setGravity(android.view.Gravity.CENTER);
+        layout.addView(tvDetail);
+
+        return layout;
     }
 
     private String formatBytes(long bytes) {

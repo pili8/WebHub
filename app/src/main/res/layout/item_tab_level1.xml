@@ -7,7 +7,7 @@
     android:layout_marginBottom="12dp"
     android:elevation="2dp">
 
-    <!-- 选项卡标题栏 -->
+    <!-- 工作区标题栏 -->
     <LinearLayout
         android:id="@+id/btnToggle"
         android:layout_width="match_parent"
@@ -41,7 +41,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="选项卡"
+            android:text="工作区"
             android:textSize="15sp"
             android:textStyle="bold"
             android:textColor="#333333"
@@ -65,7 +65,7 @@
             android:layout_width="0dp"
             android:layout_height="36dp"
             android:layout_weight="1"
-            android:hint="选项卡名称"
+            android:hint="工作区名称"
             android:textSize="14sp"
             android:background="@drawable/input_bg_small"
             android:paddingStart="10dp"

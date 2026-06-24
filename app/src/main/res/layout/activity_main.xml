@@ -203,7 +203,7 @@
         android:layout_weight="1"
         android:background="@android:color/white" />
 
-    <!-- 底部子链接菜单（长按选项卡时显示） -->
+    <!-- 底部子链接菜单（长按工作区时显示） -->
     <LinearLayout
         android:id="@+id/bottomMenuContainer"
         android:layout_width="match_parent"
@@ -213,7 +213,7 @@
         android:elevation="8dp"
         android:visibility="gone" />
 
-    <!-- 底部选项卡 -->
+    <!-- 底部工作区 -->
     <LinearLayout
         android:id="@+id/tabContainer"
         android:layout_width="match_parent"
