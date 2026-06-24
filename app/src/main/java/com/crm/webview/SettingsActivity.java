@@ -525,10 +525,16 @@ public class SettingsActivity extends AppCompatActivity {
             TextView btnDrag = tabView.findViewById(R.id.btnDrag);
             if (btnDrag != null) {
                 btnDrag.setOnLongClickListener(v -> {
-                    // 创建拖动阴影
+                    // 创建拖动阴影（蓝色底色更醒目）
                     View.DragShadowBuilder shadow = new View.DragShadowBuilder(tabView) {
                         @Override
                         public void onDrawShadow(android.graphics.Canvas canvas) {
+                            // 画蓝色背景
+                            android.graphics.Paint paint = new android.graphics.Paint();
+                            paint.setColor(Color.parseColor("#1976D2"));
+                            paint.setAlpha(180);
+                            canvas.drawRect(0, 0, tabView.getWidth(), tabView.getHeight(), paint);
+                            // 画原始内容
                             tabView.draw(canvas);
                         }
 
@@ -558,7 +564,7 @@ public class SettingsActivity extends AppCompatActivity {
                             // 只接受选项卡类型的拖动
                             return event.getLocalState() instanceof TabData;
                         case DragEvent.ACTION_DRAG_ENTERED:
-                            v.setBackgroundColor(Color.parseColor("#E3F2FD"));
+                            v.setBackgroundColor(Color.parseColor("#BBDEFB"));
                             return true;
                         case DragEvent.ACTION_DRAG_EXITED:
                             v.setBackgroundColor(Color.WHITE);
@@ -572,7 +578,8 @@ public class SettingsActivity extends AppCompatActivity {
                                 if (fromIndex != toIndex && fromIndex >= 0 && toIndex >= 0) {
                                     TabData temp = tabsData.remove(fromIndex);
                                     tabsData.add(toIndex, temp);
-                                    buildUI();
+                                    // 延迟重建UI，防止拖拽卡死
+                                    v.postDelayed(() -> buildUI(), 100);
                                 }
                             }
                             return true;
@@ -759,9 +766,16 @@ public class SettingsActivity extends AppCompatActivity {
         TextView btnDragLink = cardView.findViewById(R.id.btnDragLink);
         if (btnDragLink != null) {
             btnDragLink.setOnLongClickListener(v -> {
+                // 创建拖动阴影（蓝色底色更醒目）
                 View.DragShadowBuilder shadow = new View.DragShadowBuilder(cardView) {
                     @Override
                     public void onDrawShadow(android.graphics.Canvas canvas) {
+                        // 画蓝色背景
+                        android.graphics.Paint paint = new android.graphics.Paint();
+                        paint.setColor(Color.parseColor("#1976D2"));
+                        paint.setAlpha(180);
+                        canvas.drawRect(0, 0, cardView.getWidth(), cardView.getHeight(), paint);
+                        // 画原始内容
                         cardView.draw(canvas);
                     }
 
@@ -783,7 +797,7 @@ public class SettingsActivity extends AppCompatActivity {
                         // 只接受链接类型的拖动
                         return event.getLocalState() instanceof LinkData;
                     case DragEvent.ACTION_DRAG_ENTERED:
-                        v.setBackgroundColor(Color.parseColor("#E3F2FD"));
+                        v.setBackgroundColor(Color.parseColor("#BBDEFB"));
                         return true;
                     case DragEvent.ACTION_DRAG_EXITED:
                         v.setBackgroundColor(Color.TRANSPARENT);
@@ -797,11 +811,13 @@ public class SettingsActivity extends AppCompatActivity {
                             if (fromLinkIndex != toLinkIndex && fromLinkIndex >= 0 && toLinkIndex >= 0) {
                                 LinkData temp = tab.links.remove(fromLinkIndex);
                                 tab.links.add(toLinkIndex, temp);
-                                // 重建链接列表
-                                tab.linksContainer.removeAllViews();
-                                for (LinkData l : tab.links) {
-                                    addLinkCard(tab, l);
-                                }
+                                // 延迟重建链接列表，防止拖拽卡死
+                                v.postDelayed(() -> {
+                                    tab.linksContainer.removeAllViews();
+                                    for (LinkData l : tab.links) {
+                                        addLinkCard(tab, l);
+                                    }
+                                }, 100);
                             }
                         }
                         return true;

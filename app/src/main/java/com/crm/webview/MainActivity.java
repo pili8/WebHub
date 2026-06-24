@@ -519,6 +519,7 @@ public class MainActivity extends AppCompatActivity {
 
         // 第三组：工具、设置、退出
         popup.getMenu().add(3, 5, 0, "🎯 查找元素");
+        popup.getMenu().add(3, 8, 0, "📊 内存占用");
         popup.getMenu().add(3, 6, 0, "⚙️ 设置");
         popup.getMenu().add(3, 7, 0, "🚪 退出");
 
@@ -546,6 +547,9 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             } else if (item.getItemId() == 7) {
                 finish();
+                return true;
+            } else if (item.getItemId() == 8) {
+                showMemoryInfo();
                 return true;
             } else if (item.getItemId() >= 50 && item.getItemId() <= 53) {
                 int[] intervals = {0, 30, 60, 300};
@@ -577,6 +581,57 @@ public class MainActivity extends AppCompatActivity {
         });
 
         popup.show();
+    }
+
+    // ========== 内存占用 ==========
+
+    private void showMemoryInfo() {
+        Runtime runtime = Runtime.getRuntime();
+
+        // JVM 内存
+        long maxMemory = runtime.maxMemory();       // JVM 最大可用
+        long totalMemory = runtime.totalMemory();   // JVM 当前分配
+        long freeMemory = runtime.freeMemory();     // JVM 空闲
+        long usedMemory = totalMemory - freeMemory; // JVM 已用
+
+        // 系统内存
+        android.app.ActivityManager am = (android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE);
+        android.app.ActivityManager.MemoryInfo memInfo = new android.app.ActivityManager.MemoryInfo();
+        am.getMemoryInfo(memInfo);
+        long totalSys = memInfo.totalMem;
+        long availSys = memInfo.availMem;
+        long usedSys = totalSys - availSys;
+
+        // WebView 数量
+        int webViewCount = 0;
+        for (WebView wv : webViews) {
+            if (wv != null) webViewCount++;
+        }
+
+        String info = "📊 内存占用\n\n" +
+                "【JVM 内存】\n" +
+                "已用: " + formatBytes(usedMemory) + "\n" +
+                "分配: " + formatBytes(totalMemory) + "\n" +
+                "最大: " + formatBytes(maxMemory) + "\n\n" +
+                "【系统内存】\n" +
+                "已用: " + formatBytes(usedSys) + "\n" +
+                "可用: " + formatBytes(availSys) + "\n" +
+                "总计: " + formatBytes(totalSys) + "\n\n" +
+                "【WebView】\n" +
+                "已创建: " + webViewCount + " / " + MAX_TABS;
+
+        new AlertDialog.Builder(this)
+                .setTitle("内存占用")
+                .setMessage(info)
+                .setPositiveButton("确定", null)
+                .show();
+    }
+
+    private String formatBytes(long bytes) {
+        if (bytes < 1024) return bytes + " B";
+        else if (bytes < 1024 * 1024) return String.format("%.1f KB", bytes / 1024.0);
+        else if (bytes < 1024 * 1024 * 1024) return String.format("%.1f MB", bytes / (1024.0 * 1024));
+        else return String.format("%.2f GB", bytes / (1024.0 * 1024 * 1024));
     }
 
     // ========== 复制地址 ==========
@@ -1365,6 +1420,9 @@ public class MainActivity extends AppCompatActivity {
                     String classes = extractJsonString(json, "classes");
                     String text = extractJsonString(json, "text");
 
+                    // 退出查找模式
+                    isInspectMode = false;
+                    inspectBanner.setVisibility(View.GONE);
                     showElementInfoDialog(tag, id, classes, text);
                 } catch (Exception e) {
                     Toast.makeText(this, "解析失败", Toast.LENGTH_SHORT).show();
