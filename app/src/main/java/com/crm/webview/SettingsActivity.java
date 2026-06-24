@@ -495,7 +495,7 @@ public class SettingsActivity extends AppCompatActivity {
             TabData tab = tabsData.get(i);
             final int tabIndex = i;
 
-            // ========== 第一级：选项卡 ==========
+            // ========== 第一级：工作区 ==========
             View tabView = LayoutInflater.from(this).inflate(R.layout.item_tab_level1, settingsContainer, false);
             tab.sectionView = tabView;
 
@@ -521,7 +521,7 @@ public class SettingsActivity extends AppCompatActivity {
                         linksContainer, btnAddLink, tvArrow, btnDeleteTab, btnConfirmEdit, false);
             });
 
-            // 拖动排序（选项卡）
+            // 拖动排序（工作区）
             TextView btnDrag = tabView.findViewById(R.id.btnDrag);
             if (btnDrag != null) {
                 btnDrag.setOnLongClickListener(v -> {
@@ -561,7 +561,7 @@ public class SettingsActivity extends AppCompatActivity {
                 tabView.setOnDragListener((v, event) -> {
                     switch (event.getAction()) {
                         case DragEvent.ACTION_DRAG_STARTED:
-                            // 只接受选项卡类型的拖动
+                            // 只接受工作区类型的拖动
                             return event.getLocalState() instanceof TabData;
                         case DragEvent.ACTION_DRAG_ENTERED:
                             v.setBackgroundColor(Color.parseColor("#BBDEFB"));
@@ -597,8 +597,8 @@ public class SettingsActivity extends AppCompatActivity {
                 btnDeleteTab.setVisibility(View.VISIBLE);
                 btnDeleteTab.setOnClickListener(v -> {
                     PopupMenu popup = new PopupMenu(this, v);
-                    popup.getMenu().add(0, 1, 0, "编辑选项卡");
-                    popup.getMenu().add(0, 2, 0, "删除选项卡");
+                    popup.getMenu().add(0, 1, 0, "编辑工作区");
+                    popup.getMenu().add(0, 2, 0, "删除工作区");
                     popup.setOnMenuItemClickListener(item -> {
                         if (item.getItemId() == 1) {
                             // 进入编辑模式
@@ -606,7 +606,7 @@ public class SettingsActivity extends AppCompatActivity {
                                     linksContainer, btnAddLink, tvArrow, btnDeleteTab, btnConfirmEdit, true);
                         } else if (item.getItemId() == 2) {
                             new AlertDialog.Builder(this)
-                                    .setTitle("删除选项卡")
+                                    .setTitle("删除工作区")
                                     .setMessage("确定删除「" + tab.title + "」？\n删除后无法恢复。")
                                     .setPositiveButton("删除", (d, w) -> {
                                         tabsData.remove(tab);
@@ -652,10 +652,10 @@ public class SettingsActivity extends AppCompatActivity {
             settingsContainer.addView(tabView);
         }
 
-        // 添加选项卡按钮
+        // 添加工作区按钮
         if (tabsData.size() < 5) {
             TextView btnAddTab = new TextView(this);
-            btnAddTab.setText("＋ 添加选项卡");
+            btnAddTab.setText("＋ 添加工作区");
             btnAddTab.setTextSize(14);
             btnAddTab.setTextColor(Color.parseColor("#1976D2"));
             btnAddTab.setGravity(Gravity.CENTER);
@@ -664,7 +664,7 @@ public class SettingsActivity extends AppCompatActivity {
             btnAddTab.setOnClickListener(v -> {
                 TabData newTab = new TabData();
                 newTab.icon = "📌";
-                newTab.title = "新选项卡";
+                newTab.title = "新工作区";
                 tabsData.add(newTab);
                 buildUI();
             });
@@ -734,7 +734,7 @@ public class SettingsActivity extends AppCompatActivity {
 
         // 生效范围
         Spinner spinnerScope = cardView.findViewById(R.id.spinnerScope);
-        String[] scopeOptions = {"仅此链接", "相似域名", "当前选项卡", "所有选项卡"};
+        String[] scopeOptions = {"仅此链接", "相似域名", "当前工作区", "所有工作区"};
         ArrayAdapter<String> scopeAdapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item, scopeOptions);
         scopeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);

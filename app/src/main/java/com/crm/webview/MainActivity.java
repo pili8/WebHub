@@ -54,12 +54,12 @@ public class MainActivity extends AppCompatActivity {
     private static final int PERMISSION_REQUEST_CODE = 100;
     private static final int MAX_TABS = 5;
 
-    // WebView 容器和选项卡容器
+    // WebView 容器和工作区容器
     private FrameLayout webViewContainer;
     private LinearLayout tabContainer;
     private LinearLayout bottomMenuContainer;
 
-    // 多 WebView（每个选项卡独立）
+    // 多 WebView（每个工作区独立）
     private WebView[] webViews = new WebView[MAX_TABS];
     private boolean[] tabLoaded = new boolean[MAX_TABS]; // 是否已加载过
     private List<LinearLayout> tabViews = new ArrayList<>();
@@ -201,11 +201,11 @@ public class MainActivity extends AppCompatActivity {
             setAutoRefresh(autoRefreshInterval);
         }
 
-        // 检查选项卡数量是否变化
+        // 检查工作区数量是否变化
         int oldTabCount = tabCount;
         loadConfig();
 
-        // 如果选项卡数量变化，重新创建UI
+        // 如果工作区数量变化，重新创建UI
         if (tabCount != oldTabCount) {
             createTabsAndWebViews();
             switchTab(0);
@@ -395,7 +395,7 @@ public class MainActivity extends AppCompatActivity {
 
         for (int i = 0; i < tabCount; i++) {
 
-            // 创建选项卡
+            // 创建工作区
             LinearLayout tab = new LinearLayout(this);
             tab.setOrientation(LinearLayout.VERTICAL);
             tab.setGravity(Gravity.CENTER);
@@ -403,7 +403,7 @@ public class MainActivity extends AppCompatActivity {
                     0, LinearLayout.LayoutParams.MATCH_PARENT, 1);
             tab.setLayoutParams(tabParams);
 
-            // 选项卡图标
+            // 工作区图标
             TextView icon = new TextView(this);
             icon.setText(tabIcons[i]);
             icon.setTextSize(22);
@@ -413,7 +413,7 @@ public class MainActivity extends AppCompatActivity {
                     LinearLayout.LayoutParams.WRAP_CONTENT);
             icon.setLayoutParams(iconParams);
 
-            // 选项卡文字
+            // 工作区文字
             TextView text = new TextView(this);
             text.setText(tabTitles[i]);
             text.setTextSize(10);
@@ -433,7 +433,7 @@ public class MainActivity extends AppCompatActivity {
             tabIconViews.add(icon);
             tabTextViews.add(text);
 
-            // 点击切换选项卡
+            // 点击切换工作区
             final int index = i;
             tab.setOnClickListener(v -> switchTab(index));
 
@@ -518,7 +518,7 @@ public class MainActivity extends AppCompatActivity {
         popup.getMenu().add(2, 4, 0, autoRefreshInterval > 0 ? "⏰ 刷新中" : "⏰ 定时刷新");
 
         // 第三组：工具、设置、退出
-        popup.getMenu().add(3, 5, 0, "🎯 查找元素");
+        popup.getMenu().add(3, 5, 0, isInspectMode ? "🎯 退出查找" : "🎯 查找元素");
         popup.getMenu().add(3, 8, 0, "📊 内存占用");
         popup.getMenu().add(3, 6, 0, "⚙️ 设置");
         popup.getMenu().add(3, 7, 0, "🚪 退出");
@@ -588,11 +588,11 @@ public class MainActivity extends AppCompatActivity {
     private void showMemoryInfo() {
         Runtime runtime = Runtime.getRuntime();
 
-        // JVM 内存
-        long maxMemory = runtime.maxMemory();       // JVM 最大可用
-        long totalMemory = runtime.totalMemory();   // JVM 当前分配
-        long freeMemory = runtime.freeMemory();     // JVM 空闲
-        long usedMemory = totalMemory - freeMemory; // JVM 已用
+        // 应用内存（JVM）
+        long maxMemory = runtime.maxMemory();
+        long totalMemory = runtime.totalMemory();
+        long freeMemory = runtime.freeMemory();
+        long usedMemory = totalMemory - freeMemory;
 
         // 系统内存
         android.app.ActivityManager am = (android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE);
@@ -602,27 +602,39 @@ public class MainActivity extends AppCompatActivity {
         long availSys = memInfo.availMem;
         long usedSys = totalSys - availSys;
 
-        // WebView 数量
-        int webViewCount = 0;
-        for (WebView wv : webViews) {
-            if (wv != null) webViewCount++;
-        }
+        StringBuilder info = new StringBuilder();
+        info.append("📱 应用内存\n");
+        info.append("已用: ").append(formatBytes(usedMemory)).append("\n");
+        info.append("分配: ").append(formatBytes(totalMemory)).append("\n");
+        info.append("上限: ").append(formatBytes(maxMemory)).append("\n");
+        info.append("使用率: ").append(String.format("%.0f%%", usedMemory * 100.0 / maxMemory)).append("\n\n");
 
-        String info = "📊 内存占用\n\n" +
-                "【JVM 内存】\n" +
-                "已用: " + formatBytes(usedMemory) + "\n" +
-                "分配: " + formatBytes(totalMemory) + "\n" +
-                "最大: " + formatBytes(maxMemory) + "\n\n" +
-                "【系统内存】\n" +
-                "已用: " + formatBytes(usedSys) + "\n" +
-                "可用: " + formatBytes(availSys) + "\n" +
-                "总计: " + formatBytes(totalSys) + "\n\n" +
-                "【WebView】\n" +
-                "已创建: " + webViewCount + " / " + MAX_TABS;
+        info.append("💻 系统内存\n");
+        info.append("已用: ").append(formatBytes(usedSys)).append("\n");
+        info.append("可用: ").append(formatBytes(availSys)).append("\n");
+        info.append("总计: ").append(formatBytes(totalSys)).append("\n");
+        info.append("使用率: ").append(String.format("%.0f%%", usedSys * 100.0 / totalSys)).append("\n\n");
+
+        // 每个工作区内核情况
+        info.append("🔧 工作区内核\n");
+        int activeCount = 0;
+        for (int i = 0; i < MAX_TABS; i++) {
+            if (webViews[i] != null) {
+                activeCount++;
+                String title = (i < tabTitles.length && tabTitles[i] != null) ? tabTitles[i] : "工作区" + (i + 1);
+                boolean loaded = tabLoaded[i];
+                String url = webViews[i].getUrl();
+                String urlShort = (url != null && url.length() > 40) ? url.substring(0, 40) + "..." : (url != null ? url : "空白");
+                info.append("• ").append(title)
+                    .append(loaded ? " ✅" : " ⬜")
+                    .append("\n  ").append(urlShort).append("\n");
+            }
+        }
+        info.append("\n共 ").append(activeCount).append(" / ").append(MAX_TABS).append(" 个工作区已创建");
 
         new AlertDialog.Builder(this)
-                .setTitle("内存占用")
-                .setMessage(info)
+                .setTitle("📊 内存占用")
+                .setMessage(info.toString())
                 .setPositiveButton("确定", null)
                 .show();
     }
@@ -946,7 +958,7 @@ public class MainActivity extends AppCompatActivity {
         if (isNightMode) {
             // 标题栏变暗
             findViewById(R.id.toolbar).setBackgroundColor(Color.parseColor("#1E1E1E"));
-            // 底部选项卡变暗
+            // 底部工作区变暗
             tabContainer.setBackgroundColor(Color.parseColor("#1E1E1E"));
             bottomMenuContainer.setBackgroundColor(Color.parseColor("#1E1E1E"));
             // WebView 背景变暗
@@ -999,7 +1011,7 @@ public class MainActivity extends AppCompatActivity {
         List<LinkItem> links = tabLinks.get(tabIndex);
         if (links.size() <= 1) return;
 
-        // 如果点击的是当前选项卡，切换显示/隐藏
+        // 如果点击的是当前工作区，切换显示/隐藏
         if (tabIndex == currentTab && isBottomMenuOpen) {
             hideBottomMenu();
             return;
@@ -1080,7 +1092,7 @@ public class MainActivity extends AppCompatActivity {
         currentTab = tabIndex;
         currentLinkIndex = linkIndex;
 
-        // 更新选项卡样式
+        // 更新工作区样式
         for (int i = 0; i < tabTextViews.size(); i++) {
             tabTextViews.get(i).setTextColor(i == tabIndex ? Color.parseColor("#1976D2") : Color.parseColor("#666666"));
         }
@@ -1124,7 +1136,7 @@ public class MainActivity extends AppCompatActivity {
         activeLinkIndex = -1; // 重置活跃链接
         isDropdownOpen = false;
 
-        // 切换选项卡样式
+        // 切换工作区样式
         for (int i = 0; i < tabTextViews.size(); i++) {
             if (i == index) {
                 tabTextViews.get(i).setTextColor(Color.parseColor("#1976D2"));
@@ -1618,12 +1630,12 @@ public class MainActivity extends AppCompatActivity {
 
         // 根据 scope 收集操作
         if ("all".equals(currentScope)) {
-            // 所有选项卡
+            // 所有工作区
             for (int i = 0; i < tabLinks.size(); i++) {
                 collectActions(tabLinks.get(i), allActions);
             }
         } else if ("tab".equals(currentScope)) {
-            // 当前选项卡
+            // 当前工作区
             if (currentTab >= 0 && currentTab < tabLinks.size()) {
                 collectActions(tabLinks.get(currentTab), allActions);
             }
