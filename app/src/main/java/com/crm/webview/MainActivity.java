@@ -1420,6 +1420,19 @@ public class MainActivity extends AppCompatActivity {
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
         settings.setGeolocationEnabled(true);
 
+        // 注册 JS 接口，用于 SPA 导航回调
+        webView.addJavascriptInterface(new Object() {
+            @android.webkit.JavascriptInterface
+            public void onSpaNavigate() {
+                runOnUiThread(() -> {
+                    // 停止旧的 Observer
+                    stopMutationObserver(webView);
+                    // 重新执行页面操作（带轮询）
+                    executeCustomScript(webView);
+                });
+            }
+        }, "_webhub");
+
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
 
@@ -1716,74 +1729,131 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void executeCustomScript(WebView webView) {
+        executeCustomScriptWithRetry(webView, 0);
+    }
+
+    private void executeCustomScriptWithRetry(WebView webView, int attempt) {
         // 检查页面操作开关
         boolean pageActionsEnabled = prefs.getBoolean("page_actions_enabled", true);
         if (!pageActionsEnabled) return;
 
-        // 收集所有需要执行的操作
+        // 获取当前页面 URL
+        String currentUrl = webView.getUrl();
+        if (currentUrl == null || currentUrl.isEmpty() || "about:blank".equals(currentUrl)) return;
+
+        // 获取当前链接索引
+        int linkIndex = activeLinkIndex >= 0 ? activeLinkIndex : currentLinkIndex;
+
+        // 收集所有匹配的操作（scope 语义：每个链接的 scope 决定它要应用到哪些页面）
         List<ActionItem> allActions = new ArrayList<>();
 
-        // 获取当前链接的 scope
-        String currentScope = "link";
+        for (int tabIndex = 0; tabIndex < tabLinks.size(); tabIndex++) {
+            for (LinkItem link : tabLinks.get(tabIndex)) {
+                if (!hasActions(link)) continue;
+                if (isLinkMatchesPage(link, tabIndex, linkIndex, currentUrl)) {
+                    collectActions(link, allActions);
+                }
+            }
+        }
+
+        if (allActions.isEmpty()) return;
+
+        String js = buildScriptFromActions(allActions);
+        if (js.isEmpty()) return;
+
+        // 检查目标元素是否已存在
+        String checkJs = buildElementCheckJs(allActions);
+        webView.evaluateJavascript(checkJs, value -> {
+            boolean found = "true".equals(value);
+
+            if (found) {
+                // 元素已存在，立即执行
+                runActionScript(webView, js);
+            } else if (attempt < 20) {
+                // 元素还没出现，500ms 后重试
+                webView.postDelayed(() -> executeCustomScriptWithRetry(webView, attempt + 1), 500);
+            } else {
+                // 超时，最后一次尝试
+                runActionScript(webView, js);
+            }
+        });
+    }
+
+    /**
+     * 判断某个链接的操作是否应该应用到当前页面
+     * scope 语义：该链接的操作要应用到哪些页面
+     */
+    private boolean isLinkMatchesPage(LinkItem link, int tabIndex, int currentLinkIndex, String currentUrl) {
+        String scope = link.scope;
+
+        if ("all".equals(scope)) {
+            // 所有工作区 → 无条件应用
+            return true;
+        } else if ("tab".equals(scope)) {
+            // 当前工作区 → 只要在同一个工作区就应用
+            return tabIndex == currentTab;
+        } else if ("domain".equals(scope)) {
+            // 相似域名 → 域名匹配就应用
+            String linkDomain = getDomain(link.url);
+            String pageDomain = getDomain(currentUrl);
+            return !linkDomain.isEmpty() && linkDomain.equals(pageDomain);
+        } else {
+            // 仅此链接 → 只有当前链接才应用
+            return tabIndex == currentTab && link == getCurrentLink();
+        }
+    }
+
+    /** 获取当前正在查看的链接 */
+    private LinkItem getCurrentLink() {
         if (currentTab >= 0 && currentTab < tabLinks.size()) {
             List<LinkItem> links = tabLinks.get(currentTab);
-            int linkIndex = activeLinkIndex >= 0 ? activeLinkIndex : currentLinkIndex;
-            if (linkIndex >= 0 && linkIndex < links.size()) {
-                currentScope = links.get(linkIndex).scope;
+            int idx = activeLinkIndex >= 0 ? activeLinkIndex : currentLinkIndex;
+            if (idx >= 0 && idx < links.size()) {
+                return links.get(idx);
             }
         }
+        return null;
+    }
 
-        // 根据 scope 收集操作
-        if ("all".equals(currentScope)) {
-            // 所有工作区
-            for (int i = 0; i < tabLinks.size(); i++) {
-                collectActions(tabLinks.get(i), allActions);
-            }
-        } else if ("tab".equals(currentScope)) {
-            // 当前工作区
-            if (currentTab >= 0 && currentTab < tabLinks.size()) {
-                collectActions(tabLinks.get(currentTab), allActions);
-            }
-        } else if ("domain".equals(currentScope)) {
-            // 相似域名
-            if (currentTab >= 0 && currentTab < tabLinks.size()) {
-                List<LinkItem> links = tabLinks.get(currentTab);
-                int linkIndex = activeLinkIndex >= 0 ? activeLinkIndex : currentLinkIndex;
-                if (linkIndex >= 0 && linkIndex < links.size()) {
-                    String currentDomain = getDomain(links.get(linkIndex).url);
-                    for (List<LinkItem> tabLinksList : tabLinks) {
-                        for (LinkItem link : tabLinksList) {
-                            if (hasActions(link)) {
-                                String domain = getDomain(link.url);
-                                if (currentDomain.equals(domain)) {
-                                    collectActions(link, allActions);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        } else {
-            // 仅此链接
-            if (currentTab >= 0 && currentTab < tabLinks.size()) {
-                List<LinkItem> links = tabLinks.get(currentTab);
-                int linkIndex = activeLinkIndex >= 0 ? activeLinkIndex : currentLinkIndex;
-                if (linkIndex >= 0 && linkIndex < links.size()) {
-                    collectActions(links.get(linkIndex), allActions);
-                }
-            }
+    /** 构建检测元素是否存在的 JS */
+    private String buildElementCheckJs(List<ActionItem> actions) {
+        StringBuilder js = new StringBuilder("(function(){");
+        for (ActionItem action : actions) {
+            if (action.selector == null || action.selector.isEmpty()) continue;
+            js.append("if(document.querySelectorAll(").append(jsString(action.selector)).append(").length>0)return true;");
         }
-
-        if (!allActions.isEmpty()) {
-            String js = buildScriptFromActions(allActions);
-            if (!js.isEmpty()) {
-                // 先执行一次
-                webView.evaluateJavascript(js, null);
-
-                // 启动 MutationObserver 监听页面变化
-                startMutationObserver(webView, js);
-            }
+        // 检查 iframe 内部
+        js.append("try{var iframes=document.querySelectorAll('iframe');for(var i=0;i<iframes.length;i++){try{var doc=iframes[i].contentDocument||iframes[i].contentWindow.document;");
+        for (ActionItem action : actions) {
+            if (action.selector == null || action.selector.isEmpty()) continue;
+            js.append("if(doc.querySelectorAll(").append(jsString(action.selector)).append(").length>0)return true;");
         }
+        js.append("}catch(e){}}}catch(e){}");
+        js.append("return false;})()");
+        return js.toString();
+    }
+
+    /** 执行操作脚本（主文档 + iframe） */
+    private void runActionScript(WebView webView, String mainJs) {
+        // 在主文档执行
+        webView.evaluateJavascript(mainJs, null);
+
+        // 在所有可访问的 iframe 中执行
+        String iframeJs = "(function(){" +
+                "try{" +
+                "var iframes=document.querySelectorAll('iframe');" +
+                "for(var i=0;i<iframes.length;i++){" +
+                "  try{" +
+                "    var doc=iframes[i].contentDocument||iframes[i].contentWindow.document;" +
+                "    if(doc)" + mainJs +
+                "  }catch(e){}" +
+                "}" +
+                "}catch(e){}" +
+                "})()";
+        webView.evaluateJavascript(iframeJs, null);
+
+        // 启动 MutationObserver
+        startMutationObserver(webView, mainJs);
     }
 
     private void collectActions(List<LinkItem> links, List<ActionItem> allActions) {
@@ -1823,16 +1893,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startMutationObserver(WebView webView, String actionJs) {
-        // 使用 MutationObserver 监听页面内容变化
+        // MutationObserver + SPA 导航监听
         String observerJs = "(function() {" +
                 "if (window._webhubObserver) return;" +
                 "var timeout = null;" +
                 "var actionFn = function() {" +
                 "  try { " + actionJs + " } catch(e) {}" +
+                // 同时在 iframe 中执行
+                "  try{" +
+                "    var iframes=document.querySelectorAll('iframe');" +
+                "    for(var i=0;i<iframes.length;i++){" +
+                "      try{var doc=iframes[i].contentDocument||iframes[i].contentWindow.document;if(doc)" + actionJs + "}catch(e){}" +
+                "    }" +
+                "  }catch(e){}" +
                 "};" +
+                // MutationObserver，1000ms 去抖
                 "window._webhubObserver = new MutationObserver(function(mutations) {" +
                 "  if (timeout) clearTimeout(timeout);" +
-                "  timeout = setTimeout(actionFn, 300);" +
+                "  timeout = setTimeout(actionFn, 1000);" +
                 "});" +
                 "if (document.body) {" +
                 "  window._webhubObserver.observe(document.body, {" +
@@ -1840,7 +1918,31 @@ public class MainActivity extends AppCompatActivity {
                 "    subtree: true," +
                 "    characterData: true" +
                 "  });" +
-                "  actionFn();" + // 立即执行一次
+                "  actionFn();" +
+                "}" +
+                // SPA 导航监听：劫持 pushState/replaceState + popstate
+                "if (!window._webhubNavHooked) {" +
+                "  window._webhubNavHooked = true;" +
+                "  var origPush = history.pushState;" +
+                "  var origReplace = history.replaceState;" +
+                "  var navTimeout = null;" +
+                "  var notifyNav = function() {" +
+                "    if (navTimeout) clearTimeout(navTimeout);" +
+                "    navTimeout = setTimeout(function() {" +
+                "      try { _webhub.onSpaNavigate(); } catch(e) { actionFn(); }" +
+                "    }, 1500);" +
+                "  };" +
+                "  history.pushState = function() {" +
+                "    origPush.apply(this, arguments);" +
+                "    notifyNav();" +
+                "  };" +
+                "  history.replaceState = function() {" +
+                "    origReplace.apply(this, arguments);" +
+                "    notifyNav();" +
+                "  };" +
+                "  window.addEventListener('popstate', function() {" +
+                "    notifyNav();" +
+                "  });" +
                 "}" +
                 "})()";
 
@@ -1868,7 +1970,7 @@ public class MainActivity extends AppCompatActivity {
 
             String selector = jsString(action.selector);
             if ("hide".equals(action.type)) {
-                js.append("try{document.querySelectorAll(").append(selector).append(").forEach(el=>el.style.display='none');}catch(e){}");
+                js.append("try{document.querySelectorAll(").append(selector).append(").forEach(el=>el.style.setProperty('display','none','important'));}catch(e){}");
             } else if ("click".equals(action.type)) {
                 int delay = Math.max(0, action.delay);
                 if (delay > 0) {
