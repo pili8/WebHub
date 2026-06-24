@@ -509,22 +509,23 @@ public class MainActivity extends AppCompatActivity {
     private void showPopupMenu() {
         android.widget.PopupMenu popup = new android.widget.PopupMenu(this, btnMenu);
 
-        // 启用分组分隔线（API 28+）
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-            popup.getMenu().setGroupDividerEnabled(true);
-        }
-
         // 第一组：搜索、复制
         popup.getMenu().add(1, 2, 0, "🔍 搜索");
         popup.getMenu().add(1, 1, 0, "📋 复制链接");
 
-        // 第二组：夜间、刷新
+        // 分隔
+        popup.getMenu().add(0, 99, 0, "────────").setEnabled(false);
+
+        // 第二组：工具
         popup.getMenu().add(2, 3, 0, isNightMode ? "☀️ 日间模式" : "🌙 夜间模式");
         popup.getMenu().add(2, 4, 0, autoRefreshInterval > 0 ? "⏰ 刷新中" : "⏰ 定时刷新");
+        popup.getMenu().add(2, 5, 0, isInspectMode ? "🎯 退出查找" : "🎯 查找元素");
+        popup.getMenu().add(2, 8, 0, "📊 内存占用");
 
-        // 第三组：工具、内存、设置、退出
-        popup.getMenu().add(3, 5, 0, isInspectMode ? "🎯 退出查找" : "🎯 查找元素");
-        popup.getMenu().add(3, 8, 0, "📊 内存占用");
+        // 分隔
+        popup.getMenu().add(0, 98, 0, "────────").setEnabled(false);
+
+        // 第三组：系统
         popup.getMenu().add(3, 6, 0, "⚙️ 设置");
         popup.getMenu().add(3, 7, 0, "🚪 退出");
 
@@ -649,22 +650,111 @@ public class MainActivity extends AppCompatActivity {
 
         root.addView(rings);
 
-        // 分隔线
-        View divider = new View(this);
-        divider.setBackgroundColor(Color.parseColor("#E0E0E0"));
-        LinearLayout.LayoutParams divParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, (int) (1 * density));
-        divParams.topMargin = (int) (16 * density);
-        divParams.bottomMargin = (int) (12 * density);
-        divider.setLayoutParams(divParams);
-        root.addView(divider);
+        // 工作区标题
+        int titleTopPad = (int) (16 * density);
+        View spacer2 = new View(this);
+        spacer2.setLayoutParams(new LinearLayout.LayoutParams(1, titleTopPad));
+        root.addView(spacer2);
 
-        // 工作区状态
-        TextView tvWorkspace = new TextView(this);
-        tvWorkspace.setText("🔧 工作区: " + loadedCount + " 已加载 / " + activeCount + " 已创建 / " + MAX_TABS + " 最大");
-        tvWorkspace.setTextSize(14);
-        tvWorkspace.setTextColor(Color.parseColor("#333333"));
-        root.addView(tvWorkspace);
+        TextView tvWsTitle = new TextView(this);
+        tvWsTitle.setText("工作区");
+        tvWsTitle.setTextSize(13);
+        tvWsTitle.setTextColor(Color.parseColor("#999999"));
+        tvWsTitle.setPadding(0, 0, 0, (int) (6 * density));
+        root.addView(tvWsTitle);
+
+        // 工作区进度条
+        LinearLayout barBg = new LinearLayout(this);
+        barBg.setOrientation(LinearLayout.HORIZONTAL);
+        barBg.setBackgroundColor(Color.parseColor("#EEEEEE"));
+        barBg.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, (int) (6 * density)));
+
+        View barFill = new View(this);
+        barFill.setBackgroundColor(Color.parseColor("#1976D2"));
+        float ratio = MAX_TABS > 0 ? (float) loadedCount / MAX_TABS : 0;
+        barFill.setLayoutParams(new LinearLayout.LayoutParams(
+                0, (int) (6 * density), ratio));
+        barBg.addView(barFill);
+
+        if (loadedCount < activeCount) {
+            View barCreated = new View(this);
+            barCreated.setBackgroundColor(Color.parseColor("#90CAF9"));
+            float ratioCreated = MAX_TABS > 0 ? (float) (activeCount - loadedCount) / MAX_TABS : 0;
+            barCreated.setLayoutParams(new LinearLayout.LayoutParams(
+                    0, (int) (6 * density), ratioCreated));
+            barBg.addView(barCreated);
+        }
+
+        root.addView(barBg);
+
+        // 工作区详情列表
+        LinearLayout wsList = new LinearLayout(this);
+        wsList.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams wsListParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        wsListParams.topMargin = (int) (8 * density);
+        wsList.setLayoutParams(wsListParams);
+
+        for (int i = 0; i < MAX_TABS; i++) {
+            String title = (i < tabTitles.length && tabTitles[i] != null) ? tabTitles[i] : "工作区" + (i + 1);
+            boolean exists = webViews[i] != null;
+            boolean loaded = tabLoaded[i];
+
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            row.setLayoutParams(new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+            row.setPadding(0, (int) (3 * density), 0, (int) (3 * density));
+
+            // 状态指示点
+            View dot = new View(this);
+            int dotSize = (int) (8 * density);
+            dot.setLayoutParams(new LinearLayout.LayoutParams(dotSize, dotSize));
+            dot.setBackgroundResource(exists ? (loaded ? R.drawable.dot_green : R.drawable.dot_orange) : R.drawable.dot_gray);
+            row.addView(dot);
+
+            // 名称
+            TextView tvName = new TextView(this);
+            tvName.setText(title);
+            tvName.setTextSize(13);
+            tvName.setTextColor(Color.parseColor(exists ? "#333333" : "#BBBBBB"));
+            LinearLayout.LayoutParams nameParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1);
+            nameParams.leftMargin = (int) (8 * density);
+            tvName.setLayoutParams(nameParams);
+            row.addView(tvName);
+
+            // 状态标签
+            TextView tvStatus = new TextView(this);
+            tvStatus.setTextSize(11);
+            if (!exists) {
+                tvStatus.setText("未创建");
+                tvStatus.setTextColor(Color.parseColor("#BBBBBB"));
+            } else if (loaded) {
+                tvStatus.setText("已加载");
+                tvStatus.setTextColor(Color.parseColor("#4CAF50"));
+            } else {
+                tvStatus.setText("已创建");
+                tvStatus.setTextColor(Color.parseColor("#FF9800"));
+            }
+            row.addView(tvStatus);
+
+            wsList.addView(row);
+        }
+        root.addView(wsList);
+
+        // 底部汇总
+        TextView tvSummary = new TextView(this);
+        tvSummary.setText(loadedCount + " 已加载 / " + activeCount + " 已创建 / " + MAX_TABS + " 上限");
+        tvSummary.setTextSize(12);
+        tvSummary.setTextColor(Color.parseColor("#999999"));
+        tvSummary.setGravity(android.view.Gravity.CENTER);
+        LinearLayout.LayoutParams summaryParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        summaryParams.topMargin = (int) (8 * density);
+        tvSummary.setLayoutParams(summaryParams);
+        root.addView(tvSummary);
 
         new AlertDialog.Builder(this)
                 .setTitle("📊 内存占用")
