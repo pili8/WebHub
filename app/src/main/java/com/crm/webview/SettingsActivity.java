@@ -42,11 +42,21 @@ public class SettingsActivity extends AppCompatActivity {
     private Switch switchKdocsOptimize;
     private Switch switchNightModeCSS;
     private Switch switchPageActions;
+    private android.widget.Spinner spinnerUA;
     private SharedPreferences prefs;
 
+    private static final String[] UA_LABELS = {"默认", "iPhone", "iPad", "桌面 Chrome", "桌面 Firefox"};
+    private static final String[] UA_VALUES = {
+        "",
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+        "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0"
+    };
+
     private static final String[] ACTION_TYPES = {"隐藏", "点击", "修改"};
-    private static final String[] DEFAULT_TAB_ICONS = {"📊", "📋", "➕", "📁", "👤"};
-    private static final String[] DEFAULT_TAB_TITLES = {"工作区1", "工作区2", "工作区3", "工作区4", "工作区5"};
+    private static final String[] DEFAULT_TAB_ICONS = {"📊", "📋", "➕", "📁", "👤", "📌"};
+    private static final String[] DEFAULT_TAB_TITLES = {"工作区1", "工作区2", "工作区3", "工作区4", "工作区5", "工作区6"};
 
     private List<TabData> tabsData = new ArrayList<>();
 
@@ -91,6 +101,20 @@ public class SettingsActivity extends AppCompatActivity {
         switchKdocsOptimize.setChecked(prefs.getBoolean("kdocs_optimize", true));
         switchNightModeCSS.setChecked(prefs.getBoolean("night_mode_css", false));
         switchPageActions.setChecked(prefs.getBoolean("page_actions_enabled", true));
+
+        // UA 切换
+        spinnerUA = findViewById(R.id.spinnerUA);
+        ArrayAdapter<String> uaAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item, UA_LABELS);
+        uaAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerUA.setAdapter(uaAdapter);
+        String savedUA = prefs.getString("user_agent", "");
+        for (int i = 0; i < UA_VALUES.length; i++) {
+            if (UA_VALUES[i].equals(savedUA)) {
+                spinnerUA.setSelection(i);
+                break;
+            }
+        }
 
         // 检查是否夜间模式
         boolean isNightMode = prefs.getBoolean("night_mode", false);
@@ -349,7 +373,7 @@ public class SettingsActivity extends AppCompatActivity {
 
         int tabCount = prefs.getInt("tab_count", 3);
         if (tabCount < 2) tabCount = 2;
-        if (tabCount > 5) tabCount = 5;
+        if (tabCount > 6) tabCount = 6;
 
         String tabsJson = prefs.getString("tabs_config", "");
         if (!tabsJson.isEmpty() && loadConfigFromJson(tabsJson, tabCount)) {
@@ -434,7 +458,7 @@ public class SettingsActivity extends AppCompatActivity {
     private boolean loadConfigFromJson(String tabsJson, int tabCount) {
         try {
             JSONArray tabsArray = new JSONArray(tabsJson);
-            int count = Math.max(2, Math.min(5, Math.min(tabCount, tabsArray.length())));
+            int count = Math.max(2, Math.min(6, Math.min(tabCount, tabsArray.length())));
             for (int i = 0; i < count; i++) {
                 JSONObject tabJson = tabsArray.getJSONObject(i);
                 TabData tab = new TabData();
@@ -653,7 +677,7 @@ public class SettingsActivity extends AppCompatActivity {
         }
 
         // 添加工作区按钮
-        if (tabsData.size() < 5) {
+        if (tabsData.size() < 6) {
             TextView btnAddTab = new TextView(this);
             btnAddTab.setText("＋ 添加工作区");
             btnAddTab.setTextSize(14);
@@ -1024,6 +1048,10 @@ public class SettingsActivity extends AppCompatActivity {
         editor.putBoolean("night_mode_css", switchNightModeCSS.isChecked());
         editor.putBoolean("page_actions_enabled", switchPageActions.isChecked());
 
+        // 保存 UA
+        int uaPos = spinnerUA.getSelectedItemPosition();
+        editor.putString("user_agent", uaPos >= 0 && uaPos < UA_VALUES.length ? UA_VALUES[uaPos] : "");
+
         editor.apply();
         Toast.makeText(this, "设置已保存", Toast.LENGTH_SHORT).show();
         finish();
@@ -1038,7 +1066,7 @@ public class SettingsActivity extends AppCompatActivity {
         List<TabData> data = new ArrayList<>();
         int tabCount = prefs.getInt("tab_count", 3);
         if (tabCount < 2) tabCount = 2;
-        if (tabCount > 5) tabCount = 5;
+        if (tabCount > 6) tabCount = 6;
 
         for (int i = 0; i < tabCount; i++) {
             TabData tab = new TabData();

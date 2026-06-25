@@ -42,6 +42,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -52,7 +53,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     private static final int PERMISSION_REQUEST_CODE = 100;
-    private static final int MAX_TABS = 5;
+    private static final int MAX_TABS = 6;
 
     // WebView 容器和工作区容器
     private FrameLayout webViewContainer;
@@ -255,9 +256,10 @@ public class MainActivity extends AppCompatActivity {
         if (tabCount < 2) tabCount = 2;
         if (tabCount > MAX_TABS) tabCount = MAX_TABS;
 
-        String[] defaultIcons = {"📊", "📋", "➕", "📁", "👤"};
-        String[] defaultTitles = {"工作区1", "工作区2", "工作区3", "工作区4", "工作区5"};
+        String[] defaultIcons = {"📊", "📋", "➕", "📁", "👤", "📌"};
+        String[] defaultTitles = {"工作区1", "工作区2", "工作区3", "工作区4", "工作区5", "工作区6"};
         String[] defaultUrls = {
+                "about:blank",
                 "about:blank",
                 "about:blank",
                 "about:blank",
@@ -507,87 +509,150 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showPopupMenu() {
-        android.widget.PopupMenu popup = new android.widget.PopupMenu(this, btnMenu);
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        boolean dark = isNightMode;
 
-        // 第一组：搜索、复制
-        popup.getMenu().add(1, 2, 0, "🔍 搜索");
-        popup.getMenu().add(1, 1, 0, "📋 复制链接");
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int padH = dpToPx(8);
+        int padV = dpToPx(12);
+        root.setPadding(padH, padV, padH, padV);
+        root.setBackgroundColor(dark ? Color.parseColor("#1E1E1E") : Color.WHITE);
 
-        // 分隔
-        popup.getMenu().add(0, 99, 0, "────────").setEnabled(false);
+        // 菜单项定义：图标 + 文字
+        String[][] items = {
+            {"🔍", "搜索"},
+            {"📋", "复制链接"},
+            {isNightMode ? "☀️" : "🌙", isNightMode ? "日间模式" : "夜间模式"},
+            {"⚙️", "设置"},
+            {"⏰", autoRefreshInterval > 0 ? "刷新中" : "定时刷新"},
+            {"🎯", isInspectMode ? "退出查找" : "查找元素"},
+            {"📊", "内存占用"},
+            {"🚪", "退出"}
+        };
 
-        // 第二组：工具
-        popup.getMenu().add(2, 3, 0, isNightMode ? "☀️ 日间模式" : "🌙 夜间模式");
-        popup.getMenu().add(2, 4, 0, autoRefreshInterval > 0 ? "⏰ 刷新中" : "⏰ 定时刷新");
-        popup.getMenu().add(2, 5, 0, isInspectMode ? "🎯 退出查找" : "🎯 查找元素");
-        popup.getMenu().add(2, 8, 0, "📊 内存占用");
+        for (int i = 0; i < items.length; i++) {
+            final int index = i;
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
-        // 分隔
-        popup.getMenu().add(0, 98, 0, "────────").setEnabled(false);
+            // Ripple effect
+            android.util.TypedValue outValue = new android.util.TypedValue();
+            getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
+            row.setBackgroundResource(outValue.resourceId);
 
-        // 第三组：系统
-        popup.getMenu().add(3, 6, 0, "⚙️ 设置");
-        popup.getMenu().add(3, 7, 0, "🚪 退出");
+            TextView icon = new TextView(this);
+            icon.setText(items[i][0]);
+            icon.setTextSize(20);
+            icon.setPadding(0, 0, dpToPx(16), 0);
 
-        popup.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == 1) {
-                copyCurrentUrl();
-                return true;
-            } else if (item.getItemId() == 2) {
-                toggleSearch();
-                return true;
-            } else if (item.getItemId() == 3) {
-                toggleNightMode();
-                return true;
-            } else if (item.getItemId() == 4) {
-                // 显示定时刷新选项
-                showAutoRefreshMenu();
-                return true;
-            } else if (item.getItemId() == 5) {
-                toggleInspectMode();
-                return true;
-            } else if (item.getItemId() == 6) {
-                Intent intent = new Intent(this, SettingsActivity.class);
-                intent.putExtra("night_mode", isNightMode);
-                startActivity(intent);
-                return true;
-            } else if (item.getItemId() == 7) {
-                finish();
-                return true;
-            } else if (item.getItemId() == 8) {
-                showMemoryInfo();
-                return true;
-            } else if (item.getItemId() >= 50 && item.getItemId() <= 53) {
-                int[] intervals = {0, 30, 60, 300};
-                int index = item.getItemId() - 50;
-                setAutoRefresh(intervals[index]);
-                return true;
+            TextView label = new TextView(this);
+            label.setText(items[i][1]);
+            label.setTextSize(15);
+            label.setTextColor(dark ? Color.parseColor("#E0E0E0") : Color.parseColor("#333333"));
+
+            row.addView(icon);
+            row.addView(label);
+
+            // 定时刷新子菜单箭头
+            if (i == 4) {
+                TextView arrow = new TextView(this);
+                arrow.setText("  ▸");
+                arrow.setTextSize(13);
+                arrow.setTextColor(dark ? Color.parseColor("#888888") : Color.parseColor("#999999"));
+                row.addView(arrow);
             }
-            return false;
-        });
 
-        popup.show();
+            row.setOnClickListener(v -> {
+                dialog.dismiss();
+                switch (index) {
+                    case 0: toggleSearch(); break;
+                    case 1: copyCurrentUrl(); break;
+                    case 2: toggleNightMode(); break;
+                    case 3:
+                        Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+                        intent.putExtra("night_mode", isNightMode);
+                        startActivity(intent);
+                        break;
+                    case 4: showAutoRefreshPicker(); break;
+                    case 5: toggleInspectMode(); break;
+                    case 6: showMemoryInfo(); break;
+                    case 7: finish(); break;
+                }
+            });
+
+            root.addView(row);
+        }
+
+        dialog.setContentView(root);
+        dialog.show();
     }
 
-    private void showAutoRefreshMenu() {
-        android.widget.PopupMenu popup = new android.widget.PopupMenu(this, btnMenu);
-        popup.getMenu().add(1, 50, 0, "关闭").setChecked(autoRefreshInterval == 0);
-        popup.getMenu().add(1, 51, 0, "每30秒").setChecked(autoRefreshInterval == 30);
-        popup.getMenu().add(1, 52, 0, "每1分钟").setChecked(autoRefreshInterval == 60);
-        popup.getMenu().add(1, 53, 0, "每5分钟").setChecked(autoRefreshInterval == 300);
-        popup.getMenu().setGroupCheckable(1, true, true);
+    private void showAutoRefreshPicker() {
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        boolean dark = isNightMode;
 
-        popup.setOnMenuItemClickListener(item -> {
-            int[] intervals = {0, 30, 60, 300};
-            int index = item.getItemId() - 50;
-            if (index >= 0 && index < intervals.length) {
-                setAutoRefresh(intervals[index]);
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int padV = dpToPx(12);
+        root.setPadding(dpToPx(8), padV, dpToPx(8), padV);
+        root.setBackgroundColor(dark ? Color.parseColor("#1E1E1E") : Color.WHITE);
+
+        // 标题
+        TextView title = new TextView(this);
+        title.setText("定时刷新");
+        title.setTextSize(14);
+        title.setTextColor(dark ? Color.parseColor("#AAAAAA") : Color.parseColor("#999999"));
+        title.setPadding(dpToPx(16), dpToPx(8), dpToPx(16), dpToPx(12));
+        root.addView(title);
+
+        String[] labels = {"关闭", "每30秒", "每1分钟", "每5分钟"};
+        int[] intervals = {0, 30, 60, 300};
+
+        for (int i = 0; i < labels.length; i++) {
+            final int interval = intervals[i];
+            boolean checked = autoRefreshInterval == interval;
+
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
+
+            android.util.TypedValue outValue = new android.util.TypedValue();
+            getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
+            row.setBackgroundResource(outValue.resourceId);
+
+            TextView label = new TextView(this);
+            label.setText(labels[i]);
+            label.setTextSize(15);
+            label.setTextColor(dark ? Color.parseColor("#E0E0E0") : Color.parseColor("#333333"));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1);
+            label.setLayoutParams(lp);
+
+            row.addView(label);
+
+            if (checked) {
+                TextView check = new TextView(this);
+                check.setText("✓");
+                check.setTextSize(16);
+                check.setTextColor(Color.parseColor("#1976D2"));
+                row.addView(check);
             }
-            return true;
-        });
 
-        popup.show();
+            row.setOnClickListener(v -> {
+                dialog.dismiss();
+                setAutoRefresh(interval);
+            });
+
+            root.addView(row);
+        }
+
+        dialog.setContentView(root);
+        dialog.show();
     }
+
 
     // ========== 内存占用 ==========
 
@@ -623,10 +688,12 @@ public class MainActivity extends AppCompatActivity {
         // 构建自定义视图
         float density = getResources().getDisplayMetrics().density;
         int padding = (int) (20 * density);
+        boolean dark = isNightMode;
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(padding, padding, padding, padding);
+        root.setBackgroundColor(dark ? Color.parseColor("#1E1E1E") : Color.WHITE);
 
         // 圆环区域
         LinearLayout rings = new LinearLayout(this);
@@ -659,20 +726,20 @@ public class MainActivity extends AppCompatActivity {
         TextView tvWsTitle = new TextView(this);
         tvWsTitle.setText("工作区");
         tvWsTitle.setTextSize(13);
-        tvWsTitle.setTextColor(Color.parseColor("#999999"));
+        tvWsTitle.setTextColor(dark ? Color.parseColor("#888888") : Color.parseColor("#999999"));
         tvWsTitle.setPadding(0, 0, 0, (int) (6 * density));
         root.addView(tvWsTitle);
 
         // 工作区进度条
         LinearLayout barBg = new LinearLayout(this);
         barBg.setOrientation(LinearLayout.HORIZONTAL);
-        barBg.setBackgroundColor(Color.parseColor("#EEEEEE"));
+        barBg.setBackgroundColor(dark ? Color.parseColor("#333333") : Color.parseColor("#EEEEEE"));
         barBg.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, (int) (6 * density)));
 
         View barFill = new View(this);
         barFill.setBackgroundColor(Color.parseColor("#1976D2"));
-        float ratio = MAX_TABS > 0 ? (float) loadedCount / MAX_TABS : 0;
+        float ratio = tabCount > 0 ? (float) loadedCount / tabCount : 0;
         barFill.setLayoutParams(new LinearLayout.LayoutParams(
                 0, (int) (6 * density), ratio));
         barBg.addView(barFill);
@@ -680,7 +747,7 @@ public class MainActivity extends AppCompatActivity {
         if (loadedCount < activeCount) {
             View barCreated = new View(this);
             barCreated.setBackgroundColor(Color.parseColor("#90CAF9"));
-            float ratioCreated = MAX_TABS > 0 ? (float) (activeCount - loadedCount) / MAX_TABS : 0;
+            float ratioCreated = tabCount > 0 ? (float) (activeCount - loadedCount) / tabCount : 0;
             barCreated.setLayoutParams(new LinearLayout.LayoutParams(
                     0, (int) (6 * density), ratioCreated));
             barBg.addView(barCreated);
@@ -696,10 +763,11 @@ public class MainActivity extends AppCompatActivity {
         wsListParams.topMargin = (int) (8 * density);
         wsList.setLayoutParams(wsListParams);
 
-        for (int i = 0; i < MAX_TABS; i++) {
+        for (int i = 0; i < tabCount; i++) {
             String title = (i < tabTitles.length && tabTitles[i] != null) ? tabTitles[i] : "工作区" + (i + 1);
             boolean exists = webViews[i] != null;
             boolean loaded = tabLoaded[i];
+            int linkCount = (i < tabLinks.size()) ? tabLinks.get(i).size() : 0;
 
             LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.HORIZONTAL);
@@ -719,18 +787,26 @@ public class MainActivity extends AppCompatActivity {
             TextView tvName = new TextView(this);
             tvName.setText(title);
             tvName.setTextSize(13);
-            tvName.setTextColor(Color.parseColor(exists ? "#333333" : "#BBBBBB"));
+            tvName.setTextColor(dark ? Color.parseColor(exists ? "#E0E0E0" : "#666666") : Color.parseColor(exists ? "#333333" : "#BBBBBB"));
             LinearLayout.LayoutParams nameParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1);
             nameParams.leftMargin = (int) (8 * density);
             tvName.setLayoutParams(nameParams);
             row.addView(tvName);
+
+            // 链接数
+            TextView tvLinks = new TextView(this);
+            tvLinks.setText(linkCount + " 链接");
+            tvLinks.setTextSize(11);
+            tvLinks.setTextColor(dark ? Color.parseColor("#777777") : Color.parseColor("#999999"));
+            tvLinks.setPadding((int) (8 * density), 0, (int) (8 * density), 0);
+            row.addView(tvLinks);
 
             // 状态标签
             TextView tvStatus = new TextView(this);
             tvStatus.setTextSize(11);
             if (!exists) {
                 tvStatus.setText("未创建");
-                tvStatus.setTextColor(Color.parseColor("#BBBBBB"));
+                tvStatus.setTextColor(dark ? Color.parseColor("#555555") : Color.parseColor("#BBBBBB"));
             } else if (loaded) {
                 tvStatus.setText("已加载");
                 tvStatus.setTextColor(Color.parseColor("#4CAF50"));
@@ -746,9 +822,9 @@ public class MainActivity extends AppCompatActivity {
 
         // 底部汇总
         TextView tvSummary = new TextView(this);
-        tvSummary.setText(loadedCount + " 已加载 / " + activeCount + " 已创建 / " + MAX_TABS + " 上限");
+        tvSummary.setText(loadedCount + " 已加载 / " + activeCount + " 已创建");
         tvSummary.setTextSize(12);
-        tvSummary.setTextColor(Color.parseColor("#999999"));
+        tvSummary.setTextColor(dark ? Color.parseColor("#777777") : Color.parseColor("#999999"));
         tvSummary.setGravity(android.view.Gravity.CENTER);
         LinearLayout.LayoutParams summaryParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -756,11 +832,15 @@ public class MainActivity extends AppCompatActivity {
         tvSummary.setLayoutParams(summaryParams);
         root.addView(tvSummary);
 
-        new AlertDialog.Builder(this)
+        AlertDialog memDialog = new AlertDialog.Builder(this)
                 .setTitle("📊 内存占用")
                 .setView(root)
                 .setPositiveButton("确定", null)
-                .show();
+                .create();
+        if (dark) {
+            memDialog.getWindow().getDecorView().setBackgroundColor(Color.parseColor("#1E1E1E"));
+        }
+        memDialog.show();
     }
 
     private LinearLayout createRingView(String label, int percent, String detail, float density) {
@@ -1503,7 +1583,12 @@ public class MainActivity extends AppCompatActivity {
         settings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
-        settings.setUserAgentString(settings.getUserAgentString().replace("; wv", ""));
+        String savedUA = prefs.getString("user_agent", "");
+        if (!savedUA.isEmpty()) {
+            settings.setUserAgentString(savedUA);
+        } else {
+            settings.setUserAgentString(settings.getUserAgentString().replace("; wv", ""));
+        }
         settings.setUseWideViewPort(true);
         settings.setLoadWithOverviewMode(true);
         settings.setSupportZoom(false);
@@ -1620,8 +1705,9 @@ public class MainActivity extends AppCompatActivity {
                 "  result.classes = (typeof el.className === 'string') ? el.className.trim() : '';" +
                 "  var text = el.textContent || '';" +
                 "  result.text = text.length > 100 ? text.substring(0, 100) + '...' : text.trim();" +
+                "  var prev=document.getElementById('wh-inspect-hl');if(prev){prev.style.outline=prev.getAttribute('wh-old-outline')||'';prev.removeAttribute('id');}" +
+                "  el.setAttribute('wh-old-outline',el.style.outline||'');el.id='wh-inspect-hl';" +
                 "  el.style.outline = '3px solid #FF5722';" +
-                "  setTimeout(function() { el.style.outline = ''; }, 2000);" +
                 "  return JSON.stringify(result);" +
                 "})()";
 
@@ -1640,9 +1726,6 @@ public class MainActivity extends AppCompatActivity {
                     String classes = extractJsonString(json, "classes");
                     String text = extractJsonString(json, "text");
 
-                    // 退出查找模式
-                    isInspectMode = false;
-                    inspectBanner.setVisibility(View.GONE);
                     showElementInfoDialog(tag, id, classes, text);
                 } catch (Exception e) {
                     Toast.makeText(this, "解析失败", Toast.LENGTH_SHORT).show();
@@ -1723,6 +1806,16 @@ public class MainActivity extends AppCompatActivity {
                 android.view.WindowManager.LayoutParams.WRAP_CONTENT);
 
         btnClose.setOnClickListener(v -> dialog.dismiss());
+
+        // 退出查找按钮
+        TextView btnExitInspect = dialogView.findViewById(R.id.btnExitInspect);
+        if (btnExitInspect != null) {
+            btnExitInspect.setVisibility(isInspectMode ? View.VISIBLE : View.GONE);
+            btnExitInspect.setOnClickListener(v -> {
+                dialog.dismiss();
+                toggleInspectMode();
+            });
+        }
 
         dialog.show();
     }
