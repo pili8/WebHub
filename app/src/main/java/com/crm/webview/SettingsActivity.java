@@ -155,8 +155,10 @@ public class SettingsActivity extends AppCompatActivity {
         // 关于区域文字颜色适配
         TextView tvAboutInfo = findViewById(R.id.tvAboutInfo);
         TextView tvAboutChangelog = findViewById(R.id.tvAboutChangelog);
+        TextView tvAboutArrow = findViewById(R.id.tvAboutArrow);
         if (tvAboutInfo != null) tvAboutInfo.setTextColor(Color.parseColor("#AAAAAA"));
         if (tvAboutChangelog != null) tvAboutChangelog.setTextColor(Color.parseColor("#777777"));
+        if (tvAboutArrow != null) tvAboutArrow.setTextColor(Color.parseColor("#666666"));
     }
 
     private void setupCache() {
@@ -191,6 +193,20 @@ public class SettingsActivity extends AppCompatActivity {
         TextView tvAboutInfo = findViewById(R.id.tvAboutInfo);
         TextView tvAboutChangelog = findViewById(R.id.tvAboutChangelog);
         TextView tvAboutGithub = findViewById(R.id.tvAboutGithub);
+        LinearLayout aboutHeader = findViewById(R.id.aboutHeader);
+        LinearLayout aboutContent = findViewById(R.id.aboutContent);
+        TextView tvAboutArrow = findViewById(R.id.tvAboutArrow);
+
+        // 折叠/展开切换
+        aboutHeader.setOnClickListener(v -> {
+            if (aboutContent.getVisibility() == View.GONE) {
+                aboutContent.setVisibility(View.VISIBLE);
+                tvAboutArrow.setText("▾");
+            } else {
+                aboutContent.setVisibility(View.GONE);
+                tvAboutArrow.setText("▸");
+            }
+        });
 
         // 版本信息
         String versionName = "unknown";
@@ -203,7 +219,7 @@ public class SettingsActivity extends AppCompatActivity {
                 "把常用网页变成 APP，支持自定义外观和自动化操作。\n" +
                 "开发者: pili8 | 开源协议: MIT License");
 
-        // 更新日志（写死，每次发版同步更新）
+        // 更新日志（发版时同步更新）
         tvAboutChangelog.setText(
                 "📋 最近更新:\n" +
                 "v2.7.4 - 修复定时刷新闪退、工作区上限8个、支持HTTP、页面操作优化\n" +
