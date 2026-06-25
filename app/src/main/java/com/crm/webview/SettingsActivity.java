@@ -132,6 +132,7 @@ public class SettingsActivity extends AppCompatActivity {
 
         setupCache();
         setupExportImport();
+        setupAbout();
 
         ImageView btnBack = findViewById(R.id.btnBack);
         btnBack.setOnClickListener(v -> finish());
@@ -150,6 +151,12 @@ public class SettingsActivity extends AppCompatActivity {
 
         // 标题栏
         findViewById(R.id.settingsToolbar).setBackgroundColor(Color.parseColor("#1E1E1E"));
+
+        // 关于区域文字颜色适配
+        TextView tvAboutInfo = findViewById(R.id.tvAboutInfo);
+        TextView tvAboutChangelog = findViewById(R.id.tvAboutChangelog);
+        if (tvAboutInfo != null) tvAboutInfo.setTextColor(Color.parseColor("#AAAAAA"));
+        if (tvAboutChangelog != null) tvAboutChangelog.setTextColor(Color.parseColor("#777777"));
     }
 
     private void setupCache() {
@@ -178,6 +185,36 @@ public class SettingsActivity extends AppCompatActivity {
 
         btnExport.setOnClickListener(v -> exportSettings());
         btnImport.setOnClickListener(v -> importSettings());
+    }
+
+    private void setupAbout() {
+        TextView tvAboutInfo = findViewById(R.id.tvAboutInfo);
+        TextView tvAboutChangelog = findViewById(R.id.tvAboutChangelog);
+        TextView tvAboutGithub = findViewById(R.id.tvAboutGithub);
+
+        // 版本信息
+        String versionName = "unknown";
+        try {
+            versionName = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (Exception e) {}
+
+        tvAboutInfo.setText(
+                "📱 WebHub v" + versionName + "\n" +
+                "把常用网页变成 APP，支持自定义外观和自动化操作。\n" +
+                "开发者: pili8 | 开源协议: MIT License");
+
+        // 更新日志（写死，每次发版同步更新）
+        tvAboutChangelog.setText(
+                "📋 最近更新:\n" +
+                "v2.7.4 - 修复定时刷新闪退、工作区上限8个、支持HTTP、页面操作优化\n" +
+                "v2.7.3 - 工作区自定义颜色、浏览历史、定时刷新、自定义脚本\n" +
+                "v2.7.2 - 菜单重构、搜索优化");
+
+        // 跳转 GitHub
+        tvAboutGithub.setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/pili8/WebHub/releases"));
+            startActivity(intent);
+        });
     }
 
     private void exportSettings() {
