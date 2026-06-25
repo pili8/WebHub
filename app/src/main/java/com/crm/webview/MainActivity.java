@@ -2611,6 +2611,38 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
 
+            // 长按检测：记录按下时间，延迟判断
+            if (event.getRepeatCount() == 0) {
+                backKeyDownTime = System.currentTimeMillis();
+                backLongPressHandled = false;
+                // 延迟 800ms 后触发长按
+                new android.os.Handler().postDelayed(() -> {
+                    if (!backLongPressHandled && backKeyDownTime > 0) {
+                        backLongPressHandled = true;
+                        handleBackKeyPress();
+                    }
+                }, LONG_PRESS_THRESHOLD);
+                return true;
+            }
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
+    @Override
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK && backKeyDownTime > 0) {
+            long duration = System.currentTimeMillis() - backKeyDownTime;
+            backKeyDownTime = 0;
+
+            if (backLongPressHandled) {
+                // 长按已处理，忽略抬起
+                return true;
+            }
+
+            // 短按：执行正常返回逻辑
+            backLongPressHandled = false;
+
             // 金山文档优化
             boolean kdocsOptimize = prefs.getBoolean("kdocs_optimize", true);
             WebView wv = getCurrentWebView();
@@ -2631,17 +2663,23 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "已到第一页", Toast.LENGTH_SHORT).show();
             return true;
         }
-        return super.onKeyDown(keyCode, event);
+        return super.onKeyUp(keyCode, event);
     }
 
-    @Override
-    public boolean onKeyLongPress(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_BACK) {
-            // 长按返回键显示历史记录（Feature 2）
+    // 长按返回键相关
+    private long backKeyDownTime = 0;
+    private boolean backLongPressHandled = false;
+    private static final long LONG_PRESS_THRESHOLD = 800; // 800ms 算长按
+
+    private void handleBackKeyPress() {
+        WebView wv = getCurrentWebView();
+        if (wv == null) return;
+        android.webkit.WebBackForwardList history = wv.copyBackForwardList();
+        if (history != null && history.getSize() > 0) {
             showHistoryDialog();
-            return true;
+        } else {
+            Toast.makeText(this, "没有浏览历史", Toast.LENGTH_SHORT).show();
         }
-        return super.onKeyLongPress(keyCode, event);
     }
 
     /** 显示浏览历史对话框（Feature 2）*/
