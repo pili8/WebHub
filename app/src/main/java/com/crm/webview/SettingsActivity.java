@@ -54,15 +54,24 @@ public class SettingsActivity extends AppCompatActivity {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0"
     };
 
-    private static final String[] ACTION_TYPES = {"隐藏", "点击", "修改"};
+    private static final String[] ACTION_TYPES = {"隐藏", "点击", "修改", "自定义脚本"};
     private static final String[] DEFAULT_TAB_ICONS = {"📊", "📋", "➕", "📁", "👤", "📌"};
     private static final String[] DEFAULT_TAB_TITLES = {"工作区1", "工作区2", "工作区3", "工作区4", "工作区5", "工作区6"};
+    private static final String[] DEFAULT_TAB_COLORS = {
+        "#1976D2", "#4CAF50", "#FF9800", "#9C27B0", "#F44336", "#00BCD4"
+    };
+    // 预设颜色列表
+    private static final String[] PRESET_COLORS = {
+        "#1976D2", "#4CAF50", "#FF9800", "#9C27B0", "#F44336", "#00BCD4",
+        "#E91E63", "#607D8B", "#795548", "#FF5722"
+    };
 
     private List<TabData> tabsData = new ArrayList<>();
 
     static class TabData {
         String icon;
         String title;
+        String color; // 工作区自定义颜色
         List<LinkData> links = new ArrayList<>();
         View sectionView;
         LinearLayout linksContainer;
@@ -384,6 +393,7 @@ public class SettingsActivity extends AppCompatActivity {
             TabData tab = new TabData();
             tab.icon = prefs.getString("icon" + (i + 1), DEFAULT_TAB_ICONS[i]);
             tab.title = prefs.getString("title" + (i + 1), DEFAULT_TAB_TITLES[i]);
+            tab.color = prefs.getString("color" + (i + 1), DEFAULT_TAB_COLORS[i % DEFAULT_TAB_COLORS.length]);
 
             String linksStr = prefs.getString("links" + (i + 1), "");
             if (linksStr.isEmpty()) {
@@ -464,6 +474,7 @@ public class SettingsActivity extends AppCompatActivity {
                 TabData tab = new TabData();
                 tab.icon = tabJson.optString("icon", DEFAULT_TAB_ICONS[i]);
                 tab.title = tabJson.optString("title", DEFAULT_TAB_TITLES[i]);
+                tab.color = tabJson.optString("color", DEFAULT_TAB_COLORS[i % DEFAULT_TAB_COLORS.length]);
 
                 JSONArray linksArray = tabJson.optJSONArray("links");
                 if (linksArray != null) {
@@ -544,6 +555,9 @@ public class SettingsActivity extends AppCompatActivity {
                 toggleEditMode(tab, tvTabIcon, tvTabTitle, etTabIcon, etTabTitle,
                         linksContainer, btnAddLink, tvArrow, btnDeleteTab, btnConfirmEdit, false);
             });
+
+            // 颜色选择器（Feature 1）
+            addColorPickerRow(tab, tabView);
 
             // 拖动排序（工作区）
             TextView btnDrag = tabView.findViewById(R.id.btnDrag);
@@ -693,6 +707,84 @@ public class SettingsActivity extends AppCompatActivity {
                 buildUI();
             });
             settingsContainer.addView(btnAddTab);
+        }
+    }
+
+    /** 添加颜色选择器行（Feature 1）*/
+    private void addColorPickerRow(TabData tab, View tabView) {
+        LinearLayout colorRow = new LinearLayout(this);
+        colorRow.setOrientation(LinearLayout.HORIZONTAL);
+        colorRow.setGravity(Gravity.CENTER_VERTICAL);
+        colorRow.setPadding(dpToPx(14), dpToPx(6), dpToPx(14), dpToPx(6));
+
+        TextView label = new TextView(this);
+        label.setText("颜色");
+        label.setTextSize(12);
+        label.setTextColor(Color.parseColor("#999999"));
+        label.setPadding(0, 0, dpToPx(10), 0);
+        colorRow.addView(label);
+
+        // 存储颜色圆点的引用，方便更新选中状态
+        List<View> colorDots = new ArrayList<>();
+
+        for (int ci = 0; ci < PRESET_COLORS.length; ci++) {
+            final String color = PRESET_COLORS[ci];
+            View dot = new View(this);
+            int dotSize = dpToPx(24);
+            LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(dotSize, dotSize);
+            dotParams.setMargins(dpToPx(4), 0, dpToPx(4), 0);
+            dot.setLayoutParams(dotParams);
+
+            GradientDrawable dotBg = new GradientDrawable();
+            dotBg.setShape(GradientDrawable.OVAL);
+            dotBg.setColor(Color.parseColor(color));
+            dot.setBackground(dotBg);
+
+            // 选中状态：当前颜色加边框
+            boolean isSelected = color.equals(tab.color);
+            if (isSelected) {
+                GradientDrawable selectedBg = new GradientDrawable();
+                selectedBg.setShape(GradientDrawable.OVAL);
+                selectedBg.setColor(Color.parseColor(color));
+                selectedBg.setStroke(dpToPx(2), Color.parseColor("#333333"));
+                dot.setBackground(selectedBg);
+            }
+
+            dot.setOnClickListener(v -> {
+                tab.color = color;
+                // 更新所有圆点的选中状态
+                for (int di = 0; di < colorDots.size(); di++) {
+                    View d = colorDots.get(di);
+                    GradientDrawable bg = new GradientDrawable();
+                    bg.setShape(GradientDrawable.OVAL);
+                    bg.setColor(Color.parseColor(PRESET_COLORS[di]));
+                    if (PRESET_COLORS[di].equals(color)) {
+                        bg.setStroke(dpToPx(2), Color.parseColor("#333333"));
+                    }
+                    d.setBackground(bg);
+                }
+            });
+
+            colorDots.add(dot);
+            colorRow.addView(dot);
+        }
+
+        // 插入到 tabView 的链接容器之前
+        if (tabView instanceof LinearLayout) {
+            LinearLayout parent = (LinearLayout) tabView;
+            // 找到 linksContainer 的位置，在它之前插入
+            int insertIndex = -1;
+            for (int i = 0; i < parent.getChildCount(); i++) {
+                if (parent.getChildAt(i).getId() == R.id.linksContainer) {
+                    insertIndex = i;
+                    break;
+                }
+            }
+            if (insertIndex >= 0) {
+                parent.addView(colorRow, insertIndex);
+            } else {
+                parent.addView(colorRow);
+            }
         }
     }
 
@@ -902,10 +994,21 @@ public class SettingsActivity extends AppCompatActivity {
             // 点击：显示延迟
             layoutDelay.setVisibility(View.VISIBLE);
             etValue.setVisibility(View.GONE);
-        } else {
+        } else if (position == 2) {
             // 修改：显示新值
             layoutDelay.setVisibility(View.GONE);
             etValue.setVisibility(View.VISIBLE);
+            etValue.setHint("新值");
+            etValue.setInputType(android.text.InputType.TYPE_CLASS_TEXT);
+            etValue.setMaxLines(1);
+        } else if (position == 3) {
+            // 自定义脚本：显示JS代码输入（多行）
+            layoutDelay.setVisibility(View.VISIBLE); // 也支持延迟
+            etValue.setVisibility(View.VISIBLE);
+            etValue.setHint("输入JS代码");
+            etValue.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+            etValue.setMaxLines(6);
+            etValue.setMinLines(2);
         }
     }
 
@@ -931,12 +1034,18 @@ public class SettingsActivity extends AppCompatActivity {
         if ("hide".equals(action.type)) actionIndex = 0;
         else if ("click".equals(action.type)) actionIndex = 1;
         else if ("modify".equals(action.type)) actionIndex = 2;
+        else if ("script".equals(action.type)) actionIndex = 3;
         spinnerAction.setSelection(actionIndex);
 
         etSelector.setText(action.selector);
         etRemark.setText(action.remark);
         etValue.setText(action.value);
         etDelay.setText(String.valueOf(action.delay));
+
+        // 脚本类型：选择器可选，提示可为空
+        if ("script".equals(action.type)) {
+            etSelector.setHint("选择器（可选）");
+        }
 
         // 根据类型显示/隐藏相关字段
         updateActionFields(actionIndex, layoutDelay, etValue);
@@ -945,6 +1054,12 @@ public class SettingsActivity extends AppCompatActivity {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 updateActionFields(position, layoutDelay, etValue);
+                // 脚本类型时选择器可选
+                if (position == 3) {
+                    etSelector.setHint("选择器（可选）");
+                } else {
+                    etSelector.setHint("选择器");
+                }
             }
             @Override
             public void onNothingSelected(AdapterView<?> parent) {}
@@ -982,6 +1097,7 @@ public class SettingsActivity extends AppCompatActivity {
 
             editor.putString("icon" + (i + 1), icon);
             editor.putString("title" + (i + 1), title);
+            editor.putString("color" + (i + 1), tab.color == null ? DEFAULT_TAB_COLORS[i % DEFAULT_TAB_COLORS.length] : tab.color);
 
             StringBuilder linksStr = new StringBuilder();
             for (LinkData link : tab.links) {
@@ -1016,16 +1132,28 @@ public class SettingsActivity extends AppCompatActivity {
                     int pos = spinner.getSelectedItemPosition();
                     if (pos == 0) type = "hide";
                     else if (pos == 1) type = "click";
+                    else if (pos == 3) type = "script";
                     else type = "modify";
 
                     String value = etValue.getText().toString().trim();
                     int delay = 0;
                     try { delay = Integer.parseInt(etDelay.getText().toString().trim()); } catch (Exception e) {}
 
+                    // 脚本类型：selector可为空
+                    if ("script".equals(type) && selector.isEmpty()) {
+                        // 允许空选择器
+                    } else if (selector.isEmpty()) {
+                        continue;
+                    }
+
                     if (actionsStr.length() > 0) actionsStr.append(";");
                     actionsStr.append(type).append("|").append(selector);
-                    if (pos == 1) actionsStr.append("|").append(delay);
-                    else if (pos == 2 && !value.isEmpty()) actionsStr.append("|").append(value);
+                    if ("click".equals(type) || "script".equals(type)) {
+                        if (delay > 0) actionsStr.append("|").append(delay);
+                    }
+                    if (("modify".equals(type) || "script".equals(type)) && !value.isEmpty()) {
+                        actionsStr.append("|").append(value);
+                    }
                     if (!remark.isEmpty()) {
                         // 转义备注中的特殊字符
                         String safeRemark = remark.replace("|", "｜").replace(";", "；");
@@ -1054,6 +1182,8 @@ public class SettingsActivity extends AppCompatActivity {
 
         editor.apply();
         Toast.makeText(this, "设置已保存", Toast.LENGTH_SHORT).show();
+        // 通知 MainActivity 设置已变更（Feature 7）
+        setResult(RESULT_OK, new Intent().putExtra("settings_changed", true));
         finish();
     }
 
@@ -1095,6 +1225,7 @@ public class SettingsActivity extends AppCompatActivity {
                 JSONObject tabJson = new JSONObject();
                 tabJson.put("icon", tab.icon);
                 tabJson.put("title", tab.title);
+                tabJson.put("color", tab.color == null ? DEFAULT_TAB_COLORS[0] : tab.color);
 
                 JSONArray linksArray = new JSONArray();
                 for (LinkData link : tab.links) {
