@@ -159,6 +159,14 @@ public class SettingsActivity extends AppCompatActivity {
         if (tvAboutInfo != null) tvAboutInfo.setTextColor(Color.parseColor("#AAAAAA"));
         if (tvAboutChangelog != null) tvAboutChangelog.setTextColor(Color.parseColor("#777777"));
         if (tvAboutArrow != null) tvAboutArrow.setTextColor(Color.parseColor("#666666"));
+        // aboutHeader 内的标题文字
+        LinearLayout aboutHeader = findViewById(R.id.aboutHeader);
+        if (aboutHeader != null && aboutHeader.getChildCount() > 0) {
+            View firstChild = aboutHeader.getChildAt(0);
+            if (firstChild instanceof TextView) {
+                ((TextView) firstChild).setTextColor(Color.parseColor("#E0E0E0"));
+            }
+        }
     }
 
     private void setupCache() {
