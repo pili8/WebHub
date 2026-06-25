@@ -748,7 +748,7 @@ public class SettingsActivity extends AppCompatActivity {
         }
 
         // 添加工作区按钮
-        if (tabsData.size() < 6) {
+        if (tabsData.size() < 8) {
             TextView btnAddTab = new TextView(this);
             btnAddTab.setText("＋ 添加工作区");
             btnAddTab.setTextSize(14);
