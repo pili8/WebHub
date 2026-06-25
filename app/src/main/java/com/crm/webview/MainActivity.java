@@ -778,6 +778,10 @@ public class MainActivity extends AppCompatActivity {
         int[] intervals = {0, 30, 60, 300};
         int currentInterval = tabAutoRefresh[currentTab];
 
+        // 用列表记录哪些是菜单行，避免索引计算错误
+        List<LinearLayout> menuRows = new ArrayList<>();
+        List<Integer> menuIntervals = new ArrayList<>();
+
         for (int i = 0; i < labels.length; i++) {
             final int interval = intervals[i];
             boolean checked = currentInterval == interval;
@@ -786,6 +790,7 @@ public class MainActivity extends AppCompatActivity {
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
             row.setPadding(dpToPx(14), dpToPx(12), dpToPx(14), dpToPx(12));
+            row.setTag(interval); // 标记对应的间隔值
 
             android.util.TypedValue outValue = new android.util.TypedValue();
             getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
@@ -807,6 +812,8 @@ public class MainActivity extends AppCompatActivity {
                 row.addView(check);
             }
 
+            menuRows.add(row);
+            menuIntervals.add(interval);
             root.addView(row);
 
             if (i < labels.length - 1) {
@@ -827,18 +834,13 @@ public class MainActivity extends AppCompatActivity {
                 dark ? Color.parseColor("#2A2A2A") : Color.WHITE));
         popup.setOutsideTouchable(true);
 
-        for (int i = 0; i < root.getChildCount(); i++) {
-            View child = root.getChildAt(i);
-            if (child instanceof LinearLayout && child != root) {
-                final int interval = intervals[i / 2];
-                child.setOnClickListener(v -> {
-                    popup.dismiss();
-                    // 保存当前工作区的刷新间隔
-                    saveTabAutoRefresh(currentTab, interval);
-                    // 更新当前运行的定时器
-                    setAutoRefresh(interval);
-                });
-            }
+        for (int i = 0; i < menuRows.size(); i++) {
+            final int interval = menuIntervals.get(i);
+            menuRows.get(i).setOnClickListener(v -> {
+                popup.dismiss();
+                saveTabAutoRefresh(currentTab, interval);
+                setAutoRefresh(interval);
+            });
         }
 
         popup.showAsDropDown(btnMenu, -dpToPx(132), dpToPx(4));
