@@ -1792,6 +1792,18 @@ public class MainActivity extends AppCompatActivity {
         return (int) (dp * getResources().getDisplayMetrics().density);
     }
 
+    /** 获取 WebView 内置的 Chrome 版本号 */
+    private String getChromeVersion() {
+        String ua = WebSettings.getDefaultUserAgent(this);
+        // 从 UA 中提取 Chrome/xx.x.xxxx.xx
+        int idx = ua.indexOf("Chrome/");
+        if (idx >= 0) {
+            int end = ua.indexOf(" ", idx);
+            if (end > idx) return ua.substring(idx + 7, end);
+        }
+        return "125.0.0.0"; // fallback
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     private void setupAllWebViews() {
         // 只设置已创建的 WebView
@@ -1815,7 +1827,8 @@ public class MainActivity extends AppCompatActivity {
         if (!savedUA.isEmpty()) {
             settings.setUserAgentString(savedUA);
         } else {
-            settings.setUserAgentString(settings.getUserAgentString().replace("; wv", ""));
+            // 使用标准 Chrome UA，去掉 WebView 标记，避免被网站拦截
+            settings.setUserAgentString("Mozilla/5.0 (Linux; Android " + android.os.Build.VERSION.RELEASE + "; " + android.os.Build.MODEL + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/" + getChromeVersion() + " Mobile Safari/537.36");
         }
         settings.setUseWideViewPort(true);
         settings.setLoadWithOverviewMode(true);
@@ -1913,12 +1926,13 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse errorResponse) {
                 super.onReceivedHttpError(view, request, errorResponse);
-                // 只处理主帧 HTTP 错误（Feature 3）
+                // 只处理主帧的服务器错误（5xx），4xx 由页面自身处理
                 if (request.isForMainFrame() && errorResponse != null) {
                     int statusCode = errorResponse.getStatusCode();
-                    if (statusCode >= 400) {
-                        showErrorPage(view, "HTTP 错误: " + statusCode);
+                    if (statusCode >= 500) {
+                        showErrorPage(view, "服务器错误: " + statusCode);
                     }
+                    // 4xx（如 403）不拦截，让页面自行显示内容
                 }
             }
 
