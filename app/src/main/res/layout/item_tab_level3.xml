@@ -16,7 +16,7 @@
 
         <Spinner
             android:id="@+id/spinnerAction"
-            android:layout_width="65dp"
+            android:layout_width="80dp"
             android:layout_height="match_parent"
             android:background="@drawable/input_bg_small" />
 
@@ -46,19 +46,19 @@
 
     </LinearLayout>
 
-    <!-- 第二行：延迟/新值 + 备注（宽度与第一行对齐） -->
+    <!-- 第二行：值（自适应高度）+ 延迟 -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="28dp"
+        android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:layout_marginTop="4dp">
 
-        <!-- 延迟（与Spinner对齐，65dp） -->
+        <!-- 延迟（与Spinner对齐，80dp） -->
         <LinearLayout
             android:id="@+id/layoutDelay"
-            android:layout_width="65dp"
-            android:layout_height="match_parent"
+            android:layout_width="80dp"
+            android:layout_height="28dp"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:visibility="gone">
@@ -84,41 +84,44 @@
 
         </LinearLayout>
 
-        <!-- 新值（与选择器对齐，weight=1） -->
+        <!-- 值（与选择器对齐，weight=1，自适应高度） -->
         <EditText
             android:id="@+id/etValue"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
             android:hint="新值"
-            android:textSize="11sp"
+            android:textSize="12sp"
             android:inputType="text"
             android:paddingStart="8dp"
             android:paddingEnd="8dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
             android:background="@drawable/input_bg_small"
             android:layout_marginStart="6dp"
             android:layout_marginEnd="6dp"
             android:visibility="gone" />
 
-        <!-- 备注（与选择器对齐，weight=1） -->
-        <EditText
-            android:id="@+id/etRemark"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:hint="备注"
-            android:textSize="11sp"
-            android:textColor="#666666"
-            android:inputType="text"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:background="@android:color/transparent" />
-
         <!-- 占位（与删除按钮对齐，32dp） -->
         <View
             android:layout_width="32dp"
-            android:layout_height="match_parent" />
+            android:layout_height="match_parent"
+            android:visibility="gone" />
 
     </LinearLayout>
+
+    <!-- 第三行：备注 -->
+    <EditText
+        android:id="@+id/etRemark"
+        android:layout_width="match_parent"
+        android:layout_height="26dp"
+        android:hint="备注（可选）"
+        android:textSize="11sp"
+        android:textColor="#666666"
+        android:inputType="text"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:background="@android:color/transparent"
+        android:layout_marginTop="2dp" />
 
 </LinearLayout>

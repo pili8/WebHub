@@ -55,8 +55,8 @@ public class SettingsActivity extends AppCompatActivity {
     };
 
     private static final String[] ACTION_TYPES = {"隐藏", "点击", "修改", "自定义脚本"};
-    private static final String[] DEFAULT_TAB_ICONS = {"📊", "📋", "➕", "📁", "👤", "📌"};
-    private static final String[] DEFAULT_TAB_TITLES = {"工作区1", "工作区2", "工作区3", "工作区4", "工作区5", "工作区6"};
+    private static final String[] DEFAULT_TAB_ICONS = {"📊", "📋", "➕", "📁", "👤", "📌", "⭐", "🔧"};
+    private static final String[] DEFAULT_TAB_TITLES = {"工作区1", "工作区2", "工作区3", "工作区4", "工作区5", "工作区6", "工作区7", "工作区8"};
 
     private List<TabData> tabsData = new ArrayList<>();
 
@@ -373,7 +373,7 @@ public class SettingsActivity extends AppCompatActivity {
 
         int tabCount = prefs.getInt("tab_count", 3);
         if (tabCount < 2) tabCount = 2;
-        if (tabCount > 6) tabCount = 6;
+        if (tabCount > 8) tabCount = 8;
 
         String tabsJson = prefs.getString("tabs_config", "");
         if (!tabsJson.isEmpty() && loadConfigFromJson(tabsJson, tabCount)) {
@@ -458,7 +458,7 @@ public class SettingsActivity extends AppCompatActivity {
     private boolean loadConfigFromJson(String tabsJson, int tabCount) {
         try {
             JSONArray tabsArray = new JSONArray(tabsJson);
-            int count = Math.max(2, Math.min(6, Math.min(tabCount, tabsArray.length())));
+            int count = Math.max(2, Math.min(8, Math.min(tabCount, tabsArray.length())));
             for (int i = 0; i < count; i++) {
                 JSONObject tabJson = tabsArray.getJSONObject(i);
                 TabData tab = new TabData();
@@ -898,29 +898,34 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void updateActionFields(int position, LinearLayout layoutDelay, EditText etValue) {
-        if (position == 0) {
-            // 隐藏：不显示延迟和新值
-            layoutDelay.setVisibility(View.GONE);
-            etValue.setVisibility(View.GONE);
-        } else if (position == 1) {
-            // 点击：显示延迟
-            layoutDelay.setVisibility(View.VISIBLE);
-            etValue.setVisibility(View.GONE);
-        } else if (position == 2) {
-            // 修改：显示新值
-            layoutDelay.setVisibility(View.GONE);
-            etValue.setVisibility(View.VISIBLE);
-            etValue.setHint("新值");
-            etValue.setInputType(android.text.InputType.TYPE_CLASS_TEXT);
-            etValue.setMaxLines(1);
-        } else if (position == 3) {
-            // 自定义脚本：显示JS代码输入（多行）
-            layoutDelay.setVisibility(View.VISIBLE); // 也支持延迟
-            etValue.setVisibility(View.VISIBLE);
-            etValue.setHint("输入JS代码");
-            etValue.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-            etValue.setMaxLines(6);
-            etValue.setMinLines(2);
+        String[] types = {"hide", "click", "modify", "script"};
+        String type = (position >= 0 && position < types.length) ? types[position] : "hide";
+
+        switch (type) {
+            case "hide":
+                layoutDelay.setVisibility(View.GONE);
+                etValue.setVisibility(View.GONE);
+                break;
+            case "click":
+                layoutDelay.setVisibility(View.VISIBLE);
+                etValue.setVisibility(View.GONE);
+                break;
+            case "modify":
+                layoutDelay.setVisibility(View.GONE);
+                etValue.setVisibility(View.VISIBLE);
+                etValue.setHint("新值");
+                etValue.setInputType(android.text.InputType.TYPE_CLASS_TEXT);
+                etValue.setMaxLines(1);
+                etValue.setMinLines(1);
+                break;
+            case "script":
+                layoutDelay.setVisibility(View.VISIBLE);
+                etValue.setVisibility(View.VISIBLE);
+                etValue.setHint("输入JS代码");
+                etValue.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+                etValue.setMaxLines(6);
+                etValue.setMinLines(3);
+                break;
         }
     }
 
@@ -977,17 +982,10 @@ public class SettingsActivity extends AppCompatActivity {
             public void onNothingSelected(AdapterView<?> parent) {}
         });
 
-        // 删除操作
+        // 删除操作（直接删除，无需确认）
         btnDelete.setOnClickListener(v -> {
-            new AlertDialog.Builder(SettingsActivity.this)
-                    .setTitle("删除操作")
-                    .setMessage("确定删除此操作？")
-                    .setPositiveButton("删除", (d, w) -> {
-                        link.actions.remove(action);
-                        link.actionsContainer.removeView(row);
-                    })
-                    .setNegativeButton("取消", null)
-                    .show();
+            link.actions.remove(action);
+            link.actionsContainer.removeView(row);
         });
 
         link.actionsContainer.addView(row);
@@ -1108,7 +1106,7 @@ public class SettingsActivity extends AppCompatActivity {
         List<TabData> data = new ArrayList<>();
         int tabCount = prefs.getInt("tab_count", 3);
         if (tabCount < 2) tabCount = 2;
-        if (tabCount > 6) tabCount = 6;
+        if (tabCount > 8) tabCount = 8;
 
         for (int i = 0; i < tabCount; i++) {
             TabData tab = new TabData();
@@ -1199,6 +1197,7 @@ public class SettingsActivity extends AppCompatActivity {
                     int pos = spinner.getSelectedItemPosition();
                     if (pos == 0) action.type = "hide";
                     else if (pos == 1) action.type = "click";
+                    else if (pos == 3) action.type = "script";
                     else action.type = "modify";
 
                     action.selector = etSelector.getText().toString().trim();

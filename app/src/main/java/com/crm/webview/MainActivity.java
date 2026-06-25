@@ -62,11 +62,11 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int PERMISSION_REQUEST_CODE = 100;
     private static final int REQUEST_SETTINGS = 200;
-    private static final int MAX_TABS = 6;
+    private static final int MAX_TABS = 8;
 
     // 工作区自定义颜色（默认预设）
     private static final String[] DEFAULT_TAB_COLORS = {
-        "#1976D2", "#4CAF50", "#FF9800", "#9C27B0", "#F44336", "#00BCD4"
+        "#1976D2", "#4CAF50", "#FF9800", "#9C27B0", "#F44336", "#00BCD4", "#E91E63", "#607D8B"
     };
     // 预设颜色列表（供选择）
     private static final String[] PRESET_COLORS = {
@@ -106,6 +106,7 @@ public class MainActivity extends AppCompatActivity {
     // 定时刷新相关（按工作区配置）
     private android.os.Handler autoRefreshHandler = new android.os.Handler();
     private Runnable autoRefreshRunnable;
+    private boolean autoRefreshRunning = false; // 防止重复调度
     private int autoRefreshInterval = 0; // 当前工作区的刷新间隔（兼容旧逻辑）
     private int[] tabAutoRefresh = new int[MAX_TABS]; // 每个工作区独立的刷新间隔
     private View autoRefreshDot;
@@ -126,13 +127,10 @@ public class MainActivity extends AppCompatActivity {
 
     // 设置变更标志（Feature 7）
     private boolean settingsChanged = false;
+    private String lastTabsConfig = ""; // 用于检测配置是否变化
 
     // 进度条覆盖层（Feature 8）
     private View progressOverlay;
-
-    // 回到主页浮动按钮（Feature 4）
-    private TextView homeButton;
-    private boolean isHomeButtonVisible = false;
 
     private SharedPreferences prefs;
     private ValueCallback<Uri[]> filePathCallback;
@@ -181,12 +179,22 @@ public class MainActivity extends AppCompatActivity {
         String selector;
         String value;
         int delay;
+        String remark; // 备注
 
         ActionItem(String type, String selector, String value, int delay) {
             this.type = type;
             this.selector = selector;
             this.value = value;
             this.delay = delay;
+            this.remark = "";
+        }
+
+        ActionItem(String type, String selector, String value, int delay, String remark) {
+            this.type = type;
+            this.selector = selector;
+            this.value = value;
+            this.delay = delay;
+            this.remark = remark != null ? remark : "";
         }
     }
 
@@ -223,20 +231,22 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // 从设置页面返回时，检查是否需要重载（Feature 7）
+        // 双重检测：settingsChanged 标志 + 配置快照比对（防止标志丢失）
         isNightMode = prefs.getBoolean("night_mode", false);
         isNightModeCSS = prefs.getBoolean("night_mode_css", false);
         applyAppNightMode();
 
+        String currentTabsConfig = prefs.getInt("tab_count", 3) + "|" + prefs.getString("tabs_config", "");
+        boolean configChanged = settingsChanged || !currentTabsConfig.equals(lastTabsConfig);
+
         // 只在设置变更时才重新加载配置和重建UI
-        if (settingsChanged) {
+        if (configChanged) {
             settingsChanged = false;
 
             // 重新加载按工作区刷新配置
             loadTabAutoRefresh();
             // 重新启动定时器
-            if (autoRefreshRunnable != null) {
-                autoRefreshHandler.removeCallbacks(autoRefreshRunnable);
-            }
+            stopAutoRefresh();
             autoRefreshInterval = tabAutoRefresh[currentTab];
             if (autoRefreshInterval > 0) {
                 setAutoRefresh(autoRefreshInterval);
@@ -302,9 +312,6 @@ public class MainActivity extends AppCompatActivity {
 
         // 进度条覆盖层（Feature 8）
         initProgressOverlay();
-
-        // 回到主页浮动按钮（Feature 4）
-        initHomeButton();
     }
 
     /** 初始化进度条覆盖层（Feature 8）*/
@@ -324,58 +331,6 @@ public class MainActivity extends AppCompatActivity {
                     LinearLayout.LayoutParams.MATCH_PARENT, dpToPx(3));
             progressOverlay.setLayoutParams(lp);
             parent.addView(progressOverlay, toolbarIndex + 1);
-        }
-    }
-
-    /** 初始化回到主页浮动按钮（Feature 4）*/
-    private void initHomeButton() {
-        homeButton = new TextView(this);
-        homeButton.setText("🏠 回到主页");
-        homeButton.setTextSize(12);
-        homeButton.setTextColor(Color.WHITE);
-        homeButton.setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6));
-
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(Color.parseColor("#1976D2"));
-        bg.setCornerRadius(dpToPx(20));
-        homeButton.setBackground(bg);
-        homeButton.setElevation(dpToPx(6));
-        homeButton.setVisibility(View.GONE);
-
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT);
-        lp.gravity = Gravity.BOTTOM | Gravity.END;
-        lp.bottomMargin = dpToPx(16);
-        lp.rightMargin = dpToPx(16);
-        homeButton.setLayoutParams(lp);
-
-        homeButton.setOnClickListener(v -> {
-            loadCurrentLink();
-            hideHomeButton();
-            Toast.makeText(this, "已回到主页", Toast.LENGTH_SHORT).show();
-        });
-
-        webViewContainer.addView(homeButton);
-    }
-
-    /** 显示回到主页按钮 */
-    private void showHomeButton() {
-        if (!isHomeButtonVisible && homeButton != null) {
-            isHomeButtonVisible = true;
-            homeButton.setVisibility(View.VISIBLE);
-            homeButton.setAlpha(0f);
-            homeButton.animate().alpha(1f).setDuration(200).start();
-        }
-    }
-
-    /** 隐藏回到主页按钮 */
-    private void hideHomeButton() {
-        if (isHomeButtonVisible && homeButton != null) {
-            isHomeButtonVisible = false;
-            homeButton.animate().alpha(0f).setDuration(200).withEndAction(() -> {
-                homeButton.setVisibility(View.GONE);
-            }).start();
         }
     }
 
@@ -412,9 +367,11 @@ public class MainActivity extends AppCompatActivity {
         if (tabCount < 2) tabCount = 2;
         if (tabCount > MAX_TABS) tabCount = MAX_TABS;
 
-        String[] defaultIcons = {"📊", "📋", "➕", "📁", "👤", "📌"};
-        String[] defaultTitles = {"工作区1", "工作区2", "工作区3", "工作区4", "工作区5", "工作区6"};
+        String[] defaultIcons = {"📊", "📋", "➕", "📁", "👤", "📌", "⭐", "🔧"};
+        String[] defaultTitles = {"工作区1", "工作区2", "工作区3", "工作区4", "工作区5", "工作区6", "工作区7", "工作区8"};
         String[] defaultUrls = {
+                "about:blank",
+                "about:blank",
                 "about:blank",
                 "about:blank",
                 "about:blank",
@@ -429,6 +386,9 @@ public class MainActivity extends AppCompatActivity {
         }
 
         String tabsJson = prefs.getString("tabs_config", "");
+
+        // 记录配置快照，用于 onResume 检测变化
+        lastTabsConfig = tabCount + "|" + tabsJson;
 
         if (!tabsJson.isEmpty() && loadConfigFromJson(tabsJson, defaultIcons, defaultTitles, defaultUrls)) {
             return;
@@ -511,7 +471,8 @@ public class MainActivity extends AppCompatActivity {
                                         actionJson.optString("type", "hide"),
                                         selector,
                                         actionJson.optString("value", ""),
-                                        actionJson.optInt("delay", 0)
+                                        actionJson.optInt("delay", 0),
+                                        actionJson.optString("remark", "")
                                 ));
                             }
                         }
@@ -542,17 +503,23 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("SetJavaScriptEnabled")
     private void createTabsAndWebViews() {
+        // 先销毁旧的 WebView（防止内存泄漏）
+        for (int i = 0; i < MAX_TABS; i++) {
+            if (webViews[i] != null) {
+                stopMutationObserver(webViews[i]);
+                webViews[i].stopLoading();
+                webViewContainer.removeView(webViews[i]);
+                webViews[i].destroy();
+                webViews[i] = null;
+            }
+        }
+
         // 清除旧视图
         webViewContainer.removeAllViews();
         tabContainer.removeAllViews();
         tabViews.clear();
         tabIconViews.clear();
         tabTextViews.clear();
-
-        // 初始化 WebView 数组
-        for (int i = 0; i < MAX_TABS; i++) {
-            webViews[i] = null;
-        }
 
         // 只创建第一个 WebView
         createWebView(0);
@@ -706,6 +673,7 @@ public class MainActivity extends AppCompatActivity {
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
             row.setPadding(dpToPx(14), dpToPx(12), dpToPx(14), dpToPx(12));
+            row.setTag(i); // 标记菜单项索引
 
             android.util.TypedValue outValue = new android.util.TypedValue();
             getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
@@ -756,8 +724,8 @@ public class MainActivity extends AppCompatActivity {
 
         for (int i = 0; i < root.getChildCount(); i++) {
             View child = root.getChildAt(i);
-            if (child instanceof LinearLayout) {
-                final int index = i / 2;
+            if (child instanceof LinearLayout && child.getTag() instanceof Integer) {
+                final int index = (int) child.getTag();
                 child.setOnClickListener(v -> {
                     popup.dismiss();
                     switch (index) {
@@ -1166,27 +1134,46 @@ public class MainActivity extends AppCompatActivity {
     private void setAutoRefresh(int interval) {
         autoRefreshInterval = interval;
 
-        // 停止之前的定时器
-        if (autoRefreshRunnable != null) {
-            autoRefreshHandler.removeCallbacks(autoRefreshRunnable);
-        }
+        // 彻底停止之前的定时器
+        stopAutoRefresh();
 
         if (interval > 0) {
             // 启动定时刷新（只刷新当前工作区）
             autoRefreshRunnable = () -> {
+                autoRefreshRunning = false;
+                // 安全检查：Activity 是否仍然有效
+                if (isFinishing() || isDestroyed()) return;
                 WebView wv = getCurrentWebView();
                 if (wv != null) {
                     wv.reload();
                 }
-                autoRefreshHandler.postDelayed(autoRefreshRunnable, interval * 1000L);
+                // 如果间隔仍然有效，继续调度
+                if (autoRefreshInterval > 0) {
+                    scheduleAutoRefresh();
+                }
             };
-            autoRefreshHandler.postDelayed(autoRefreshRunnable, interval * 1000L);
+            scheduleAutoRefresh();
             Toast.makeText(this, "定时刷新: " + formatInterval(interval) + " (当前工作区)", Toast.LENGTH_SHORT).show();
         } else {
             Toast.makeText(this, "定时刷新已关闭", Toast.LENGTH_SHORT).show();
         }
 
         updateAutoRefreshIndicator();
+    }
+
+    /** 调度下一次自动刷新 */
+    private void scheduleAutoRefresh() {
+        if (autoRefreshRunning || autoRefreshInterval <= 0) return;
+        if (isFinishing() || isDestroyed()) return;
+        autoRefreshRunning = true;
+        autoRefreshHandler.postDelayed(autoRefreshRunnable, autoRefreshInterval * 1000L);
+    }
+
+    /** 停止自动刷新 */
+    private void stopAutoRefresh() {
+        autoRefreshRunning = false;
+        autoRefreshHandler.removeCallbacksAndMessages(null);
+        autoRefreshRunnable = null;
     }
 
     private String formatInterval(int seconds) {
@@ -1636,23 +1623,22 @@ public class MainActivity extends AppCompatActivity {
 
         // 切换工作区时，更新定时刷新状态（Feature 5）
         autoRefreshInterval = tabAutoRefresh[index];
-        if (autoRefreshRunnable != null) {
-            autoRefreshHandler.removeCallbacks(autoRefreshRunnable);
-        }
+        stopAutoRefresh();
         if (autoRefreshInterval > 0) {
             autoRefreshRunnable = () -> {
+                autoRefreshRunning = false;
+                if (isFinishing() || isDestroyed()) return;
                 WebView wv = getCurrentWebView();
                 if (wv != null) {
                     wv.reload();
                 }
-                autoRefreshHandler.postDelayed(autoRefreshRunnable, autoRefreshInterval * 1000L);
+                if (autoRefreshInterval > 0) {
+                    scheduleAutoRefresh();
+                }
             };
-            autoRefreshHandler.postDelayed(autoRefreshRunnable, autoRefreshInterval * 1000L);
+            scheduleAutoRefresh();
         }
         updateAutoRefreshIndicator();
-
-        // 隐藏回到主页按钮
-        hideHomeButton();
 
         // 切换工作区样式
         for (int i = 0; i < tabTextViews.size(); i++) {
@@ -1821,7 +1807,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
         settings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
-        settings.setAllowFileAccess(true);
+        settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(true);
         String savedUA = prefs.getString("user_agent", "");
         if (!savedUA.isEmpty()) {
@@ -1835,18 +1821,19 @@ public class MainActivity extends AppCompatActivity {
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
         settings.setGeolocationEnabled(true);
 
-        // 注册 JS 接口，用于 SPA 导航回调
-        webView.addJavascriptInterface(new Object() {
-            @android.webkit.JavascriptInterface
-            public void onSpaNavigate() {
-                runOnUiThread(() -> {
-                    // 停止旧的 Observer
-                    stopMutationObserver(webView);
-                    // 重新执行页面操作（带轮询）
-                    executeCustomScript(webView);
-                });
-            }
-        }, "_webhub");
+        // 注册 JS 接口，用于 SPA 导航回调（防止重复注册）
+        if (webView.getTag() == null) {
+            webView.setTag("_webhub_registered");
+            webView.addJavascriptInterface(new Object() {
+                @android.webkit.JavascriptInterface
+                public void onSpaNavigate() {
+                    runOnUiThread(() -> {
+                        stopMutationObserver(webView);
+                        executeCustomScript(webView);
+                    });
+                }
+            }, "_webhub");
+        }
 
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
@@ -1904,8 +1891,6 @@ public class MainActivity extends AppCompatActivity {
                             })
                             .start();
                 }
-                // 检查是否离开配置域名，显示/隐藏回到主页按钮（Feature 4）
-                checkDomainAndShowHomeButton(url);
                 // 执行自定义操作
                 executeCustomScript(view);
                 // 夜间模式 CSS
@@ -2197,11 +2182,7 @@ public class MainActivity extends AppCompatActivity {
             return false;
         }
 
-        if (url.startsWith("http://")) {
-            Toast.makeText(this, "当前仅允许加载 HTTPS 链接", Toast.LENGTH_SHORT).show();
-            return false;
-        }
-        if (url.startsWith("https://")) return true;
+        if (url.startsWith("https://") || url.startsWith("http://")) return true;
         if (url.startsWith("javascript:") || url.startsWith("about:blank") || url.startsWith("data:")) return true;
 
         return false;
@@ -2248,8 +2229,8 @@ public class MainActivity extends AppCompatActivity {
             if (found) {
                 // 元素已存在，立即执行
                 runActionScript(webView, js);
-            } else if (attempt < 20) {
-                // 元素还没出现，500ms 后重试
+            } else if (attempt < 10) {
+                // 元素还没出现，500ms 后重试（最多 10 次，共 5 秒）
                 webView.postDelayed(() -> executeCustomScriptWithRetry(webView, attempt + 1), 500);
             } else {
                 // 超时，最后一次尝试
@@ -2510,14 +2491,20 @@ public class MainActivity extends AppCompatActivity {
 
             int delay = 0;
             String value = "";
-            if ("click".equals(type) && parts.length > 2 && !parts[2].startsWith("@")) {
-                try {
-                    delay = Integer.parseInt(parts[2]);
-                } catch (Exception e) {}
-            } else if ("modify".equals(type) && parts.length > 2 && !parts[2].startsWith("@")) {
-                value = parts[2];
+            String remark = "";
+            for (int k = 2; k < parts.length; k++) {
+                String part = parts[k];
+                if (part.startsWith("@")) {
+                    remark = part.substring(1)
+                        .replace("｜", "|")
+                        .replace("；", ";");
+                } else if ("click".equals(type)) {
+                    try { delay = Integer.parseInt(part); } catch (Exception e) {}
+                } else if ("modify".equals(type) && value.isEmpty()) {
+                    value = part;
+                }
             }
-            items.add(new ActionItem(type, selector, value, delay));
+            items.add(new ActionItem(type, selector, value, delay, remark));
         }
         return items;
     }
@@ -2529,7 +2516,13 @@ public class MainActivity extends AppCompatActivity {
 
     /** 显示错误页面（Feature 3）*/
     private void showErrorPage(WebView webView, String errorMsg) {
-        String escapedMsg = errorMsg.replace("\'", "\\'").replace("\"", "\\\"");
+        // 转义 HTML 特殊字符，防止 XSS
+        String safeMsg = errorMsg
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
         String errorHtml = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">" +
                 "<style>" +
                 "body{margin:0;padding:40px 20px;font-family:-apple-system,sans-serif;text-align:center;background:#f5f5f5;color:#333;}" +
@@ -2541,33 +2534,10 @@ public class MainActivity extends AppCompatActivity {
                 "</style></head><body>" +
                 "<div class=\"icon\">⚠️</div>" +
                 "<div class=\"title\">页面加载失败</div>" +
-                "<div class=\"msg\">" + escapedMsg + "</div>" +
+                "<div class=\"msg\">" + safeMsg + "</div>" +
                 "<button class=\"btn\" onclick=\"location.reload()\">🔄 重新加载</button>" +
                 "</body></html>";
         webView.loadDataWithBaseURL(null, errorHtml, "text/html", "UTF-8", null);
-    }
-
-    /** 检查当前URL是否属于配置的域名，不属于则显示回到主页按钮（Feature 4）*/
-    private void checkDomainAndShowHomeButton(String currentUrl) {
-        if (currentUrl == null || currentUrl.isEmpty() || "about:blank".equals(currentUrl)) {
-            hideHomeButton();
-            return;
-        }
-
-        // 获取当前工作区配置的链接 URL
-        if (currentTab >= 0 && currentTab < tabLinks.size()) {
-            List<LinkItem> links = tabLinks.get(currentTab);
-            int idx = activeLinkIndex >= 0 ? activeLinkIndex : currentLinkIndex;
-            if (idx >= 0 && idx < links.size()) {
-                String configUrl = links.get(idx).url;
-                // 只要当前URL不是配置的URL，就显示回到主页按钮
-                if (configUrl != null && !configUrl.isEmpty() && !configUrl.equals(currentUrl)) {
-                    showHomeButton();
-                    return;
-                }
-            }
-        }
-        hideHomeButton();
     }
 
     @Override
@@ -2802,10 +2772,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (autoRefreshRunnable != null) {
-            autoRefreshHandler.removeCallbacks(autoRefreshRunnable);
-            autoRefreshRunnable = null;
-        }
+        stopAutoRefresh();
         for (int i = 0; i < MAX_TABS; i++) {
             if (webViews[i] != null) {
                 webViews[i].destroy();
