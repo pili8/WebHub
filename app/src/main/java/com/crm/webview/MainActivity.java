@@ -42,7 +42,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import com.google.android.material.bottomsheet.BottomSheetDialog;
+import android.widget.PopupWindow;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -509,17 +509,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showPopupMenu() {
-        BottomSheetDialog dialog = new BottomSheetDialog(this);
         boolean dark = isNightMode;
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         int padH = dpToPx(8);
-        int padV = dpToPx(12);
+        int padV = dpToPx(6);
         root.setPadding(padH, padV, padH, padV);
-        root.setBackgroundColor(dark ? Color.parseColor("#1E1E1E") : Color.WHITE);
+        root.setBackgroundColor(dark ? Color.parseColor("#2A2A2A") : Color.WHITE);
 
-        // 菜单项定义：图标 + 文字
         String[][] items = {
             {"🔍", "搜索"},
             {"📋", "复制链接"},
@@ -536,77 +534,104 @@ public class MainActivity extends AppCompatActivity {
             LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
+            row.setPadding(dpToPx(14), dpToPx(12), dpToPx(14), dpToPx(12));
 
-            // Ripple effect
             android.util.TypedValue outValue = new android.util.TypedValue();
             getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
             row.setBackgroundResource(outValue.resourceId);
 
             TextView icon = new TextView(this);
             icon.setText(items[i][0]);
-            icon.setTextSize(20);
-            icon.setPadding(0, 0, dpToPx(16), 0);
+            icon.setTextSize(18);
+            icon.setPadding(0, 0, dpToPx(12), 0);
 
             TextView label = new TextView(this);
             label.setText(items[i][1]);
-            label.setTextSize(15);
+            label.setTextSize(14);
             label.setTextColor(dark ? Color.parseColor("#E0E0E0") : Color.parseColor("#333333"));
+            LinearLayout.LayoutParams labelLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1);
+            label.setLayoutParams(labelLp);
 
             row.addView(icon);
             row.addView(label);
 
-            // 定时刷新子菜单箭头
             if (i == 4) {
                 TextView arrow = new TextView(this);
-                arrow.setText("  ▸");
-                arrow.setTextSize(13);
+                arrow.setText("▸");
+                arrow.setTextSize(12);
                 arrow.setTextColor(dark ? Color.parseColor("#888888") : Color.parseColor("#999999"));
                 row.addView(arrow);
             }
 
-            row.setOnClickListener(v -> {
-                dialog.dismiss();
-                switch (index) {
-                    case 0: toggleSearch(); break;
-                    case 1: copyCurrentUrl(); break;
-                    case 2: toggleNightMode(); break;
-                    case 3:
-                        Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
-                        intent.putExtra("night_mode", isNightMode);
-                        startActivity(intent);
-                        break;
-                    case 4: showAutoRefreshPicker(); break;
-                    case 5: toggleInspectMode(); break;
-                    case 6: showMemoryInfo(); break;
-                    case 7: finish(); break;
-                }
-            });
-
             root.addView(row);
+
+            if (i < items.length - 1) {
+                View divider = new View(this);
+                divider.setBackgroundColor(dark ? Color.parseColor("#3A3A3A") : Color.parseColor("#F0F0F0"));
+                LinearLayout.LayoutParams divLp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, 1);
+                divLp.leftMargin = dpToPx(46);
+                divider.setLayoutParams(divLp);
+                root.addView(divider);
+            }
         }
 
-        dialog.setContentView(root);
-        dialog.show();
+        PopupWindow popup = new PopupWindow(root,
+                dpToPx(200), LinearLayout.LayoutParams.WRAP_CONTENT, true);
+        popup.setElevation(dpToPx(8));
+        popup.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(
+                dark ? Color.parseColor("#2A2A2A") : Color.WHITE));
+        popup.setOutsideTouchable(true);
+
+        for (int i = 0; i < root.getChildCount(); i++) {
+            View child = root.getChildAt(i);
+            if (child instanceof LinearLayout) {
+                final int index = i / 2;
+                child.setOnClickListener(v -> {
+                    popup.dismiss();
+                    switch (index) {
+                        case 0: toggleSearch(); break;
+                        case 1: copyCurrentUrl(); break;
+                        case 2: toggleNightMode(); break;
+                        case 3:
+                            Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+                            intent.putExtra("night_mode", isNightMode);
+                            startActivity(intent);
+                            break;
+                        case 4: showAutoRefreshPicker(); break;
+                        case 5: toggleInspectMode(); break;
+                        case 6: showMemoryInfo(); break;
+                        case 7: finish(); break;
+                    }
+                });
+            }
+        }
+
+        popup.showAsDropDown(btnMenu, -dpToPx(156), dpToPx(4));
     }
 
     private void showAutoRefreshPicker() {
-        BottomSheetDialog dialog = new BottomSheetDialog(this);
         boolean dark = isNightMode;
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        int padV = dpToPx(12);
-        root.setPadding(dpToPx(8), padV, dpToPx(8), padV);
-        root.setBackgroundColor(dark ? Color.parseColor("#1E1E1E") : Color.WHITE);
+        int padH = dpToPx(8);
+        int padV = dpToPx(6);
+        root.setPadding(padH, padV, padH, padV);
+        root.setBackgroundColor(dark ? Color.parseColor("#2A2A2A") : Color.WHITE);
 
-        // 标题
         TextView title = new TextView(this);
         title.setText("定时刷新");
-        title.setTextSize(14);
+        title.setTextSize(13);
         title.setTextColor(dark ? Color.parseColor("#AAAAAA") : Color.parseColor("#999999"));
-        title.setPadding(dpToPx(16), dpToPx(8), dpToPx(16), dpToPx(12));
+        title.setPadding(dpToPx(14), dpToPx(8), dpToPx(14), dpToPx(8));
         root.addView(title);
+
+        View titleDivider = new View(this);
+        titleDivider.setBackgroundColor(dark ? Color.parseColor("#3A3A3A") : Color.parseColor("#F0F0F0"));
+        titleDivider.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 1));
+        root.addView(titleDivider);
 
         String[] labels = {"关闭", "每30秒", "每1分钟", "每5分钟"};
         int[] intervals = {0, 30, 60, 300};
@@ -618,7 +643,7 @@ public class MainActivity extends AppCompatActivity {
             LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
+            row.setPadding(dpToPx(14), dpToPx(12), dpToPx(14), dpToPx(12));
 
             android.util.TypedValue outValue = new android.util.TypedValue();
             getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
@@ -626,11 +651,10 @@ public class MainActivity extends AppCompatActivity {
 
             TextView label = new TextView(this);
             label.setText(labels[i]);
-            label.setTextSize(15);
+            label.setTextSize(14);
             label.setTextColor(dark ? Color.parseColor("#E0E0E0") : Color.parseColor("#333333"));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1);
             label.setLayoutParams(lp);
-
             row.addView(label);
 
             if (checked) {
@@ -641,16 +665,38 @@ public class MainActivity extends AppCompatActivity {
                 row.addView(check);
             }
 
-            row.setOnClickListener(v -> {
-                dialog.dismiss();
-                setAutoRefresh(interval);
-            });
-
             root.addView(row);
+
+            if (i < labels.length - 1) {
+                View divider = new View(this);
+                divider.setBackgroundColor(dark ? Color.parseColor("#3A3A3A") : Color.parseColor("#F0F0F0"));
+                LinearLayout.LayoutParams divLp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, 1);
+                divLp.leftMargin = dpToPx(14);
+                divider.setLayoutParams(divLp);
+                root.addView(divider);
+            }
         }
 
-        dialog.setContentView(root);
-        dialog.show();
+        PopupWindow popup = new PopupWindow(root,
+                dpToPx(180), LinearLayout.LayoutParams.WRAP_CONTENT, true);
+        popup.setElevation(dpToPx(8));
+        popup.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(
+                dark ? Color.parseColor("#2A2A2A") : Color.WHITE));
+        popup.setOutsideTouchable(true);
+
+        for (int i = 0; i < root.getChildCount(); i++) {
+            View child = root.getChildAt(i);
+            if (child instanceof LinearLayout && child != root) {
+                final int interval = intervals[i / 2];
+                child.setOnClickListener(v -> {
+                    popup.dismiss();
+                    setAutoRefresh(interval);
+                });
+            }
+        }
+
+        popup.showAsDropDown(btnMenu, -dpToPx(112), dpToPx(4));
     }
 
 
