@@ -33,7 +33,6 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import android.graphics.drawable.GradientDrawable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -58,21 +57,12 @@ public class SettingsActivity extends AppCompatActivity {
     private static final String[] ACTION_TYPES = {"隐藏", "点击", "修改", "自定义脚本"};
     private static final String[] DEFAULT_TAB_ICONS = {"📊", "📋", "➕", "📁", "👤", "📌"};
     private static final String[] DEFAULT_TAB_TITLES = {"工作区1", "工作区2", "工作区3", "工作区4", "工作区5", "工作区6"};
-    private static final String[] DEFAULT_TAB_COLORS = {
-        "#1976D2", "#4CAF50", "#FF9800", "#9C27B0", "#F44336", "#00BCD4"
-    };
-    // 预设颜色列表
-    private static final String[] PRESET_COLORS = {
-        "#1976D2", "#4CAF50", "#FF9800", "#9C27B0", "#F44336", "#00BCD4",
-        "#E91E63", "#607D8B", "#795548", "#FF5722"
-    };
 
     private List<TabData> tabsData = new ArrayList<>();
 
     static class TabData {
         String icon;
         String title;
-        String color; // 工作区自定义颜色
         List<LinkData> links = new ArrayList<>();
         View sectionView;
         LinearLayout linksContainer;
@@ -394,7 +384,6 @@ public class SettingsActivity extends AppCompatActivity {
             TabData tab = new TabData();
             tab.icon = prefs.getString("icon" + (i + 1), DEFAULT_TAB_ICONS[i]);
             tab.title = prefs.getString("title" + (i + 1), DEFAULT_TAB_TITLES[i]);
-            tab.color = prefs.getString("color" + (i + 1), DEFAULT_TAB_COLORS[i % DEFAULT_TAB_COLORS.length]);
 
             String linksStr = prefs.getString("links" + (i + 1), "");
             if (linksStr.isEmpty()) {
@@ -475,7 +464,6 @@ public class SettingsActivity extends AppCompatActivity {
                 TabData tab = new TabData();
                 tab.icon = tabJson.optString("icon", DEFAULT_TAB_ICONS[i]);
                 tab.title = tabJson.optString("title", DEFAULT_TAB_TITLES[i]);
-                tab.color = tabJson.optString("color", DEFAULT_TAB_COLORS[i % DEFAULT_TAB_COLORS.length]);
 
                 JSONArray linksArray = tabJson.optJSONArray("links");
                 if (linksArray != null) {
@@ -557,8 +545,7 @@ public class SettingsActivity extends AppCompatActivity {
                         linksContainer, btnAddLink, tvArrow, btnDeleteTab, btnConfirmEdit, false);
             });
 
-            // 颜色选择器（Feature 1）
-            addColorPickerRow(tab, tabView);
+
 
             // 拖动排序（工作区）
             TextView btnDrag = tabView.findViewById(R.id.btnDrag);
@@ -711,83 +698,7 @@ public class SettingsActivity extends AppCompatActivity {
         }
     }
 
-    /** 添加颜色选择器行（Feature 1）*/
-    private void addColorPickerRow(TabData tab, View tabView) {
-        LinearLayout colorRow = new LinearLayout(this);
-        colorRow.setOrientation(LinearLayout.HORIZONTAL);
-        colorRow.setGravity(Gravity.CENTER_VERTICAL);
-        colorRow.setPadding(dpToPx(14), dpToPx(6), dpToPx(14), dpToPx(6));
 
-        TextView label = new TextView(this);
-        label.setText("颜色");
-        label.setTextSize(12);
-        label.setTextColor(Color.parseColor("#999999"));
-        label.setPadding(0, 0, dpToPx(10), 0);
-        colorRow.addView(label);
-
-        // 存储颜色圆点的引用，方便更新选中状态
-        List<View> colorDots = new ArrayList<>();
-
-        for (int ci = 0; ci < PRESET_COLORS.length; ci++) {
-            final String color = PRESET_COLORS[ci];
-            View dot = new View(this);
-            int dotSize = dpToPx(24);
-            LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(dotSize, dotSize);
-            dotParams.setMargins(dpToPx(4), 0, dpToPx(4), 0);
-            dot.setLayoutParams(dotParams);
-
-            GradientDrawable dotBg = new GradientDrawable();
-            dotBg.setShape(GradientDrawable.OVAL);
-            dotBg.setColor(Color.parseColor(color));
-            dot.setBackground(dotBg);
-
-            // 选中状态：当前颜色加边框
-            boolean isSelected = color.equals(tab.color);
-            if (isSelected) {
-                GradientDrawable selectedBg = new GradientDrawable();
-                selectedBg.setShape(GradientDrawable.OVAL);
-                selectedBg.setColor(Color.parseColor(color));
-                selectedBg.setStroke(dpToPx(2), Color.parseColor("#333333"));
-                dot.setBackground(selectedBg);
-            }
-
-            dot.setOnClickListener(v -> {
-                tab.color = color;
-                // 更新所有圆点的选中状态
-                for (int di = 0; di < colorDots.size(); di++) {
-                    View d = colorDots.get(di);
-                    GradientDrawable bg = new GradientDrawable();
-                    bg.setShape(GradientDrawable.OVAL);
-                    bg.setColor(Color.parseColor(PRESET_COLORS[di]));
-                    if (PRESET_COLORS[di].equals(color)) {
-                        bg.setStroke(dpToPx(2), Color.parseColor("#333333"));
-                    }
-                    d.setBackground(bg);
-                }
-            });
-
-            colorDots.add(dot);
-            colorRow.addView(dot);
-        }
-
-        // 插入到 tabView 的链接容器之前
-        if (tabView instanceof LinearLayout) {
-            LinearLayout parent = (LinearLayout) tabView;
-            // 找到 linksContainer 的位置，在它之前插入
-            int insertIndex = -1;
-            for (int i = 0; i < parent.getChildCount(); i++) {
-                if (parent.getChildAt(i).getId() == R.id.linksContainer) {
-                    insertIndex = i;
-                    break;
-                }
-            }
-            if (insertIndex >= 0) {
-                parent.addView(colorRow, insertIndex);
-            } else {
-                parent.addView(colorRow);
-            }
-        }
-    }
 
     private void toggleEditMode(TabData tab, TextView tvTabIcon, TextView tvTabTitle, EditText etTabIcon, EditText etTabTitle,
                                 LinearLayout linksContainer, TextView btnAddLink, TextView tvArrow,
@@ -1098,7 +1009,7 @@ public class SettingsActivity extends AppCompatActivity {
 
             editor.putString("icon" + (i + 1), icon);
             editor.putString("title" + (i + 1), title);
-            editor.putString("color" + (i + 1), tab.color == null ? DEFAULT_TAB_COLORS[i % DEFAULT_TAB_COLORS.length] : tab.color);
+
 
             StringBuilder linksStr = new StringBuilder();
             for (LinkData link : tab.links) {
@@ -1226,7 +1137,7 @@ public class SettingsActivity extends AppCompatActivity {
                 JSONObject tabJson = new JSONObject();
                 tabJson.put("icon", tab.icon);
                 tabJson.put("title", tab.title);
-                tabJson.put("color", tab.color == null ? DEFAULT_TAB_COLORS[0] : tab.color);
+
 
                 JSONArray linksArray = new JSONArray();
                 for (LinkData link : tab.links) {

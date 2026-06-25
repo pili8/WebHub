@@ -309,20 +309,21 @@ public class MainActivity extends AppCompatActivity {
 
     /** 初始化进度条覆盖层（Feature 8）*/
     private void initProgressOverlay() {
-        // 在 toolbar 底部添加一个细长的进度覆盖条
-        android.widget.FrameLayout.LayoutParams overlayParams = new android.widget.FrameLayout.LayoutParams(
-                0, dpToPx(3));
-        overlayParams.gravity = Gravity.BOTTOM;
-
+        // 在 toolbar 下方添加进度条（不遮挡按钮）
         progressOverlay = new View(this);
         progressOverlay.setBackgroundColor(Color.parseColor("#42A5F5"));
-        progressOverlay.setLayoutParams(overlayParams);
+        progressOverlay.setPivotX(0); // 从左向右增长
         progressOverlay.setVisibility(View.GONE);
 
-        // 添加到 toolbar
+        // 插入到 toolbar 之后
         LinearLayout toolbar = findViewById(R.id.toolbar);
-        if (toolbar instanceof ViewGroup) {
-            ((ViewGroup) toolbar).addView(progressOverlay);
+        if (toolbar != null && toolbar.getParent() instanceof ViewGroup) {
+            ViewGroup parent = (ViewGroup) toolbar.getParent();
+            int toolbarIndex = parent.indexOfChild(toolbar);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, dpToPx(3));
+            progressOverlay.setLayoutParams(lp);
+            parent.addView(progressOverlay, toolbarIndex + 1);
         }
     }
 
@@ -576,21 +577,15 @@ public class MainActivity extends AppCompatActivity {
                     LinearLayout.LayoutParams.WRAP_CONTENT);
             icon.setLayoutParams(iconParams);
 
-            // 设置图标文字颜色为工作区自定义颜色
-            String color = (i < tabColors.length && tabColors[i] != null) ? tabColors[i] : DEFAULT_TAB_COLORS[i % DEFAULT_TAB_COLORS.length];
-            try {
-                icon.setTextColor(Color.parseColor(color));
-            } catch (Exception e) {
-                icon.setTextColor(Color.parseColor(DEFAULT_TAB_COLORS[i % DEFAULT_TAB_COLORS.length]));
-            }
+            // 工作区图标颜色
+            icon.setTextColor(i == 0 ? Color.parseColor("#1976D2") : Color.parseColor("#666666"));
 
             // 工作区文字
             TextView text = new TextView(this);
             text.setText(tabTitles[i]);
             text.setTextSize(10);
             text.setGravity(Gravity.CENTER);
-            String tabColor = (i < tabColors.length && tabColors[i] != null) ? tabColors[i] : DEFAULT_TAB_COLORS[i % DEFAULT_TAB_COLORS.length];
-            text.setTextColor(i == 0 ? Color.parseColor(tabColor) : Color.parseColor("#666666"));
+            text.setTextColor(i == 0 ? Color.parseColor("#1976D2") : Color.parseColor("#666666"));
             LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -662,6 +657,12 @@ public class MainActivity extends AppCompatActivity {
         });
 
         btnDropdown.setOnClickListener(v -> toggleDropdown());
+
+        // 长按标题栏显示浏览历史
+        tvTitle.setOnLongClickListener(v -> {
+            showHistoryDialog();
+            return true;
+        });
         btnMenu.setOnClickListener(v -> showPopupMenu());
 
         // 搜索取消按钮
@@ -1588,18 +1589,10 @@ public class MainActivity extends AppCompatActivity {
         currentTab = tabIndex;
         currentLinkIndex = linkIndex;
 
-        // 更新工作区样式（使用自定义颜色）
+        // 更新工作区样式
         for (int i = 0; i < tabTextViews.size(); i++) {
-            if (i == tabIndex) {
-                String c = (i < tabColors.length && tabColors[i] != null) ? tabColors[i] : DEFAULT_TAB_COLORS[i % DEFAULT_TAB_COLORS.length];
-                try {
-                    tabTextViews.get(i).setTextColor(Color.parseColor(c));
-                } catch (Exception e) {
-                    tabTextViews.get(i).setTextColor(Color.parseColor("#1976D2"));
-                }
-            } else {
-                tabTextViews.get(i).setTextColor(Color.parseColor("#666666"));
-            }
+            tabTextViews.get(i).setTextColor(i == tabIndex ? Color.parseColor("#1976D2") : Color.parseColor("#666666"));
+            tabIconViews.get(i).setTextColor(i == tabIndex ? Color.parseColor("#1976D2") : Color.parseColor("#666666"));
         }
 
         // 加载链接
@@ -1661,18 +1654,10 @@ public class MainActivity extends AppCompatActivity {
         // 隐藏回到主页按钮
         hideHomeButton();
 
-        // 切换工作区样式（使用自定义颜色）
+        // 切换工作区样式
         for (int i = 0; i < tabTextViews.size(); i++) {
-            if (i == index) {
-                String c = (i < tabColors.length && tabColors[i] != null) ? tabColors[i] : DEFAULT_TAB_COLORS[i % DEFAULT_TAB_COLORS.length];
-                try {
-                    tabTextViews.get(i).setTextColor(Color.parseColor(c));
-                } catch (Exception e) {
-                    tabTextViews.get(i).setTextColor(Color.parseColor("#1976D2"));
-                }
-            } else {
-                tabTextViews.get(i).setTextColor(Color.parseColor("#666666"));
-            }
+            tabTextViews.get(i).setTextColor(i == index ? Color.parseColor("#1976D2") : Color.parseColor("#666666"));
+            tabIconViews.get(i).setTextColor(i == index ? Color.parseColor("#1976D2") : Color.parseColor("#666666"));
         }
 
         // 创建 WebView（如果不存在）
@@ -1891,8 +1876,7 @@ public class MainActivity extends AppCompatActivity {
                     // 显示进度覆盖层（Feature 8）
                     if (progressOverlay != null) {
                         progressOverlay.setVisibility(View.VISIBLE);
-                        progressOverlay.getLayoutParams().width = 0;
-                        progressOverlay.requestLayout();
+                        progressOverlay.setScaleX(0f);
                     }
                 }
             }
@@ -1903,18 +1887,20 @@ public class MainActivity extends AppCompatActivity {
                 progressBar.setVisibility(View.GONE);
                 // 进度覆盖层动画完成（Feature 8）
                 if (progressOverlay != null && webView != null && view == webView) {
-                    // 动画：填满后淡出
-                    int toolbarWidth = findViewById(R.id.toolbar).getWidth();
-                    progressOverlay.getLayoutParams().width = toolbarWidth;
-                    progressOverlay.requestLayout();
                     progressOverlay.animate()
-                            .alpha(0f)
-                            .setDuration(300)
-                            .setStartDelay(100)
+                            .scaleX(1f)
+                            .setDuration(200)
                             .withEndAction(() -> {
-                                progressOverlay.setVisibility(View.GONE);
-                                progressOverlay.setAlpha(1f);
-                                progressOverlay.getLayoutParams().width = 0;
+                                progressOverlay.animate()
+                                        .alpha(0f)
+                                        .setDuration(300)
+                                        .setStartDelay(100)
+                                        .withEndAction(() -> {
+                                            progressOverlay.setVisibility(View.GONE);
+                                            progressOverlay.setAlpha(1f);
+                                            progressOverlay.setScaleX(0f);
+                                        })
+                                        .start();
                             })
                             .start();
                 }
@@ -1964,12 +1950,9 @@ public class MainActivity extends AppCompatActivity {
                     if (newProgress >= 100) {
                         progressBar.setVisibility(View.GONE);
                     }
-                    // 更新进度覆盖层宽度（Feature 8）
+                    // 更新进度覆盖层（Feature 8）
                     if (progressOverlay != null && progressOverlay.getVisibility() == View.VISIBLE) {
-                        int toolbarWidth = findViewById(R.id.toolbar).getWidth();
-                        int newWidth = (int) (toolbarWidth * (newProgress / 100f));
-                        progressOverlay.getLayoutParams().width = newWidth;
-                        progressOverlay.requestLayout();
+                        progressOverlay.setScaleX(newProgress / 100f);
                     }
                 }
             }
@@ -2571,16 +2554,14 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // 获取当前工作区配置的链接域名
+        // 获取当前工作区配置的链接 URL
         if (currentTab >= 0 && currentTab < tabLinks.size()) {
             List<LinkItem> links = tabLinks.get(currentTab);
             int idx = activeLinkIndex >= 0 ? activeLinkIndex : currentLinkIndex;
             if (idx >= 0 && idx < links.size()) {
                 String configUrl = links.get(idx).url;
-                String configDomain = getDomain(configUrl);
-                String currentDomain = getDomain(currentUrl);
-
-                if (!configDomain.isEmpty() && !currentDomain.isEmpty() && !configDomain.equals(currentDomain)) {
+                // 只要当前URL不是配置的URL，就显示回到主页按钮
+                if (configUrl != null && !configUrl.isEmpty() && !configUrl.equals(currentUrl)) {
                     showHomeButton();
                     return;
                 }
@@ -2611,38 +2592,6 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
 
-            // 长按检测：记录按下时间，延迟判断
-            if (event.getRepeatCount() == 0) {
-                backKeyDownTime = System.currentTimeMillis();
-                backLongPressHandled = false;
-                // 延迟 800ms 后触发长按
-                new android.os.Handler().postDelayed(() -> {
-                    if (!backLongPressHandled && backKeyDownTime > 0) {
-                        backLongPressHandled = true;
-                        handleBackKeyPress();
-                    }
-                }, LONG_PRESS_THRESHOLD);
-                return true;
-            }
-            return true;
-        }
-        return super.onKeyDown(keyCode, event);
-    }
-
-    @Override
-    public boolean onKeyUp(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_BACK && backKeyDownTime > 0) {
-            long duration = System.currentTimeMillis() - backKeyDownTime;
-            backKeyDownTime = 0;
-
-            if (backLongPressHandled) {
-                // 长按已处理，忽略抬起
-                return true;
-            }
-
-            // 短按：执行正常返回逻辑
-            backLongPressHandled = false;
-
             // 金山文档优化
             boolean kdocsOptimize = prefs.getBoolean("kdocs_optimize", true);
             WebView wv = getCurrentWebView();
@@ -2663,24 +2612,12 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "已到第一页", Toast.LENGTH_SHORT).show();
             return true;
         }
-        return super.onKeyUp(keyCode, event);
+        return super.onKeyDown(keyCode, event);
     }
 
-    // 长按返回键相关
-    private long backKeyDownTime = 0;
-    private boolean backLongPressHandled = false;
-    private static final long LONG_PRESS_THRESHOLD = 800; // 800ms 算长按
 
-    private void handleBackKeyPress() {
-        WebView wv = getCurrentWebView();
-        if (wv == null) return;
-        android.webkit.WebBackForwardList history = wv.copyBackForwardList();
-        if (history != null && history.getSize() > 0) {
-            showHistoryDialog();
-        } else {
-            Toast.makeText(this, "没有浏览历史", Toast.LENGTH_SHORT).show();
-        }
-    }
+
+
 
     /** 显示浏览历史对话框（Feature 2）*/
     private void showHistoryDialog() {
