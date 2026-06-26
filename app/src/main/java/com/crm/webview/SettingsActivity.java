@@ -74,18 +74,18 @@ public class SettingsActivity extends AppCompatActivity {
     // 应用名称和图标预设
     private static final String[] ALIAS_NAMES = {
         "com.crm.webview.AliasWebHub",
-        "com.crm.webview.AliasECM",
+        "com.crm.webview.AliasWebHub2",
         "com.crm.webview.AliasLanHub",
-        "com.crm.webview.AliasWebHubPng",
+        "com.crm.webview.AliasECM",
         "com.crm.webview.AliasGming",
         "com.crm.webview.AliasPili",
         "com.crm.webview.AliasPiliDouyin"
     };
     private static final String[] PRESET_LABELS = {
         "WebHub",
-        "ECM",
-        "LanHub",
         "WebHub",
+        "LanHub",
+        "ECM",
         "Gming",
         "Pili",
         "PILI"

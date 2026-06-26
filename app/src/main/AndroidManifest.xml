@@ -81,13 +81,13 @@
             </intent-filter>
         </activity-alias>
 
-        <!-- 1: ECM（企业CRM） -->
+        <!-- 1: WebHub2 -->
         <activity-alias
-            android:name=".AliasECM"
+            android:name=".AliasWebHub2"
             android:targetActivity=".MainActivity"
             android:exported="true"
-            android:label="ECM"
-            android:icon="@mipmap/ic_ecm"
+            android:label="WebHub"
+            android:icon="@mipmap/ic_webhub2"
             android:enabled="false">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -95,7 +95,7 @@
             </intent-filter>
         </activity-alias>
 
-        <!-- 2: LanHub（局域网控制集群） -->
+        <!-- 2: LanHub -->
         <activity-alias
             android:name=".AliasLanHub"
             android:targetActivity=".MainActivity"
@@ -109,13 +109,13 @@
             </intent-filter>
         </activity-alias>
 
-        <!-- 3: WebHub（自定义图标） -->
+        <!-- 3: ECM -->
         <activity-alias
-            android:name=".AliasWebHubPng"
+            android:name=".AliasECM"
             android:targetActivity=".MainActivity"
             android:exported="true"
-            android:label="WebHub"
-            android:icon="@mipmap/ic_webhub"
+            android:label="ECM"
+            android:icon="@mipmap/ic_ecm"
             android:enabled="false">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -151,7 +151,7 @@
             </intent-filter>
         </activity-alias>
 
-        <!-- 6: PILI（抖音版） -->
+        <!-- 6: PILI -->
         <activity-alias
             android:name=".AliasPiliDouyin"
             android:targetActivity=".MainActivity"
