@@ -82,13 +82,13 @@ public class SettingsActivity extends AppCompatActivity {
         "com.crm.webview.AliasPiliDouyin"
     };
     private static final String[] PRESET_LABELS = {
-        "WebHub（默认）",
-        "ECM（企业CRM）",
-        "LanHub（局域网控制）",
-        "WebHub（自定义图标）",
+        "WebHub",
+        "ECM",
+        "LanHub",
+        "WebHub",
         "Gming",
         "Pili",
-        "PILI（抖音版）"
+        "PILI"
     };
 
     private List<TabData> tabsData = new ArrayList<>();
