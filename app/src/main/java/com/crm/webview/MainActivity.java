@@ -1496,15 +1496,12 @@ public class MainActivity extends AppCompatActivity {
         webView.evaluateJavascript("(function(){var s=document.getElementById('wh-nm');if(s)s.remove();})()", null);
     }
 
-    /** 桌面模式注入 viewport meta，确保页面缩放到屏幕宽度 */
-    private void injectDesktopViewport(WebView webView) {
-        float density = getResources().getDisplayMetrics().density;
-        int screenWidth = (int) (getResources().getDisplayMetrics().widthPixels / density);
+    /** 桌面模式：移除页面自带的 viewport meta，让页面按自然桌面宽度渲染 */
+    private void removeViewportMeta(WebView webView) {
         webView.evaluateJavascript(
             "(function(){" +
-            "var meta=document.querySelector('meta[name=viewport]');" +
-            "if(!meta){meta=document.createElement('meta');meta.name='viewport';document.head.appendChild(meta);}" +
-            "meta.content='width=" + screenWidth + "';" +
+            "var metas=document.querySelectorAll('meta[name=viewport]');" +
+            "for(var i=0;i<metas.length;i++){metas[i].remove();}" +
             "})()", null);
     }
 
@@ -1955,10 +1952,10 @@ public class MainActivity extends AppCompatActivity {
                 if (isNightMode && isNightModeCSS) {
                     injectNightModeCSS(view);
                 }
-                // 桌面模式 viewport 注入
+                // 桌面模式：移除 viewport meta，让页面按自然宽度渲染后由 overview 缩放
                 if (view.getTag(R.id._webhub_desktop_mode) instanceof Boolean
                         && (Boolean) view.getTag(R.id._webhub_desktop_mode)) {
-                    injectDesktopViewport(view);
+                    removeViewportMeta(view);
                 }
             }
 
