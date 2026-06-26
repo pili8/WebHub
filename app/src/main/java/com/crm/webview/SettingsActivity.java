@@ -28,6 +28,14 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.crm.webview.config.ConfigManager;
+import com.crm.webview.model.AppConfig;
+import com.crm.webview.model.AppConfig.ActionData;
+import com.crm.webview.model.AppConfig.LinkData;
+import com.crm.webview.model.AppConfig.TabData;
+import com.crm.webview.util.AliasManager;
+import com.crm.webview.util.UIHelper;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -67,60 +75,11 @@ public class SettingsActivity extends AppCompatActivity {
         "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko"
     };
 
-    private static final String[] ACTION_TYPES = {"隐藏", "点击", "修改", "自定义脚本"};
-    private static final String[] DEFAULT_TAB_ICONS = {"📊", "📋", "➕", "📁", "👤", "📌", "⭐", "🔧"};
-    private static final String[] DEFAULT_TAB_TITLES = {"工作区1", "工作区2", "工作区3", "工作区4", "工作区5", "工作区6", "工作区7", "工作区8"};
-
-    // 应用名称和图标预设
-    private static final String[] ALIAS_NAMES = {
-        "com.crm.webview.AliasWebHub",
-        "com.crm.webview.AliasWebHub2",
-        "com.crm.webview.AliasLanHub",
-        "com.crm.webview.AliasECM",
-        "com.crm.webview.AliasGming",
-        "com.crm.webview.AliasPili",
-        "com.crm.webview.AliasPiliDouyin"
-    };
-    private static final String[] PRESET_LABELS = {
-        "WebHub 1",
-        "WebHub 2",
-        "LanHub",
-        "ECM",
-        "Gming",
-        "Pili",
-        "PILI"
-    };
+    // 常量已迁移至 AppConfig / AliasManager，通过静态引用访问
 
     private List<TabData> tabsData = new ArrayList<>();
 
-    static class TabData {
-        String icon;
-        String title;
-        List<LinkData> links = new ArrayList<>();
-        View sectionView;
-        LinearLayout linksContainer;
-        boolean isExpanded = false;
-    }
-
-    static class LinkData {
-        String title;
-        String url;
-        String scope = "link"; // link/domain/tab/all
-        boolean desktopMode = false;
-        List<ActionData> actions = new ArrayList<>();
-        View cardView;
-        LinearLayout actionsContainer;
-        Switch switchDesktopMode;
-    }
-
-    static class ActionData {
-        String type;
-        String selector;
-        String value;
-        String remark = "";
-        int delay = 0;
-        View actionView;
-    }
+    // 数据模型已迁移至 AppConfig（TabData, LinkData, ActionData）
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -170,7 +129,7 @@ public class SettingsActivity extends AppCompatActivity {
         Button btnSave = findViewById(R.id.btnSave);
         btnSave.setOnClickListener(v -> saveConfig());
 
-        loadConfig();
+        tabsData = ConfigManager.loadConfigAsTabs(prefs);
         buildUI();
     }
 
@@ -260,6 +219,7 @@ public class SettingsActivity extends AppCompatActivity {
         // 更新日志（发版时同步更新）
         tvAboutChangelog.setText(
                 "📋 最近更新:\n" +
+                "v2.9.0 - 架构重构、ECR预设名称图标\n" +
                 "v2.8.0 - 应用名称图标切换、桌面模式优化、Bug修复\n" +
                 "v2.7.6 - 设置页样式恢复、操作项折叠、桌面模式缩放优化\n" +
                 "v2.7.5 - 桌面模式开关、设置页重排、Bug修复\n" +
@@ -279,68 +239,33 @@ public class SettingsActivity extends AppCompatActivity {
         TextView tvPresetInfo = findViewById(R.id.tvPresetInfo);
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item, PRESET_LABELS);
+                android.R.layout.simple_spinner_item, AliasManager.PRESET_LABELS);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerPreset.setAdapter(adapter);
 
-        // 找到当前启用的别名
-        currentPresetIndex = -1;
-        PackageManager pm = getPackageManager();
-        for (int i = 0; i < ALIAS_NAMES.length; i++) {
-            try {
-                ComponentName cn = new ComponentName(getPackageName(), ALIAS_NAMES[i]);
-                int state = pm.getComponentEnabledSetting(cn);
-                if (state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                        || state == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT) {
-                    currentPresetIndex = i;
-                    break;
-                }
-            } catch (Exception e) {}
-        }
-        if (currentPresetIndex < 0) currentPresetIndex = 0;
+        currentPresetIndex = AliasManager.getCurrentPresetIndex(getPackageManager(), getPackageName());
         presetInitialized = false;
         spinnerPreset.setSelection(currentPresetIndex);
-        tvPresetInfo.setText(PRESET_LABELS[currentPresetIndex]);
+        tvPresetInfo.setText(AliasManager.PRESET_LABELS[currentPresetIndex]);
 
         spinnerPreset.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                // 跳过初始化时的自动触发
                 if (!presetInitialized) {
                     presetInitialized = true;
                     return;
                 }
-                if (position >= 0 && position < ALIAS_NAMES.length && position != currentPresetIndex) {
+                if (position >= 0 && position < AliasManager.ALIAS_NAMES.length && position != currentPresetIndex) {
                     currentPresetIndex = position;
-                    switchAppPreset(position);
+                    AliasManager.switchAppPreset(getPackageManager(), getPackageName(), position);
+                    TextView tvInfo = findViewById(R.id.tvPresetInfo);
+                    tvInfo.setText(AliasManager.PRESET_LABELS[position]);
+                    Toast.makeText(SettingsActivity.this, "已切换为「" + AliasManager.PRESET_LABELS[position] + "」，返回桌面查看", Toast.LENGTH_LONG).show();
                 }
             }
             @Override
             public void onNothingSelected(AdapterView<?> parent) {}
         });
-    }
-
-    private void switchAppPreset(int index) {
-        PackageManager pm = getPackageManager();
-
-        // 禁用所有别名
-        for (String name : ALIAS_NAMES) {
-            ComponentName cn = new ComponentName(getPackageName(), name);
-            pm.setComponentEnabledSetting(cn,
-                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                    PackageManager.DONT_KILL_APP);
-        }
-
-        // 启用选中的别名
-        ComponentName selected = new ComponentName(getPackageName(), ALIAS_NAMES[index]);
-        pm.setComponentEnabledSetting(selected,
-                PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-                PackageManager.DONT_KILL_APP);
-
-        TextView tvPresetInfo = findViewById(R.id.tvPresetInfo);
-        tvPresetInfo.setText(PRESET_LABELS[index]);
-
-        Toast.makeText(this, "已切换为「" + PRESET_LABELS[index] + "」，返回桌面查看", Toast.LENGTH_LONG).show();
     }
 
     private void exportSettings() {
@@ -363,14 +288,14 @@ public class SettingsActivity extends AppCompatActivity {
             json.put("page_actions_enabled", prefs.getBoolean("page_actions_enabled", true));
             json.put("auto_refresh_interval", prefs.getInt("auto_refresh_interval", 0));
             json.put("tab_count", prefs.getInt("tab_count", 3));
-            json.put("tabs_config", prefs.getString("tabs_config", buildTabsJsonFromPrefs().toString()));
+            json.put("tabs_config", prefs.getString("tabs_config", ConfigManager.buildTabsJsonFromPrefs(prefs).toString()));
 
             // 保留旧格式字段，方便旧版本导入。
             JSONArray tabsArray = new JSONArray();
             for (int i = 0; i < prefs.getInt("tab_count", 3); i++) {
                 JSONObject tab = new JSONObject();
-                tab.put("icon", prefs.getString("icon" + (i + 1), DEFAULT_TAB_ICONS[i]));
-                tab.put("title", prefs.getString("title" + (i + 1), DEFAULT_TAB_TITLES[i]));
+                tab.put("icon", prefs.getString("icon" + (i + 1), AppConfig.DEFAULT_TAB_ICONS[i]));
+                tab.put("title", prefs.getString("title" + (i + 1), AppConfig.DEFAULT_TAB_TITLES[i]));
                 tab.put("links", prefs.getString("links" + (i + 1), ""));
                 tabsArray.put(tab);
             }
@@ -465,7 +390,7 @@ public class SettingsActivity extends AppCompatActivity {
             }
 
             editor.apply();
-            loadConfig();
+            tabsData = ConfigManager.loadConfigAsTabs(prefs);
             buildUI();
             switchKdocsOptimize.setChecked(prefs.getBoolean("kdocs_optimize", true));
             switchNightModeCSS.setChecked(prefs.getBoolean("night_mode_css", false));
@@ -539,151 +464,7 @@ public class SettingsActivity extends AppCompatActivity {
         return dir != null && dir.delete();
     }
 
-    private void loadConfig() {
-        tabsData.clear();
 
-        int tabCount = prefs.getInt("tab_count", 3);
-        if (tabCount < 2) tabCount = 2;
-        if (tabCount > 8) tabCount = 8;
-
-        String tabsJson = prefs.getString("tabs_config", "");
-        if (!tabsJson.isEmpty() && loadConfigFromJson(tabsJson, tabCount)) {
-            return;
-        }
-
-        for (int i = 0; i < tabCount; i++) {
-            TabData tab = new TabData();
-            tab.icon = prefs.getString("icon" + (i + 1), DEFAULT_TAB_ICONS[i]);
-            tab.title = prefs.getString("title" + (i + 1), DEFAULT_TAB_TITLES[i]);
-
-            String linksStr = prefs.getString("links" + (i + 1), "");
-            if (linksStr.isEmpty()) {
-                LinkData link = new LinkData();
-                link.title = DEFAULT_TAB_TITLES[i];
-                link.url = "about:blank";
-                tab.links.add(link);
-            } else {
-                String[] lines = linksStr.split("\n");
-                for (String line : lines) {
-                    line = line.trim();
-                    if (line.isEmpty()) continue;
-
-                    LinkData link = new LinkData();
-                    String[] parts = line.split("\\|", 2);
-                    String titleUrl = parts[0];
-                    String actionsStr = parts.length > 1 ? parts[1] : "";
-
-                    String[] titleUrlParts = titleUrl.split(",", 4);
-                    if (titleUrlParts.length >= 2) {
-                        link.title = titleUrlParts[0].trim();
-                        link.url = titleUrlParts[1].trim();
-                        link.scope = titleUrlParts.length > 2 ? titleUrlParts[2].trim() : "link";
-                        // 第4个字段为桌面模式标记
-                        if (titleUrlParts.length > 3 && "1".equals(titleUrlParts[3].trim())) {
-                            link.desktopMode = true;
-                        }
-                    }
-
-                    if (!actionsStr.isEmpty()) {
-                        // 用分号分隔多个操作
-                        String[] actionGroups = actionsStr.split(";");
-                        for (String group : actionGroups) {
-                            group = group.trim();
-                            if (group.isEmpty()) continue;
-
-                            String[] actionParts = group.split("\\|");
-                            if (actionParts.length < 2) continue;
-
-                            ActionData action = new ActionData();
-                            action.type = actionParts[0];
-                            action.selector = actionParts[1];
-                            action.value = "";
-                            action.remark = "";
-                            action.delay = 0;
-
-                            // 解析剩余部分
-                            for (int k = 2; k < actionParts.length; k++) {
-                                String part = actionParts[k];
-                                if (part.startsWith("@")) {
-                                    // 备注（反转义特殊字符）
-                                    action.remark = part.substring(1)
-                                        .replace("｜", "|")
-                                        .replace("；", ";");
-                                } else if ("click".equals(action.type)) {
-                                    // 延迟
-                                    try { action.delay = Integer.parseInt(part); } catch (Exception e) {}
-                                } else if ("modify".equals(action.type)) {
-                                    // 新值
-                                    action.value = part;
-                                }
-                            }
-
-                            link.actions.add(action);
-                        }
-                    }
-
-                    tab.links.add(link);
-                }
-            }
-
-            tabsData.add(tab);
-        }
-    }
-
-    private boolean loadConfigFromJson(String tabsJson, int tabCount) {
-        try {
-            JSONArray tabsArray = new JSONArray(tabsJson);
-            int count = Math.max(2, Math.min(8, Math.min(tabCount, tabsArray.length())));
-            for (int i = 0; i < count; i++) {
-                JSONObject tabJson = tabsArray.getJSONObject(i);
-                TabData tab = new TabData();
-                tab.icon = tabJson.optString("icon", DEFAULT_TAB_ICONS[i]);
-                tab.title = tabJson.optString("title", DEFAULT_TAB_TITLES[i]);
-
-                JSONArray linksArray = tabJson.optJSONArray("links");
-                if (linksArray != null) {
-                    for (int j = 0; j < linksArray.length(); j++) {
-                        JSONObject linkJson = linksArray.getJSONObject(j);
-                        LinkData link = new LinkData();
-                        link.title = linkJson.optString("title", "");
-                        link.url = linkJson.optString("url", "");
-                        link.scope = linkJson.optString("scope", "link");
-                        link.desktopMode = linkJson.optBoolean("desktopMode", false);
-                        if (link.title.isEmpty() || link.url.isEmpty()) continue;
-
-                        JSONArray actionsArray = linkJson.optJSONArray("actions");
-                        if (actionsArray != null) {
-                            for (int k = 0; k < actionsArray.length(); k++) {
-                                JSONObject actionJson = actionsArray.getJSONObject(k);
-                                ActionData action = new ActionData();
-                                action.type = actionJson.optString("type", "hide");
-                                action.selector = actionJson.optString("selector", "");
-                                action.value = actionJson.optString("value", "");
-                                action.remark = actionJson.optString("remark", "");
-                                action.delay = actionJson.optInt("delay", 0);
-                                if (!action.selector.isEmpty()) {
-                                    link.actions.add(action);
-                                }
-                            }
-                        }
-                        tab.links.add(link);
-                    }
-                }
-
-                if (tab.links.isEmpty()) {
-                    LinkData link = new LinkData();
-                    link.title = tab.title;
-                    link.url = "about:blank";
-                    tab.links.add(link);
-                }
-                tabsData.add(tab);
-            }
-            return !tabsData.isEmpty();
-        } catch (Exception e) {
-            tabsData.clear();
-            return false;
-        }
-    }
 
     private boolean isEditMode = false;
 
@@ -861,7 +642,7 @@ public class SettingsActivity extends AppCompatActivity {
             btnAddTab.setTextSize(14);
             btnAddTab.setTextColor(Color.parseColor("#1976D2"));
             btnAddTab.setGravity(Gravity.CENTER);
-            btnAddTab.setPadding(0, dpToPx(16), 0, dpToPx(16));
+            btnAddTab.setPadding(0, UIHelper.dpToPx(this, 16), 0, UIHelper.dpToPx(this, 16));
             btnAddTab.setBackgroundResource(R.drawable.btn_add_link);
             btnAddTab.setOnClickListener(v -> {
                 TabData newTab = new TabData();
@@ -1137,7 +918,7 @@ public class SettingsActivity extends AppCompatActivity {
         TextView btnDelete = row.findViewById(R.id.btnDelete);
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item, ACTION_TYPES);
+                android.R.layout.simple_spinner_item, AppConfig.ACTION_TYPES);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerAction.setAdapter(adapter);
 
@@ -1187,7 +968,7 @@ public class SettingsActivity extends AppCompatActivity {
 
     private void saveConfig() {
         SharedPreferences.Editor editor = prefs.edit();
-        JSONArray tabsJson = buildTabsJsonFromUi();
+        JSONArray tabsJson = ConfigManager.buildTabsJson(tabsData);
 
         for (int i = 0; i < tabsData.size(); i++) {
             TabData tab = tabsData.get(i);
@@ -1196,8 +977,8 @@ public class SettingsActivity extends AppCompatActivity {
             String icon = tab.icon;
             String title = tab.title;
 
-            if (icon.isEmpty()) icon = DEFAULT_TAB_ICONS[i];
-            if (title.isEmpty()) title = DEFAULT_TAB_TITLES[i];
+            if (icon.isEmpty()) icon = AppConfig.DEFAULT_TAB_ICONS[i];
+            if (title.isEmpty()) title = AppConfig.DEFAULT_TAB_TITLES[i];
 
             editor.putString("icon" + (i + 1), icon);
             editor.putString("title" + (i + 1), title);
@@ -1296,74 +1077,7 @@ public class SettingsActivity extends AppCompatActivity {
 
     private JSONArray buildTabsJsonFromUi() {
         syncUiToData();
-        return buildTabsJson(tabsData);
-    }
-
-    private JSONArray buildTabsJsonFromPrefs() {
-        List<TabData> data = new ArrayList<>();
-        int tabCount = prefs.getInt("tab_count", 3);
-        if (tabCount < 2) tabCount = 2;
-        if (tabCount > 8) tabCount = 8;
-
-        for (int i = 0; i < tabCount; i++) {
-            TabData tab = new TabData();
-            tab.icon = prefs.getString("icon" + (i + 1), DEFAULT_TAB_ICONS[i]);
-            tab.title = prefs.getString("title" + (i + 1), DEFAULT_TAB_TITLES[i]);
-
-            String linksStr = prefs.getString("links" + (i + 1), "");
-            if (!linksStr.isEmpty()) {
-                parseLegacyLinks(tab, linksStr);
-            }
-            if (tab.links.isEmpty()) {
-                LinkData link = new LinkData();
-                link.title = tab.title;
-                link.url = "about:blank";
-                tab.links.add(link);
-            }
-            data.add(tab);
-        }
-        return buildTabsJson(data);
-    }
-
-    private JSONArray buildTabsJson(List<TabData> data) {
-        JSONArray tabsArray = new JSONArray();
-        try {
-            for (TabData tab : data) {
-                JSONObject tabJson = new JSONObject();
-                tabJson.put("icon", tab.icon);
-                tabJson.put("title", tab.title);
-
-
-                JSONArray linksArray = new JSONArray();
-                for (LinkData link : tab.links) {
-                    if (link.title == null || link.title.isEmpty() || link.url == null || link.url.isEmpty()) continue;
-
-                    JSONObject linkJson = new JSONObject();
-                    linkJson.put("title", link.title);
-                    linkJson.put("url", link.url);
-                    linkJson.put("scope", link.scope == null || link.scope.isEmpty() ? "link" : link.scope);
-                    linkJson.put("desktopMode", link.desktopMode);
-
-                    JSONArray actionsArray = new JSONArray();
-                    for (ActionData action : link.actions) {
-                        if (action.selector == null || action.selector.isEmpty()) continue;
-
-                        JSONObject actionJson = new JSONObject();
-                        actionJson.put("type", action.type == null || action.type.isEmpty() ? "hide" : action.type);
-                        actionJson.put("selector", action.selector);
-                        actionJson.put("value", action.value == null ? "" : action.value);
-                        actionJson.put("remark", action.remark == null ? "" : action.remark);
-                        actionJson.put("delay", Math.max(0, action.delay));
-                        actionsArray.put(actionJson);
-                    }
-                    linkJson.put("actions", actionsArray);
-                    linksArray.put(linkJson);
-                }
-                tabJson.put("links", linksArray);
-                tabsArray.put(tabJson);
-            }
-        } catch (Exception e) {}
-        return tabsArray;
+        return ConfigManager.buildTabsJson(tabsData);
     }
 
     private void syncUiToData() {
@@ -1412,71 +1126,5 @@ public class SettingsActivity extends AppCompatActivity {
                 }
             }
         }
-    }
-
-    private void parseLegacyLinks(TabData tab, String linksStr) {
-        String[] lines = linksStr.split("\n");
-        for (String line : lines) {
-            line = line.trim();
-            if (line.isEmpty()) continue;
-
-            LinkData link = new LinkData();
-            String[] parts = line.split("\\|", 2);
-            String titleUrl = parts[0];
-            String actionsStr = parts.length > 1 ? parts[1] : "";
-
-            String[] titleUrlParts = titleUrl.split(",", 4);
-            if (titleUrlParts.length >= 2) {
-                link.title = titleUrlParts[0].trim();
-                link.url = titleUrlParts[1].trim();
-                link.scope = titleUrlParts.length > 2 ? titleUrlParts[2].trim() : "link";
-                // 第4个字段为桌面模式标记
-                if (titleUrlParts.length > 3 && "1".equals(titleUrlParts[3].trim())) {
-                    link.desktopMode = true;
-                }
-            }
-            parseLegacyActions(link, actionsStr);
-            if (link.title != null && !link.title.isEmpty() && link.url != null && !link.url.isEmpty()) {
-                tab.links.add(link);
-            }
-        }
-    }
-
-    private void parseLegacyActions(LinkData link, String actionsStr) {
-        if (actionsStr == null || actionsStr.isEmpty()) return;
-
-        String[] actionGroups = actionsStr.split(";");
-        for (String group : actionGroups) {
-            group = group.trim();
-            if (group.isEmpty()) continue;
-
-            String[] actionParts = group.split("\\|");
-            if (actionParts.length < 2) continue;
-
-            ActionData action = new ActionData();
-            action.type = actionParts[0];
-            action.selector = actionParts[1];
-            action.value = "";
-            action.remark = "";
-            action.delay = 0;
-
-            for (int k = 2; k < actionParts.length; k++) {
-                String part = actionParts[k];
-                if (part.startsWith("@")) {
-                    action.remark = part.substring(1)
-                            .replace("｜", "|")
-                            .replace("；", ";");
-                } else if ("click".equals(action.type)) {
-                    try { action.delay = Integer.parseInt(part); } catch (Exception e) {}
-                } else if ("modify".equals(action.type)) {
-                    action.value = part;
-                }
-            }
-            link.actions.add(action);
-        }
-    }
-
-    private int dpToPx(int dp) {
-        return (int) (dp * getResources().getDisplayMetrics().density);
     }
 }

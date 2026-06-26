@@ -145,6 +145,28 @@
 
 ---
 
+## V2.9.0 (2026-06-26)
+
+**架构重构 + ECR 预设**
+
+### 重构
+
+- ✅ 代码架构重构：拆分为 6 个模块（model/config/engine/webview/util）
+- ✅ MainActivity 从 2888 行精简至 2040 行（-29%）
+- ✅ SettingsActivity 从 1482 行精简至 1129 行（-24%）
+- ✅ 统一数据模型：消除 MainActivity/SettingsActivity 重复定义
+- ✅ ConfigManager 集中配置管理，消除旧格式兼容代码分散
+- ✅ PageActionEngine 页面操作引擎独立
+- ✅ WebViewFactory WebView 创建和配置集中管理
+- ✅ AliasManager 启动图标管理独立
+- ✅ UIHelper 工具方法独立
+
+### 变更
+
+- ✅ 预设名称 ECM → ECR，图标更新
+
+---
+
 ## V2.8.0 (2026-06-26)
 
 **应用名称和图标切换 + 桌面模式优化 + Bug修复**

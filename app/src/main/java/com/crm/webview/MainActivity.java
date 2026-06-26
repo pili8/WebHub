@@ -6,6 +6,7 @@ import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -59,21 +60,20 @@ import android.view.ViewGroup;
 import android.animation.ObjectAnimator;
 import android.animation.AnimatorListenerAdapter;
 
-public class MainActivity extends AppCompatActivity {
+import com.crm.webview.config.ConfigManager;
+import com.crm.webview.engine.PageActionEngine;
+import com.crm.webview.model.AppConfig;
+import com.crm.webview.model.AppConfig.ActionItem;
+import com.crm.webview.model.AppConfig.LinkItem;
+import com.crm.webview.model.AppConfig.SearchResult;
+import com.crm.webview.util.AliasManager;
+import com.crm.webview.util.UIHelper;
+import com.crm.webview.webview.WebViewFactory;
+
+public class MainActivity extends AppCompatActivity implements WebViewFactory.WebViewCallbacks {
 
     private static final int PERMISSION_REQUEST_CODE = 100;
     private static final int REQUEST_SETTINGS = 200;
-    private static final int MAX_TABS = 8;
-
-    // 工作区自定义颜色（默认预设）
-    private static final String[] DEFAULT_TAB_COLORS = {
-        "#1976D2", "#4CAF50", "#FF9800", "#9C27B0", "#F44336", "#00BCD4", "#E91E63", "#607D8B"
-    };
-    // 预设颜色列表（供选择）
-    private static final String[] PRESET_COLORS = {
-        "#1976D2", "#4CAF50", "#FF9800", "#9C27B0", "#F44336", "#00BCD4",
-        "#E91E63", "#607D8B", "#795548", "#FF5722"
-    };
 
     // WebView 容器和工作区容器
     private FrameLayout webViewContainer;
@@ -81,8 +81,8 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout bottomMenuContainer;
 
     // 多 WebView（每个工作区独立）
-    private WebView[] webViews = new WebView[MAX_TABS];
-    private boolean[] tabLoaded = new boolean[MAX_TABS]; // 是否已加载过
+    private WebView[] webViews = new WebView[AppConfig.MAX_TABS];
+    private boolean[] tabLoaded = new boolean[AppConfig.MAX_TABS]; // 是否已加载过
     private List<LinearLayout> tabViews = new ArrayList<>();
     private List<TextView> tabIconViews = new ArrayList<>();
     private List<TextView> tabTextViews = new ArrayList<>();
@@ -109,7 +109,7 @@ public class MainActivity extends AppCompatActivity {
     private Runnable autoRefreshRunnable;
     private boolean autoRefreshRunning = false; // 防止重复调度
     private int autoRefreshInterval = 0; // 当前工作区的刷新间隔（兼容旧逻辑）
-    private int[] tabAutoRefresh = new int[MAX_TABS]; // 每个工作区独立的刷新间隔
+    private int[] tabAutoRefresh = new int[AppConfig.MAX_TABS]; // 每个工作区独立的刷新间隔
     private View autoRefreshDot;
 
     // 搜索相关
@@ -120,10 +120,10 @@ public class MainActivity extends AppCompatActivity {
 
     // 配置数据
     private int tabCount = 3;
-    private String[] tabIcons = new String[MAX_TABS];
-    private String[] tabTitles = new String[MAX_TABS];
-    private String[] tabActions = new String[MAX_TABS];
-    private String[] tabColors = new String[MAX_TABS]; // 工作区自定义颜色
+    private String[] tabIcons = new String[AppConfig.MAX_TABS];
+    private String[] tabTitles = new String[AppConfig.MAX_TABS];
+    private String[] tabActions = new String[AppConfig.MAX_TABS];
+    private String[] tabColors = new String[AppConfig.MAX_TABS]; // 工作区自定义颜色
     private List<List<LinkItem>> tabLinks = new ArrayList<>();
 
     // 设置变更标志（Feature 7）
@@ -136,79 +136,6 @@ public class MainActivity extends AppCompatActivity {
     private SharedPreferences prefs;
     private ValueCallback<Uri[]> filePathCallback;
 
-    static class LinkItem {
-        String title;
-        String url;
-        String actions;
-        String scope; // link/domain/tab/all
-        boolean desktopMode = false;
-        List<ActionItem> actionItems = new ArrayList<>();
-
-        LinkItem(String title, String url) {
-            this.title = title;
-            this.url = url;
-            this.actions = "";
-            this.scope = "link";
-        }
-
-        LinkItem(String title, String url, String actions) {
-            this.title = title;
-            this.url = url;
-            this.actions = actions;
-            this.scope = "link";
-            this.actionItems = parseLegacyActions(actions);
-        }
-
-        LinkItem(String title, String url, String actions, String scope) {
-            this.title = title;
-            this.url = url;
-            this.actions = actions;
-            this.scope = scope;
-            this.actionItems = parseLegacyActions(actions);
-        }
-
-        LinkItem(String title, String url, String scope, List<ActionItem> actionItems) {
-            this.title = title;
-            this.url = url;
-            this.scope = scope;
-            this.actionItems = actionItems != null ? actionItems : new ArrayList<>();
-            this.actions = "";
-        }
-
-        LinkItem(String title, String url, String scope, List<ActionItem> actionItems, boolean desktopMode) {
-            this.title = title;
-            this.url = url;
-            this.scope = scope;
-            this.actionItems = actionItems != null ? actionItems : new ArrayList<>();
-            this.actions = "";
-            this.desktopMode = desktopMode;
-        }
-    }
-
-    static class ActionItem {
-        String type;
-        String selector;
-        String value;
-        int delay;
-        String remark; // 备注
-
-        ActionItem(String type, String selector, String value, int delay) {
-            this.type = type;
-            this.selector = selector;
-            this.value = value;
-            this.delay = delay;
-            this.remark = "";
-        }
-
-        ActionItem(String type, String selector, String value, int delay, String remark) {
-            this.type = type;
-            this.selector = selector;
-            this.value = value;
-            this.delay = delay;
-            this.remark = remark != null ? remark : "";
-        }
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -216,7 +143,7 @@ public class MainActivity extends AppCompatActivity {
 
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         // 确保启动图标存在（覆盖安装后 PackageManager 状态可能不一致）
-        ensureLauncherAlias();
+        AliasManager.ensureLauncherAlias(getPackageManager(), getPackageName());
 
         prefs = getSharedPreferences("app_config", MODE_PRIVATE);
 
@@ -224,7 +151,6 @@ public class MainActivity extends AppCompatActivity {
         loadConfig();
         createTabsAndWebViews();
         setupListeners();
-        setupAllWebViews();
         requestPermissions();
         switchTab(0);
 
@@ -273,8 +199,8 @@ public class MainActivity extends AppCompatActivity {
                 // 工作区数量没变，只刷新当前页面操作
                 wv = getCurrentWebView();
                 if (wv != null) {
-                    stopMutationObserver(wv);
-                    executeCustomScript(wv);
+                    PageActionEngine.stopMutationObserver(wv);
+                    PageActionEngine.executeCustomScript(wv, prefs.getBoolean("page_actions_enabled", true), tabLinks, currentTab, currentLinkIndex, activeLinkIndex, getCurrentLink());
                 }
             }
         } else {
@@ -285,8 +211,8 @@ public class MainActivity extends AppCompatActivity {
             // 重新执行页面操作（APP从后台返回时WebView可能重新加载）
             wv = getCurrentWebView();
             if (wv != null) {
-                stopMutationObserver(wv);
-                executeCustomScript(wv);
+                PageActionEngine.stopMutationObserver(wv);
+                PageActionEngine.executeCustomScript(wv, prefs.getBoolean("page_actions_enabled", true), tabLinks, currentTab, currentLinkIndex, activeLinkIndex, getCurrentLink());
             }
         }
     }
@@ -316,7 +242,9 @@ public class MainActivity extends AppCompatActivity {
 
         // 定时刷新（按工作区配置）
         autoRefreshDot = findViewById(R.id.autoRefreshDot);
-        loadTabAutoRefresh();
+        tabAutoRefresh = ConfigManager.loadTabAutoRefreshWithMigration(prefs, currentTab);
+        autoRefreshInterval = tabAutoRefresh[currentTab];
+        updateAutoRefreshIndicator();
 
         // 进度条覆盖层（Feature 8）
         initProgressOverlay();
@@ -336,189 +264,33 @@ public class MainActivity extends AppCompatActivity {
             ViewGroup parent = (ViewGroup) toolbar.getParent();
             int toolbarIndex = parent.indexOfChild(toolbar);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, dpToPx(3));
+                    LinearLayout.LayoutParams.MATCH_PARENT, UIHelper.dpToPx(this, 3));
             progressOverlay.setLayoutParams(lp);
             parent.addView(progressOverlay, toolbarIndex + 1);
         }
     }
 
-    /** 加载每个工作区的刷新间隔配置（Feature 5）*/
-    private void loadTabAutoRefresh() {
-        for (int i = 0; i < MAX_TABS; i++) {
-            tabAutoRefresh[i] = prefs.getInt("auto_refresh_tab_" + i, 0);
-        }
-        // 兼容旧的全局配置
-        int oldGlobal = prefs.getInt("auto_refresh_interval", 0);
-        if (oldGlobal > 0) {
-            // 迁移旧配置到第一个工作区
-            boolean anySet = false;
-            for (int i = 0; i < MAX_TABS; i++) {
-                if (tabAutoRefresh[i] > 0) { anySet = true; break; }
-            }
-            if (!anySet) {
-                tabAutoRefresh[0] = oldGlobal;
-                prefs.edit().putInt("auto_refresh_tab_0", oldGlobal).remove("auto_refresh_interval").apply();
-            }
-        }
-        autoRefreshInterval = tabAutoRefresh[currentTab];
-        updateAutoRefreshIndicator();
-    }
-
-    /** 保存指定工作区的刷新间隔 */
-    private void saveTabAutoRefresh(int tabIndex, int interval) {
-        tabAutoRefresh[tabIndex] = interval;
-        prefs.edit().putInt("auto_refresh_tab_" + tabIndex, interval).apply();
-    }
 
     private void loadConfig() {
-        tabCount = prefs.getInt("tab_count", 3);
-        if (tabCount < 2) tabCount = 2;
-        if (tabCount > MAX_TABS) tabCount = MAX_TABS;
-
-        String[] defaultIcons = {"📊", "📋", "➕", "📁", "👤", "📌", "⭐", "🔧"};
-        String[] defaultTitles = {"工作区1", "工作区2", "工作区3", "工作区4", "工作区5", "工作区6", "工作区7", "工作区8"};
-        String[] defaultUrls = {
-                "about:blank",
-                "about:blank",
-                "about:blank",
-                "about:blank",
-                "about:blank",
-                "about:blank",
-                "about:blank",
-                "about:blank"
-        };
-
-        // 初始化默认颜色
-        for (int i = 0; i < MAX_TABS; i++) {
-            tabColors[i] = DEFAULT_TAB_COLORS[i % DEFAULT_TAB_COLORS.length];
-        }
-
-        String tabsJson = prefs.getString("tabs_config", "");
+        ConfigManager.ConfigData data = ConfigManager.loadConfig(prefs);
+        tabCount = data.tabCount;
+        tabIcons = data.tabIcons;
+        tabTitles = data.tabTitles;
+        tabActions = data.tabActions;
+        tabColors = data.tabColors;
+        tabLinks = data.tabLinks;
 
         // 记录配置快照，用于 onResume 检测变化
-        lastTabsConfig = tabCount + "|" + tabsJson;
-
-        if (!tabsJson.isEmpty() && loadConfigFromJson(tabsJson, defaultIcons, defaultTitles, defaultUrls)) {
-            return;
-        }
-
-        for (int i = 0; i < tabCount; i++) {
-            tabIcons[i] = prefs.getString("icon" + (i + 1), defaultIcons[i]);
-            tabTitles[i] = prefs.getString("title" + (i + 1), defaultTitles[i]);
-            tabActions[i] = prefs.getString("actions" + (i + 1), "");
-
-            // 加载链接
-            List<LinkItem> links = new ArrayList<>();
-            String linksStr = prefs.getString("links" + (i + 1), "");
-
-            if (linksStr.isEmpty()) {
-                links.add(new LinkItem(tabTitles[i], defaultUrls[i]));
-            } else {
-                String[] lines = linksStr.split("\n");
-                for (String line : lines) {
-                    line = line.trim();
-                    if (line.isEmpty()) continue;
-
-                    String[] parts = line.split("\\|", 2);
-                    String titleUrl = parts[0];
-                    String actions = parts.length > 1 ? parts[1] : "";
-
-                    String[] titleUrlParts = titleUrl.split(",", 4);
-                    if (titleUrlParts.length >= 2) {
-                        String scope = titleUrlParts.length > 2 ? titleUrlParts[2].trim() : "link";
-                        boolean desktopMode = titleUrlParts.length > 3 && "1".equals(titleUrlParts[3].trim());
-                        links.add(new LinkItem(titleUrlParts[0].trim(), titleUrlParts[1].trim(),
-                                scope, parseLegacyActions(actions), desktopMode));
-                    }
-                }
-            }
-
-            if (links.isEmpty()) {
-                links.add(new LinkItem(tabTitles[i], "about:blank"));
-            }
-
-            if (tabLinks.size() > i) {
-                tabLinks.set(i, links);
-            } else {
-                tabLinks.add(links);
-            }
-        }
-
-        while (tabLinks.size() > tabCount) {
-            tabLinks.remove(tabLinks.size() - 1);
-        }
+        lastTabsConfig = ConfigManager.getTabsConfigSnapshot(prefs);
     }
 
-    private boolean loadConfigFromJson(String tabsJson, String[] defaultIcons, String[] defaultTitles, String[] defaultUrls) {
-        try {
-            JSONArray tabsArray = new JSONArray(tabsJson);
-            tabCount = Math.max(2, Math.min(MAX_TABS, tabsArray.length()));
-
-            for (int i = 0; i < tabCount; i++) {
-                JSONObject tab = tabsArray.getJSONObject(i);
-                tabIcons[i] = tab.optString("icon", defaultIcons[i]);
-                tabTitles[i] = tab.optString("title", defaultTitles[i]);
-                tabColors[i] = tab.optString("color", DEFAULT_TAB_COLORS[i % DEFAULT_TAB_COLORS.length]);
-                tabActions[i] = "";
-
-                List<LinkItem> links = new ArrayList<>();
-                JSONArray linksArray = tab.optJSONArray("links");
-                if (linksArray != null) {
-                    for (int j = 0; j < linksArray.length(); j++) {
-                        JSONObject linkJson = linksArray.getJSONObject(j);
-                        String title = linkJson.optString("title", "");
-                        String url = linkJson.optString("url", "");
-                        if (title.isEmpty() || url.isEmpty()) continue;
-
-                        List<ActionItem> actions = new ArrayList<>();
-                        JSONArray actionsArray = linkJson.optJSONArray("actions");
-                        if (actionsArray != null) {
-                            for (int k = 0; k < actionsArray.length(); k++) {
-                                JSONObject actionJson = actionsArray.getJSONObject(k);
-                                String selector = actionJson.optString("selector", "");
-                                if (selector.isEmpty()) continue;
-                                actions.add(new ActionItem(
-                                        actionJson.optString("type", "hide"),
-                                        selector,
-                                        actionJson.optString("value", ""),
-                                        actionJson.optInt("delay", 0),
-                                        actionJson.optString("remark", "")
-                                ));
-                            }
-                        }
-
-                        links.add(new LinkItem(title, url,
-                                linkJson.optString("scope", "link"), actions,
-                                linkJson.optBoolean("desktopMode", false)));
-                    }
-                }
-
-                if (links.isEmpty()) {
-                    links.add(new LinkItem(tabTitles[i], defaultUrls[i]));
-                }
-
-                if (tabLinks.size() > i) {
-                    tabLinks.set(i, links);
-                } else {
-                    tabLinks.add(links);
-                }
-            }
-
-            while (tabLinks.size() > tabCount) {
-                tabLinks.remove(tabLinks.size() - 1);
-            }
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
 
     @SuppressLint("SetJavaScriptEnabled")
     private void createTabsAndWebViews() {
         // 先销毁旧的 WebView（防止内存泄漏）
         for (int i = 0; i < MAX_TABS; i++) {
             if (webViews[i] != null) {
-                stopMutationObserver(webViews[i]);
+                PageActionEngine.stopMutationObserver(webViews[i]);
                 webViews[i].stopLoading();
                 webViewContainer.removeView(webViews[i]);
                 webViews[i].destroy();
@@ -568,7 +340,7 @@ public class MainActivity extends AppCompatActivity {
             LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT);
-            textParams.topMargin = dpToPx(2);
+            textParams.topMargin = UIHelper.dpToPx(this, 2);
             text.setLayoutParams(textParams);
 
             tab.addView(icon);
@@ -595,7 +367,7 @@ public class MainActivity extends AppCompatActivity {
     private void createWebView(int index) {
         if (webViews[index] != null) return; // 已创建
 
-        WebView webView = new WebView(this);
+        WebView webView = WebViewFactory.createWebView(this);
         FrameLayout.LayoutParams wvParams = new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT);
@@ -605,7 +377,7 @@ public class MainActivity extends AppCompatActivity {
         webViews[index] = webView;
 
         // 设置 WebView
-        setupWebView(webView);
+        WebViewFactory.setupWebView(webView, prefs, this, progressBar, progressOverlay);
     }
 
     private WebView getCurrentWebView() {
@@ -663,8 +435,8 @@ public class MainActivity extends AppCompatActivity {
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        int padH = dpToPx(8);
-        int padV = dpToPx(6);
+        int padH = UIHelper.dpToPx(this, 8);
+        int padV = UIHelper.dpToPx(this, 6);
         root.setPadding(padH, padV, padH, padV);
         root.setBackgroundColor(dark ? Color.parseColor("#2A2A2A") : Color.WHITE);
 
@@ -684,7 +456,7 @@ public class MainActivity extends AppCompatActivity {
             LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setPadding(dpToPx(14), dpToPx(12), dpToPx(14), dpToPx(12));
+            row.setPadding(UIHelper.dpToPx(this, 14), UIHelper.dpToPx(this, 12), UIHelper.dpToPx(this, 14), UIHelper.dpToPx(this, 12));
             row.setTag(i); // 标记菜单项索引
 
             android.util.TypedValue outValue = new android.util.TypedValue();
@@ -694,7 +466,7 @@ public class MainActivity extends AppCompatActivity {
             TextView icon = new TextView(this);
             icon.setText(items[i][0]);
             icon.setTextSize(18);
-            icon.setPadding(0, 0, dpToPx(12), 0);
+            icon.setPadding(0, 0, UIHelper.dpToPx(this, 12), 0);
 
             TextView label = new TextView(this);
             label.setText(items[i][1]);
@@ -721,15 +493,15 @@ public class MainActivity extends AppCompatActivity {
                 divider.setBackgroundColor(dark ? Color.parseColor("#3A3A3A") : Color.parseColor("#F0F0F0"));
                 LinearLayout.LayoutParams divLp = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT, 1);
-                divLp.leftMargin = dpToPx(46);
+                divLp.leftMargin = UIHelper.dpToPx(this, 46);
                 divider.setLayoutParams(divLp);
                 root.addView(divider);
             }
         }
 
         PopupWindow popup = new PopupWindow(root,
-                dpToPx(200), LinearLayout.LayoutParams.WRAP_CONTENT, true);
-        popup.setElevation(dpToPx(8));
+                UIHelper.dpToPx(this, 200), LinearLayout.LayoutParams.WRAP_CONTENT, true);
+        popup.setElevation(UIHelper.dpToPx(this, 8));
         popup.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(
                 dark ? Color.parseColor("#2A2A2A") : Color.WHITE));
         popup.setOutsideTouchable(true);
@@ -758,7 +530,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        popup.showAsDropDown(btnMenu, -dpToPx(156), dpToPx(4));
+        popup.showAsDropDown(btnMenu, -UIHelper.dpToPx(this, 156), UIHelper.dpToPx(this, 4));
     }
 
     private void showAutoRefreshPicker() {
@@ -766,8 +538,8 @@ public class MainActivity extends AppCompatActivity {
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        int padH = dpToPx(8);
-        int padV = dpToPx(6);
+        int padH = UIHelper.dpToPx(this, 8);
+        int padV = UIHelper.dpToPx(this, 6);
         root.setPadding(padH, padV, padH, padV);
         root.setBackgroundColor(dark ? Color.parseColor("#2A2A2A") : Color.WHITE);
 
@@ -777,7 +549,7 @@ public class MainActivity extends AppCompatActivity {
         title.setText("定时刷新 - " + wsName);
         title.setTextSize(13);
         title.setTextColor(dark ? Color.parseColor("#AAAAAA") : Color.parseColor("#999999"));
-        title.setPadding(dpToPx(14), dpToPx(8), dpToPx(14), dpToPx(8));
+        title.setPadding(UIHelper.dpToPx(this, 14), UIHelper.dpToPx(this, 8), UIHelper.dpToPx(this, 14), UIHelper.dpToPx(this, 8));
         root.addView(title);
 
         View titleDivider = new View(this);
@@ -801,7 +573,7 @@ public class MainActivity extends AppCompatActivity {
             LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setPadding(dpToPx(14), dpToPx(12), dpToPx(14), dpToPx(12));
+            row.setPadding(UIHelper.dpToPx(this, 14), UIHelper.dpToPx(this, 12), UIHelper.dpToPx(this, 14), UIHelper.dpToPx(this, 12));
             row.setTag(interval); // 标记对应的间隔值
 
             android.util.TypedValue outValue = new android.util.TypedValue();
@@ -833,15 +605,15 @@ public class MainActivity extends AppCompatActivity {
                 divider.setBackgroundColor(dark ? Color.parseColor("#3A3A3A") : Color.parseColor("#F0F0F0"));
                 LinearLayout.LayoutParams divLp = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT, 1);
-                divLp.leftMargin = dpToPx(14);
+                divLp.leftMargin = UIHelper.dpToPx(this, 14);
                 divider.setLayoutParams(divLp);
                 root.addView(divider);
             }
         }
 
         PopupWindow popup = new PopupWindow(root,
-                dpToPx(200), LinearLayout.LayoutParams.WRAP_CONTENT, true);
-        popup.setElevation(dpToPx(8));
+                UIHelper.dpToPx(this, 200), LinearLayout.LayoutParams.WRAP_CONTENT, true);
+        popup.setElevation(UIHelper.dpToPx(this, 8));
         popup.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(
                 dark ? Color.parseColor("#2A2A2A") : Color.WHITE));
         popup.setOutsideTouchable(true);
@@ -855,7 +627,7 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
-        popup.showAsDropDown(btnMenu, -dpToPx(132), dpToPx(4));
+        popup.showAsDropDown(btnMenu, -UIHelper.dpToPx(this, 132), UIHelper.dpToPx(this, 4));
     }
 
 
@@ -907,7 +679,7 @@ public class MainActivity extends AppCompatActivity {
 
         // 应用内存圆环
         LinearLayout appRing = createRingView("应用", appPercent,
-                formatBytes(usedMemory) + " / " + formatBytes(maxMemory), density);
+                UIHelper.formatBytes(usedMemory) + " / " + UIHelper.formatBytes(maxMemory), density);
         rings.addView(appRing);
 
         // 间距
@@ -917,7 +689,7 @@ public class MainActivity extends AppCompatActivity {
 
         // 系统内存圆环
         LinearLayout sysRing = createRingView("系统", sysPercent,
-                formatBytes(usedSys) + " / " + formatBytes(totalSys), density);
+                UIHelper.formatBytes(usedSys) + " / " + UIHelper.formatBytes(totalSys), density);
         rings.addView(sysRing);
 
         root.addView(rings);
@@ -1119,12 +891,6 @@ public class MainActivity extends AppCompatActivity {
         return layout;
     }
 
-    private String formatBytes(long bytes) {
-        if (bytes < 1024) return bytes + " B";
-        else if (bytes < 1024 * 1024) return String.format("%.1f KB", bytes / 1024.0);
-        else if (bytes < 1024 * 1024 * 1024) return String.format("%.1f MB", bytes / (1024.0 * 1024));
-        else return String.format("%.2f GB", bytes / (1024.0 * 1024 * 1024));
-    }
 
     // ========== 复制地址 ==========
 
@@ -1148,7 +914,7 @@ public class MainActivity extends AppCompatActivity {
     private void setAutoRefresh(int interval) {
         startAutoRefresh(interval);
         if (interval > 0) {
-            Toast.makeText(this, "定时刷新: " + formatInterval(interval) + " (当前工作区)", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "定时刷新: " + UIHelper.formatInterval(interval) + " (当前工作区)", Toast.LENGTH_SHORT).show();
         } else {
             Toast.makeText(this, "定时刷新已关闭", Toast.LENGTH_SHORT).show();
         }
@@ -1192,11 +958,6 @@ public class MainActivity extends AppCompatActivity {
         autoRefreshRunnable = null;
     }
 
-    private String formatInterval(int seconds) {
-        if (seconds < 60) return seconds + "秒";
-        if (seconds < 3600) return (seconds / 60) + "分钟";
-        return (seconds / 3600) + "小时";
-    }
 
     private void updateAutoRefreshIndicator() {
         if (autoRefreshDot != null) {
@@ -1253,7 +1014,7 @@ public class MainActivity extends AppCompatActivity {
         loadingText.setText("搜索中...");
         loadingText.setTextSize(14);
         loadingText.setTextColor(Color.parseColor("#999999"));
-        loadingText.setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16));
+        loadingText.setPadding(UIHelper.dpToPx(this, 16), UIHelper.dpToPx(this, 16), UIHelper.dpToPx(this, 16), UIHelper.dpToPx(this, 16));
         loadingText.setGravity(Gravity.CENTER);
         searchResults.addView(loadingText);
 
@@ -1353,7 +1114,7 @@ public class MainActivity extends AppCompatActivity {
             emptyText.setText("未找到匹配结果");
             emptyText.setTextSize(14);
             emptyText.setTextColor(Color.parseColor("#999999"));
-            emptyText.setPadding(dpToPx(16), dpToPx(32), dpToPx(16), dpToPx(16));
+            emptyText.setPadding(UIHelper.dpToPx(this, 16), UIHelper.dpToPx(this, 32), UIHelper.dpToPx(this, 16), UIHelper.dpToPx(this, 16));
             emptyText.setGravity(Gravity.CENTER);
             searchResults.addView(emptyText);
             return;
@@ -1364,14 +1125,14 @@ public class MainActivity extends AppCompatActivity {
         countText.setText("找到 " + results.size() + " 个结果");
         countText.setTextSize(12);
         countText.setTextColor(Color.parseColor("#999999"));
-        countText.setPadding(dpToPx(16), dpToPx(12), dpToPx(16), dpToPx(8));
+        countText.setPadding(UIHelper.dpToPx(this, 16), UIHelper.dpToPx(this, 12), UIHelper.dpToPx(this, 16), UIHelper.dpToPx(this, 8));
         searchResults.addView(countText);
 
         // 结果列表
         for (SearchResult result : results) {
             LinearLayout item = new LinearLayout(this);
             item.setOrientation(LinearLayout.VERTICAL);
-            item.setPadding(dpToPx(16), dpToPx(12), dpToPx(16), dpToPx(12));
+            item.setPadding(UIHelper.dpToPx(this, 16), UIHelper.dpToPx(this, 12), UIHelper.dpToPx(this, 16), UIHelper.dpToPx(this, 12));
             item.setBackgroundResource(android.R.drawable.list_selector_background);
 
             // 标题
@@ -1390,7 +1151,7 @@ public class MainActivity extends AppCompatActivity {
             urlView.setTextColor(Color.parseColor("#1976D2"));
             urlView.setMaxLines(1);
             urlView.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            urlView.setPadding(0, dpToPx(2), 0, 0);
+            urlView.setPadding(0, UIHelper.dpToPx(this, 2), 0, 0);
             item.addView(urlView);
 
             // 来源
@@ -1398,7 +1159,7 @@ public class MainActivity extends AppCompatActivity {
             sourceView.setText("匹配: " + result.source);
             sourceView.setTextSize(11);
             sourceView.setTextColor(Color.parseColor("#999999"));
-            sourceView.setPadding(0, dpToPx(2), 0, 0);
+            sourceView.setPadding(0, UIHelper.dpToPx(this, 2), 0, 0);
             item.addView(sourceView);
 
             // 分割线
@@ -1406,7 +1167,7 @@ public class MainActivity extends AppCompatActivity {
             divider.setBackgroundColor(Color.parseColor("#EEEEEE"));
             LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, 1);
-            dividerParams.topMargin = dpToPx(12);
+            dividerParams.topMargin = UIHelper.dpToPx(this, 12);
             divider.setLayoutParams(dividerParams);
 
             // 点击打开链接
@@ -1420,22 +1181,6 @@ public class MainActivity extends AppCompatActivity {
 
             searchResults.addView(item);
             searchResults.addView(divider);
-        }
-    }
-
-    static class SearchResult {
-        int tabIndex;
-        int linkIndex;
-        String title;
-        String url;
-        String source;
-
-        SearchResult(int tabIndex, int linkIndex, String title, String url, String source) {
-            this.tabIndex = tabIndex;
-            this.linkIndex = linkIndex;
-            this.title = title;
-            this.url = url;
-            this.source = source;
         }
     }
 
@@ -1464,7 +1209,7 @@ public class MainActivity extends AppCompatActivity {
             if (isNightModeCSS) {
                 for (int i = 0; i < MAX_TABS; i++) {
                     if (webViews[i] != null) {
-                        injectNightModeCSS(webViews[i]);
+                        WebViewFactory.injectNightModeCSS(webViews[i]);
                     }
                 }
             }
@@ -1479,40 +1224,10 @@ public class MainActivity extends AppCompatActivity {
             // 移除网页暗色 CSS
             for (int i = 0; i < MAX_TABS; i++) {
                 if (webViews[i] != null) {
-                    removeNightModeCSS(webViews[i]);
+                    WebViewFactory.removeNightModeCSS(webViews[i]);
                 }
             }
         }
-    }
-
-    private void injectNightModeCSS(WebView webView) {
-        String css = "var s=document.getElementById('wh-nm');" +
-                "if(!s){s=document.createElement('style');s.id='wh-nm';document.head.appendChild(s);}" +
-                "s.textContent='*{background-color:#1a1a1a!important;color:#ccc!important;border-color:#333!important}" +
-                "a{color:#6db3f2!important}" +
-                "input,textarea,select,button{background:#2a2a2a!important;color:#ccc!important}" +
-                "img,video{opacity:.85}';";
-        webView.evaluateJavascript("(function(){" + css + "})()", null);
-    }
-
-    private void removeNightModeCSS(WebView webView) {
-        webView.evaluateJavascript("(function(){var s=document.getElementById('wh-nm');if(s)s.remove();})()", null);
-    }
-
-    /** 桌面模式：viewport meta 控制渲染宽度和初始缩放 */
-    private void applyDesktopZoom(WebView webView) {
-        if (webView == null) return;
-        float density = getResources().getDisplayMetrics().density;
-        int screenW = (int) (getResources().getDisplayMetrics().widthPixels / density);
-        // 页面按 980 CSS px 宽度渲染，缩放至屏幕 DP 宽度
-        float scale = Math.max(0.2f, (float) screenW / 980f);
-        String scaleStr = String.format("%.3f", scale);
-        webView.evaluateJavascript(
-            "(function(){" +
-            "var m=document.querySelector('meta[name=viewport]');" +
-            "if(!m){m=document.createElement('meta');m.name='viewport';document.head.appendChild(m);}" +
-            "m.content='width=980,initial-scale=" + scaleStr + ",minimum-scale=" + scaleStr + ",maximum-scale=3.0';" +
-            "})()", null);
     }
 
     /**
@@ -1538,7 +1253,7 @@ public class MainActivity extends AppCompatActivity {
         title.setText(tabTitles[tabIndex] + " - 选择链接");
         title.setTextSize(12);
         title.setTextColor(Color.parseColor("#999999"));
-        title.setPadding(dpToPx(16), dpToPx(8), dpToPx(16), dpToPx(4));
+        title.setPadding(UIHelper.dpToPx(this, 16), UIHelper.dpToPx(this, 8), UIHelper.dpToPx(this, 16), UIHelper.dpToPx(this, 4));
         bottomMenuContainer.addView(title);
 
         // 链接列表
@@ -1549,7 +1264,7 @@ public class MainActivity extends AppCompatActivity {
             LinearLayout item = new LinearLayout(this);
             item.setOrientation(LinearLayout.HORIZONTAL);
             item.setGravity(Gravity.CENTER_VERTICAL);
-            item.setPadding(dpToPx(16), dpToPx(12), dpToPx(16), dpToPx(12));
+            item.setPadding(UIHelper.dpToPx(this, 16), UIHelper.dpToPx(this, 12), UIHelper.dpToPx(this, 16), UIHelper.dpToPx(this, 12));
 
             // 高亮当前选中的链接
             if (tabIndex == currentTab && i == currentLinkIndex) {
@@ -1560,7 +1275,7 @@ public class MainActivity extends AppCompatActivity {
             dot.setText("•");
             dot.setTextSize(14);
             dot.setTextColor(Color.parseColor("#1976D2"));
-            dot.setPadding(0, 0, dpToPx(8), 0);
+            dot.setPadding(0, 0, UIHelper.dpToPx(this, 8), 0);
 
             TextView linkTitle = new TextView(this);
             linkTitle.setText(link.title);
@@ -1583,7 +1298,7 @@ public class MainActivity extends AppCompatActivity {
                 divider.setBackgroundColor(Color.parseColor("#E0E0E0"));
                 LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT, 1);
-                dividerParams.leftMargin = dpToPx(16);
+                dividerParams.leftMargin = UIHelper.dpToPx(this, 16);
                 divider.setLayoutParams(dividerParams);
                 bottomMenuContainer.addView(divider);
             }
@@ -1639,7 +1354,7 @@ public class MainActivity extends AppCompatActivity {
         // 隐藏当前 WebView 并停止 MutationObserver
         WebView oldWebView = getCurrentWebView();
         if (oldWebView != null) {
-            stopMutationObserver(oldWebView);
+            PageActionEngine.stopMutationObserver(oldWebView);
             oldWebView.setVisibility(View.GONE);
         }
 
@@ -1695,8 +1410,8 @@ public class MainActivity extends AppCompatActivity {
         WebView wv = getCurrentWebView();
         if (wv != null) {
             LinkItem link = links.get(linkIndex);
-            if (!isAllowedUrl(link.url)) return;
-            applyDesktopModeUA(wv, link.desktopMode);
+            if (!WebViewFactory.isAllowedUrl(link.url, this)) return;
+            WebViewFactory.applyDesktopModeUA(wv, link.desktopMode);
             wv.loadUrl(link.url);
             tvTitle.setText(link.title);
         }
@@ -1746,7 +1461,7 @@ public class MainActivity extends AppCompatActivity {
             TextView item = new TextView(this);
             item.setText(link.title);
             item.setTextSize(14);
-            item.setPadding(dpToPx(16), dpToPx(12), dpToPx(16), dpToPx(12));
+            item.setPadding(UIHelper.dpToPx(this, 16), UIHelper.dpToPx(this, 12), UIHelper.dpToPx(this, 16), UIHelper.dpToPx(this, 12));
 
             if (i == currentLinkIndex) {
                 item.setBackgroundColor(Color.parseColor("#E3F2FD"));
@@ -1793,285 +1508,13 @@ public class MainActivity extends AppCompatActivity {
         if (currentLinkIndex < links.size() && wv != null) {
             LinkItem link = links.get(currentLinkIndex);
             String url = link.url;
-            if (!isAllowedUrl(url)) return;
+            if (!WebViewFactory.isAllowedUrl(url, this)) return;
             activeLinkIndex = currentLinkIndex; // 设置活跃链接
-            applyDesktopModeUA(wv, link.desktopMode);
+            WebViewFactory.applyDesktopModeUA(wv, link.desktopMode);
             wv.loadUrl(url);
         }
     }
 
-    /** 确保至少有一个启动入口别名可用（修复更新后图标消失） */
-    private void ensureLauncherAlias() {
-        PackageManager pm = getPackageManager();
-        String[] allAliases = {
-            "com.crm.webview.AliasWebHub",
-            "com.crm.webview.AliasWebHub2",
-            "com.crm.webview.AliasLanHub",
-            "com.crm.webview.AliasECM",
-            "com.crm.webview.AliasGming",
-            "com.crm.webview.AliasPili",
-            "com.crm.webview.AliasPiliDouyin"
-        };
-
-        // 检查是否有任何别名已启用
-        for (String name : allAliases) {
-            ComponentName cn = new ComponentName(getPackageName(), name);
-            int state = pm.getComponentEnabledSetting(cn);
-            if (state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                    || state == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT) {
-                return; // 已有可用别名，无需修复
-            }
-        }
-
-        // 没有别名可用（覆盖安装后状态丢失），重置为默认
-        for (String name : allAliases) {
-            ComponentName cn = new ComponentName(getPackageName(), name);
-            pm.setComponentEnabledSetting(cn,
-                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                    PackageManager.DONT_KILL_APP);
-        }
-        ComponentName defaultCn = new ComponentName(getPackageName(), allAliases[0]);
-        pm.setComponentEnabledSetting(defaultCn,
-                PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-                PackageManager.DONT_KILL_APP);
-    }
-
-    private int dpToPx(int dp) {
-        return (int) (dp * getResources().getDisplayMetrics().density);
-    }
-
-    /** 获取 WebView 内置的 Chrome 版本号 */
-    private String getChromeVersion() {
-        String ua = WebSettings.getDefaultUserAgent(this);
-        // 从 UA 中提取 Chrome/xx.x.xxxx.xx
-        int idx = ua.indexOf("Chrome/");
-        if (idx >= 0) {
-            int end = ua.indexOf(" ", idx);
-            if (end > idx) return ua.substring(idx + 7, end);
-        }
-        return "125.0.0.0"; // fallback
-    }
-
-    private static final String DESKTOP_UA = 
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
-
-    /** 根据链接的桌面模式开关切换 WebView 渲染模式 */
-    private void applyDesktopModeUA(WebView webView, boolean desktopMode) {
-        if (webView == null) return;
-        WebSettings settings = webView.getSettings();
-        if (desktopMode) {
-            // 保存当前 UA，以便恢复
-            webView.setTag(R.id._webhub_saved_ua, settings.getUserAgentString());
-            // 桌面 UA
-            settings.setUserAgentString(DESKTOP_UA);
-            // 桌面视口渲染，允许双指缩放
-            settings.setUseWideViewPort(true);
-            settings.setLoadWithOverviewMode(false);
-            settings.setSupportZoom(true);
-            settings.setBuiltInZoomControls(true);
-            settings.setDisplayZoomControls(false);
-            // 标记桌面模式
-            webView.setTag(R.id._webhub_desktop_mode, true);
-        } else {
-            webView.setTag(R.id._webhub_desktop_mode, null);
-            // 恢复之前保存的 UA
-            Object savedUA = webView.getTag(R.id._webhub_saved_ua);
-            if (savedUA instanceof String && !((String) savedUA).isEmpty()) {
-                settings.setUserAgentString((String) savedUA);
-            }
-            // 没有保存的 UA（首次加载非桌面链接），保持 setupWebView 设置的 UA 不变
-            // 恢复移动端缩放行为
-            settings.setLoadWithOverviewMode(true);
-            settings.setUseWideViewPort(true);
-            settings.setSupportZoom(false);
-            settings.setBuiltInZoomControls(false);
-        }
-    }
-
-    @SuppressLint("SetJavaScriptEnabled")
-    private void setupAllWebViews() {
-        // 只设置已创建的 WebView
-        for (int i = 0; i < MAX_TABS; i++) {
-            if (webViews[i] != null) {
-                setupWebView(webViews[i]);
-            }
-        }
-    }
-
-    @SuppressLint("SetJavaScriptEnabled")
-    private void setupWebView(WebView webView) {
-        WebSettings settings = webView.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setDatabaseEnabled(true);
-        settings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
-        settings.setAllowFileAccess(false);
-        settings.setAllowContentAccess(true);
-        String savedUA = prefs.getString("user_agent", "");
-        if (!savedUA.isEmpty()) {
-            settings.setUserAgentString(savedUA);
-        } else {
-            // 使用标准 Chrome UA，去掉 WebView 标记，避免被网站拦截
-            settings.setUserAgentString("Mozilla/5.0 (Linux; Android " + android.os.Build.VERSION.RELEASE + "; " + android.os.Build.MODEL + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/" + getChromeVersion() + " Mobile Safari/537.36");
-        }
-        settings.setUseWideViewPort(true);
-        settings.setLoadWithOverviewMode(true);
-        settings.setSupportZoom(false);
-        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
-        settings.setGeolocationEnabled(true);
-
-        // 注册 JS 接口，用于 SPA 导航回调（防止重复注册）
-        if (webView.getTag() == null) {
-            webView.setTag("_webhub_registered");
-            webView.addJavascriptInterface(new Object() {
-                @android.webkit.JavascriptInterface
-                public void onSpaNavigate() {
-                    runOnUiThread(() -> {
-                        stopMutationObserver(webView);
-                        executeCustomScript(webView);
-                    });
-                }
-            }, "_webhub");
-        }
-
-        CookieManager.getInstance().setAcceptCookie(true);
-        CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
-
-        webView.setOnTouchListener((v, event) -> {
-            if (isInspectMode && event.getAction() == MotionEvent.ACTION_DOWN) {
-                float x = event.getX();
-                float y = event.getY();
-                float density = getResources().getDisplayMetrics().density;
-                inspectElementAt(x / density, y / density);
-                return true;
-            }
-            return false;
-        });
-
-        webView.setWebViewClient(new WebViewClient() {
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                return !isAllowedUrl(request.getUrl().toString());
-            }
-
-            @Override
-            public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                super.onPageStarted(view, url, favicon);
-                if (webView != null && view == webView) {
-                    progressBar.setVisibility(View.VISIBLE);
-                    // 显示进度覆盖层（Feature 8）
-                    if (progressOverlay != null) {
-                        progressOverlay.setVisibility(View.VISIBLE);
-                        progressOverlay.setScaleX(0f);
-                    }
-                }
-            }
-
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                super.onPageFinished(view, url);
-                progressBar.setVisibility(View.GONE);
-                // 进度覆盖层动画完成（Feature 8）
-                if (progressOverlay != null && webView != null && view == webView) {
-                    progressOverlay.animate()
-                            .scaleX(1f)
-                            .setDuration(200)
-                            .withEndAction(() -> {
-                                progressOverlay.animate()
-                                        .alpha(0f)
-                                        .setDuration(300)
-                                        .setStartDelay(100)
-                                        .withEndAction(() -> {
-                                            progressOverlay.setVisibility(View.GONE);
-                                            progressOverlay.setAlpha(1f);
-                                            progressOverlay.setScaleX(0f);
-                                        })
-                                        .start();
-                            })
-                            .start();
-                }
-                // 执行自定义操作
-                executeCustomScript(view);
-                // 夜间模式 CSS
-                if (isNightMode && isNightModeCSS) {
-                    injectNightModeCSS(view);
-                }
-                // 桌面模式：CSS transform 缩放页面至全宽可见
-                if (view.getTag(R.id._webhub_desktop_mode) instanceof Boolean
-                        && (Boolean) view.getTag(R.id._webhub_desktop_mode)) {
-                    applyDesktopZoom(view);
-                }
-            }
-
-            @Override
-            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-                super.onReceivedError(view, request, error);
-                // 只处理主帧加载错误（Feature 3）
-                if (request.isForMainFrame()) {
-                    showErrorPage(view, error.getDescription() != null ? error.getDescription().toString() : "页面加载失败");
-                }
-            }
-
-            @Override
-            public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse errorResponse) {
-                super.onReceivedHttpError(view, request, errorResponse);
-                // 只处理主帧的服务器错误（5xx），4xx 由页面自身处理
-                if (request.isForMainFrame() && errorResponse != null) {
-                    int statusCode = errorResponse.getStatusCode();
-                    if (statusCode >= 500) {
-                        showErrorPage(view, "服务器错误: " + statusCode);
-                    }
-                    // 4xx（如 403）不拦截，让页面自行显示内容
-                }
-            }
-
-            @Override
-            public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
-                handler.cancel();
-                Toast.makeText(MainActivity.this, "证书错误，已停止加载", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        webView.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public void onProgressChanged(WebView view, int newProgress) {
-                if (webView != null && view == webView) {
-                    progressBar.setProgress(newProgress);
-                    if (newProgress >= 100) {
-                        progressBar.setVisibility(View.GONE);
-                    }
-                    // 更新进度覆盖层（Feature 8）
-                    if (progressOverlay != null && progressOverlay.getVisibility() == View.VISIBLE) {
-                        progressOverlay.setScaleX(newProgress / 100f);
-                    }
-                }
-            }
-
-            @Override
-            public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
-                callback.invoke(origin, true, false);
-            }
-
-            @Override
-            public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> callback,
-                                             FileChooserParams fileChooserParams) {
-                if (filePathCallback != null) {
-                    filePathCallback.onReceiveValue(null);
-                }
-                filePathCallback = callback;
-
-                Intent intent = fileChooserParams.createIntent();
-                try {
-                    startActivityForResult(intent, 1001);
-                } catch (Exception e) {
-                    filePathCallback = null;
-                    Toast.makeText(MainActivity.this, "无法打开文件选择器", Toast.LENGTH_SHORT).show();
-                    return false;
-                }
-                return true;
-            }
-        });
-    }
 
     private void inspectElementAt(float x, float y) {
         WebView wv = getCurrentWebView();
@@ -2102,10 +1545,10 @@ public class MainActivity extends AppCompatActivity {
                     json = json.replace("\\\"", "\"");
                     json = json.replace("\\\\", "\\");
 
-                    String tag = extractJsonString(json, "tag");
-                    String id = extractJsonString(json, "id");
-                    String classes = extractJsonString(json, "classes");
-                    String text = extractJsonString(json, "text");
+                    String tag = UIHelper.extractJsonString(json, "tag");
+                    String id = UIHelper.extractJsonString(json, "id");
+                    String classes = UIHelper.extractJsonString(json, "classes");
+                    String text = UIHelper.extractJsonString(json, "text");
 
                     showElementInfoDialog(tag, id, classes, text);
                 } catch (Exception e) {
@@ -2115,15 +1558,6 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private String extractJsonString(String json, String key) {
-        String search = "\"" + key + "\":\"";
-        int start = json.indexOf(search);
-        if (start == -1) return "";
-        start += search.length();
-        int end = json.indexOf("\"", start);
-        if (end == -1) return "";
-        return json.substring(start, end);
-    }
 
     private void showElementInfoDialog(String tag, String id, String classes, String text) {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_element_info, null);
@@ -2145,7 +1579,7 @@ public class MainActivity extends AppCompatActivity {
             tvId.setText("#" + id);
             btnCopyId.setVisibility(View.VISIBLE);
             btnCopyId.setOnClickListener(v -> {
-                copyToClipboard("#" + id);
+                UIHelper.copyToClipboard(this, "#" + id);
                 Toast.makeText(this, "已复制: #" + id, Toast.LENGTH_SHORT).show();
             });
         }
@@ -2156,7 +1590,7 @@ public class MainActivity extends AppCompatActivity {
             tvClass.setText("." + firstClass);
             btnCopyClass.setVisibility(View.VISIBLE);
             btnCopyClass.setOnClickListener(v -> {
-                copyToClipboard("." + firstClass);
+                UIHelper.copyToClipboard(this, "." + firstClass);
                 Toast.makeText(this, "已复制: ." + firstClass, Toast.LENGTH_SHORT).show();
             });
         }
@@ -2173,7 +1607,7 @@ public class MainActivity extends AppCompatActivity {
         if (text != null && !text.isEmpty()) allInfo.append("文本: ").append(text);
 
         btnCopyAll.setOnClickListener(v -> {
-            copyToClipboard(allInfo.toString());
+            UIHelper.copyToClipboard(this, allInfo.toString());
             Toast.makeText(this, "已复制全部信息", Toast.LENGTH_SHORT).show();
         });
 
@@ -2201,11 +1635,6 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    private void copyToClipboard(String text) {
-        ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-        ClipData clip = ClipData.newPlainText("element", text);
-        clipboard.setPrimaryClip(clip);
-    }
 
     private void requestPermissions() {
         String[] permissions = {
@@ -2263,361 +1692,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private boolean isAllowedUrl(String url) {
-        if (url == null) return false;
-
-        if (url.startsWith("tel:")) {
-            Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse(url));
-            if (checkSelfPermission(Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
-                startActivity(intent);
-            } else {
-                Intent dial = new Intent(Intent.ACTION_DIAL, Uri.parse(url));
-                startActivity(dial);
-            }
-            return false;
-        }
-        if (url.startsWith("mailto:")) {
-            Intent intent = new Intent(Intent.ACTION_SENDTO, Uri.parse(url));
-            startActivity(intent);
-            return false;
-        }
-        if (url.startsWith("sms:")) {
-            Intent intent = new Intent(Intent.ACTION_SENDTO, Uri.parse(url));
-            startActivity(intent);
-            return false;
-        }
-
-        if (url.startsWith("https://") || url.startsWith("http://")) return true;
-        if (url.startsWith("javascript:") || url.startsWith("about:blank") || url.startsWith("data:")) return true;
-
-        return false;
-    }
-
-    private void executeCustomScript(WebView webView) {
-        executeCustomScriptWithRetry(webView, 0);
-    }
-
-    private void executeCustomScriptWithRetry(WebView webView, int attempt) {
-        // 检查页面操作开关
-        boolean pageActionsEnabled = prefs.getBoolean("page_actions_enabled", true);
-        if (!pageActionsEnabled) return;
-
-        // 获取当前页面 URL
-        String currentUrl = webView.getUrl();
-        if (currentUrl == null || currentUrl.isEmpty() || "about:blank".equals(currentUrl)) return;
-
-        // 获取当前链接索引
-        int linkIndex = activeLinkIndex >= 0 ? activeLinkIndex : currentLinkIndex;
-
-        // 收集所有匹配的操作（scope 语义：每个链接的 scope 决定它要应用到哪些页面）
-        List<ActionItem> allActions = new ArrayList<>();
-
-        for (int tabIndex = 0; tabIndex < tabLinks.size(); tabIndex++) {
-            for (LinkItem link : tabLinks.get(tabIndex)) {
-                if (!hasActions(link)) continue;
-                if (isLinkMatchesPage(link, tabIndex, linkIndex, currentUrl)) {
-                    collectActions(link, allActions);
-                }
-            }
-        }
-
-        if (allActions.isEmpty()) return;
-
-        String js = buildScriptFromActions(allActions);
-        if (js.isEmpty()) return;
-
-        // 检查目标元素是否已存在
-        String checkJs = buildElementCheckJs(allActions);
-        webView.evaluateJavascript(checkJs, value -> {
-            boolean found = "true".equals(value);
-
-            if (found) {
-                // 元素已存在，立即执行
-                runActionScript(webView, js);
-            } else if (attempt < 10) {
-                // 元素还没出现，500ms 后重试（最多 10 次，共 5 秒）
-                webView.postDelayed(() -> executeCustomScriptWithRetry(webView, attempt + 1), 500);
-            } else {
-                // 超时，最后一次尝试
-                runActionScript(webView, js);
-            }
-        });
-    }
-
-    /**
-     * 判断某个链接的操作是否应该应用到当前页面
-     * scope 语义：该链接的操作要应用到哪些页面
-     */
-    private boolean isLinkMatchesPage(LinkItem link, int tabIndex, int currentLinkIndex, String currentUrl) {
-        String scope = link.scope;
-
-        if ("all".equals(scope)) {
-            // 所有工作区 → 无条件应用
-            return true;
-        } else if ("tab".equals(scope)) {
-            // 当前工作区 → 只要在同一个工作区就应用
-            return tabIndex == currentTab;
-        } else if ("domain".equals(scope)) {
-            // 相似域名 → 域名匹配就应用
-            String linkDomain = getDomain(link.url);
-            String pageDomain = getDomain(currentUrl);
-            return !linkDomain.isEmpty() && linkDomain.equals(pageDomain);
-        } else {
-            // 仅此链接 → 只有当前链接才应用
-            return tabIndex == currentTab && link == getCurrentLink();
-        }
-    }
-
-    /** 获取当前正在查看的链接 */
-    private LinkItem getCurrentLink() {
-        if (currentTab >= 0 && currentTab < tabLinks.size()) {
-            List<LinkItem> links = tabLinks.get(currentTab);
-            int idx = activeLinkIndex >= 0 ? activeLinkIndex : currentLinkIndex;
-            if (idx >= 0 && idx < links.size()) {
-                return links.get(idx);
-            }
-        }
-        return null;
-    }
-
-    /** 构建检测元素是否存在的 JS */
-    private String buildElementCheckJs(List<ActionItem> actions) {
-        StringBuilder js = new StringBuilder("(function(){");
-        boolean hasSelectors = false;
-        for (ActionItem action : actions) {
-            if ("script".equals(action.type)) continue; // 脚本类型不需要检测选择器
-            if (action.selector == null || action.selector.isEmpty()) continue;
-            js.append("if(document.querySelectorAll(").append(jsString(action.selector)).append(").length>0)return true;");
-            hasSelectors = true;
-        }
-        if (!hasSelectors) {
-            // 如果所有操作都是脚本类型，直接返回true
-            js.append("return true;");
-            js.append("})()");
-            return js.toString();
-        }
-        // 检查 iframe 内部
-        js.append("try{var iframes=document.querySelectorAll('iframe');for(var i=0;i<iframes.length;i++){try{var doc=iframes[i].contentDocument||iframes[i].contentWindow.document;");
-        for (ActionItem action : actions) {
-            if ("script".equals(action.type)) continue;
-            if (action.selector == null || action.selector.isEmpty()) continue;
-            js.append("if(doc.querySelectorAll(").append(jsString(action.selector)).append(").length>0)return true;");
-        }
-        js.append("}catch(e){}}}catch(e){}");
-        js.append("return false;})()");
-        return js.toString();
-    }
-
-    /** 执行操作脚本（主文档 + iframe） */
-    private void runActionScript(WebView webView, String mainJs) {
-        // 在主文档执行
-        webView.evaluateJavascript(mainJs, null);
-
-        // 在所有可访问的 iframe 中执行
-        String iframeJs = "(function(){" +
-                "try{" +
-                "var iframes=document.querySelectorAll('iframe');" +
-                "for(var i=0;i<iframes.length;i++){" +
-                "  try{" +
-                "    var doc=iframes[i].contentDocument||iframes[i].contentWindow.document;" +
-                "    if(doc)" + mainJs +
-                "  }catch(e){}" +
-                "}" +
-                "}catch(e){}" +
-                "})()";
-        webView.evaluateJavascript(iframeJs, null);
-
-        // 启动 MutationObserver
-        startMutationObserver(webView, mainJs);
-    }
-
-    private void collectActions(List<LinkItem> links, List<ActionItem> allActions) {
-        for (LinkItem link : links) {
-            collectActions(link, allActions);
-        }
-    }
-
-    private void collectActions(LinkItem link, List<ActionItem> allActions) {
-        if (link.actionItems != null && !link.actionItems.isEmpty()) {
-            allActions.addAll(link.actionItems);
-        } else if (link.actions != null && !link.actions.isEmpty()) {
-            allActions.addAll(parseLegacyActions(link.actions));
-        }
-    }
-
-    private boolean hasActions(LinkItem link) {
-        return (link.actionItems != null && !link.actionItems.isEmpty())
-                || (link.actions != null && !link.actions.isEmpty());
-    }
-
-    private String getDomain(String url) {
-        if (url == null || url.isEmpty()) return "";
-        try {
-            java.net.URI uri = new java.net.URI(url);
-            String host = uri.getHost();
-            if (host == null) return "";
-            // 提取主域名（去掉子域名）
-            String[] parts = host.split("\\.");
-            if (parts.length >= 2) {
-                return parts[parts.length - 2] + "." + parts[parts.length - 1];
-            }
-            return host;
-        } catch (Exception e) {
-            return "";
-        }
-    }
-
-    private void startMutationObserver(WebView webView, String actionJs) {
-        // MutationObserver + SPA 导航监听
-        String observerJs = "(function() {" +
-                "if (window._webhubObserver) return;" +
-                "var timeout = null;" +
-                "var actionFn = function() {" +
-                "  try { " + actionJs + " } catch(e) {}" +
-                // 同时在 iframe 中执行
-                "  try{" +
-                "    var iframes=document.querySelectorAll('iframe');" +
-                "    for(var i=0;i<iframes.length;i++){" +
-                "      try{var doc=iframes[i].contentDocument||iframes[i].contentWindow.document;if(doc)" + actionJs + "}catch(e){}" +
-                "    }" +
-                "  }catch(e){}" +
-                "};" +
-                // MutationObserver，1000ms 去抖
-                "window._webhubObserver = new MutationObserver(function(mutations) {" +
-                "  if (timeout) clearTimeout(timeout);" +
-                "  timeout = setTimeout(actionFn, 1000);" +
-                "});" +
-                "if (document.body) {" +
-                "  window._webhubObserver.observe(document.body, {" +
-                "    childList: true," +
-                "    subtree: true," +
-                "    characterData: true" +
-                "  });" +
-                "  actionFn();" +
-                "}" +
-                // SPA 导航监听：劫持 pushState/replaceState + popstate
-                "if (!window._webhubNavHooked) {" +
-                "  window._webhubNavHooked = true;" +
-                "  var origPush = history.pushState;" +
-                "  var origReplace = history.replaceState;" +
-                "  var navTimeout = null;" +
-                "  var notifyNav = function() {" +
-                "    if (navTimeout) clearTimeout(navTimeout);" +
-                "    navTimeout = setTimeout(function() {" +
-                "      try { _webhub.onSpaNavigate(); } catch(e) { actionFn(); }" +
-                "    }, 1500);" +
-                "  };" +
-                "  history.pushState = function() {" +
-                "    origPush.apply(this, arguments);" +
-                "    notifyNav();" +
-                "  };" +
-                "  history.replaceState = function() {" +
-                "    origReplace.apply(this, arguments);" +
-                "    notifyNav();" +
-                "  };" +
-                "  window.addEventListener('popstate', function() {" +
-                "    notifyNav();" +
-                "  });" +
-                "}" +
-                "})()";
-
-        webView.evaluateJavascript(observerJs, null);
-    }
-
-    private void stopMutationObserver(WebView webView) {
-        if (webView != null) {
-            webView.evaluateJavascript(
-                "(function() {" +
-                "if (window._webhubObserver) {" +
-                "  window._webhubObserver.disconnect();" +
-                "  window._webhubObserver = null;" +
-                "}" +
-                "})()", null);
-        }
-    }
-
-    private String buildScriptFromActions(List<ActionItem> actions) {
-        StringBuilder js = new StringBuilder();
-        js.append("(function(){");
-
-        for (ActionItem action : actions) {
-            if (action == null) continue;
-
-            // 自定义脚本类型（Feature 6）：直接执行JS代码，selector可为空
-            if ("script".equals(action.type)) {
-                String script = action.value;
-                if (script != null && !script.isEmpty()) {
-                    int delay = Math.max(0, action.delay);
-                    if (delay > 0) {
-                        js.append("setTimeout(function(){try{").append(script).append("}catch(e){}},").append(delay * 1000).append(");");
-                    } else {
-                        js.append("try{").append(script).append("}catch(e){}");
-                    }
-                }
-                continue;
-            }
-
-            if (action.selector == null || action.selector.isEmpty()) continue;
-
-            String selector = jsString(action.selector);
-            if ("hide".equals(action.type)) {
-                js.append("try{document.querySelectorAll(").append(selector).append(").forEach(el=>el.style.setProperty('display','none','important'));}catch(e){}");
-            } else if ("click".equals(action.type)) {
-                int delay = Math.max(0, action.delay);
-                if (delay > 0) {
-                    js.append("setTimeout(function(){try{document.querySelectorAll(").append(selector).append(").forEach(el=>el.click());}catch(e){}},").append(delay * 1000).append(");");
-                } else {
-                    js.append("try{document.querySelectorAll(").append(selector).append(").forEach(el=>el.click());}catch(e){}");
-                }
-            } else if ("modify".equals(action.type)) {
-                js.append("try{document.querySelectorAll(").append(selector).append(").forEach(el=>el.textContent=").append(jsString(action.value)).append(");}catch(e){}");
-            }
-        }
-
-        js.append("})()");
-        return js.toString();
-    }
-
-    private static List<ActionItem> parseLegacyActions(String actions) {
-        List<ActionItem> items = new ArrayList<>();
-        if (actions == null || actions.isEmpty()) return items;
-
-        String[] actionGroups = actions.split(";");
-        for (String group : actionGroups) {
-            group = group.trim();
-            if (group.isEmpty()) continue;
-
-            String[] parts = group.split("\\|");
-            if (parts.length < 2) continue;
-
-            String type = parts[0];
-            String selector = parts[1];
-            if (selector.startsWith("@")) continue;
-
-            int delay = 0;
-            String value = "";
-            String remark = "";
-            for (int k = 2; k < parts.length; k++) {
-                String part = parts[k];
-                if (part.startsWith("@")) {
-                    remark = part.substring(1)
-                        .replace("｜", "|")
-                        .replace("；", ";");
-                } else if ("click".equals(type)) {
-                    try { delay = Integer.parseInt(part); } catch (Exception e) {}
-                } else if ("modify".equals(type) && value.isEmpty()) {
-                    value = part;
-                }
-            }
-            items.add(new ActionItem(type, selector, value, delay, remark));
-        }
-        return items;
-    }
-
-    private String jsString(String value) {
-        if (value == null) value = "";
-        return JSONObject.quote(value);
-    }
 
     /** 显示错误页面（Feature 3）*/
     private void showErrorPage(WebView webView, String errorMsg) {
@@ -2691,9 +1765,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-
-
-
     /** 显示浏览历史对话框（Feature 2）*/
     private void showHistoryDialog() {
         WebView wv = getCurrentWebView();
@@ -2713,14 +1784,14 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(dark ? Color.parseColor("#1E1E1E") : Color.WHITE);
-        root.setPadding(0, dpToPx(12), 0, dpToPx(12));
+        root.setPadding(0, UIHelper.dpToPx(this, 12), 0, UIHelper.dpToPx(this, 12));
 
         // 标题
         TextView titleView = new TextView(this);
         titleView.setText("浏览历史 (" + size + " 条)");
         titleView.setTextSize(15);
         titleView.setTextColor(dark ? Color.parseColor("#E0E0E0") : Color.parseColor("#333333"));
-        titleView.setPadding(dpToPx(16), dpToPx(8), dpToPx(16), dpToPx(12));
+        titleView.setPadding(UIHelper.dpToPx(this, 16), UIHelper.dpToPx(this, 8), UIHelper.dpToPx(this, 16), UIHelper.dpToPx(this, 12));
         titleView.setTypeface(null, android.graphics.Typeface.BOLD);
         root.addView(titleView);
 
@@ -2743,7 +1814,7 @@ public class MainActivity extends AppCompatActivity {
             LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setPadding(dpToPx(16), dpToPx(10), dpToPx(16), dpToPx(10));
+            row.setPadding(UIHelper.dpToPx(this, 16), UIHelper.dpToPx(this, 10), UIHelper.dpToPx(this, 16), UIHelper.dpToPx(this, 10));
 
             android.util.TypedValue outValue = new android.util.TypedValue();
             getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
@@ -2759,8 +1830,8 @@ public class MainActivity extends AppCompatActivity {
             numView.setText(String.valueOf(i + 1));
             numView.setTextSize(11);
             numView.setTextColor(dark ? Color.parseColor("#666666") : Color.parseColor("#999999"));
-            numView.setPadding(0, 0, dpToPx(10), 0);
-            numView.setMinWidth(dpToPx(24));
+            numView.setPadding(0, 0, UIHelper.dpToPx(this, 10), 0);
+            numView.setMinWidth(UIHelper.dpToPx(this, 24));
             numView.setGravity(Gravity.END);
             row.addView(numView);
 
@@ -2796,7 +1867,7 @@ public class MainActivity extends AppCompatActivity {
                 curTag.setText("当前");
                 curTag.setTextSize(10);
                 curTag.setTextColor(Color.parseColor("#1976D2"));
-                curTag.setPadding(dpToPx(8), 0, 0, 0);
+                curTag.setPadding(UIHelper.dpToPx(this, 8), 0, 0, 0);
                 row.addView(curTag);
             }
 
@@ -2816,7 +1887,7 @@ public class MainActivity extends AppCompatActivity {
                 divider.setBackgroundColor(dark ? Color.parseColor("#2A2A2A") : Color.parseColor("#F0F0F0"));
                 LinearLayout.LayoutParams divLp = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT, 1);
-                divLp.leftMargin = dpToPx(50);
+                divLp.leftMargin = UIHelper.dpToPx(this, 50);
                 divider.setLayoutParams(divLp);
                 listLayout.addView(divider);
             }
@@ -2884,5 +1955,86 @@ public class MainActivity extends AppCompatActivity {
                 webViews[i] = null;
             }
         }
+    }
+
+    // ==================== WebViewCallbacks 实现 ====================
+
+    private LinkItem getCurrentLink() {
+        if (currentTab >= 0 && currentTab < tabLinks.size()) {
+            List<LinkItem> links = tabLinks.get(currentTab);
+            int idx = activeLinkIndex >= 0 ? activeLinkIndex : currentLinkIndex;
+            if (idx >= 0 && idx < links.size()) {
+                return links.get(idx);
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public boolean isPageActionsEnabled() {
+        return prefs.getBoolean("page_actions_enabled", true);
+    }
+
+    @Override
+    public boolean isInspectMode() {
+        return isInspectMode;
+    }
+
+    @Override
+    public boolean isNightMode() {
+        return isNightMode;
+    }
+
+    @Override
+    public boolean isNightModeCSS() {
+        return isNightModeCSS;
+    }
+
+    @Override
+    public ValueCallback<Uri[]> getFilePathCallback() {
+        return filePathCallback;
+    }
+
+    @Override
+    public void setFilePathCallback(ValueCallback<Uri[]> callback) {
+        filePathCallback = callback;
+    }
+
+    @Override
+    public void onExecuteCustomScript(WebView webView) {
+        PageActionEngine.executeCustomScript(webView, prefs.getBoolean("page_actions_enabled", true),
+                tabLinks, currentTab, currentLinkIndex, activeLinkIndex, getCurrentLink());
+    }
+
+    @Override
+    public void onInjectNightModeCSS(WebView webView) {
+        WebViewFactory.injectNightModeCSS(webView);
+    }
+
+    @Override
+    public void onRemoveNightModeCSS(WebView webView) {
+        WebViewFactory.removeNightModeCSS(webView);
+    }
+
+    @Override
+    public void onApplyDesktopZoom(WebView webView) {
+        float density = getResources().getDisplayMetrics().density;
+        int screenW = (int) (getResources().getDisplayMetrics().widthPixels / density);
+        WebViewFactory.applyDesktopZoom(webView, density, screenW);
+    }
+
+    @Override
+    public void onInspectElementAt(float x, float y) {
+        inspectElementAt(x, y);
+    }
+
+    @Override
+    public void onShowErrorPage(WebView webView, String errorMsg) {
+        showErrorPage(webView, errorMsg);
+    }
+
+    @Override
+    public Context getContext() {
+        return this;
     }
 }

@@ -66,7 +66,7 @@
 | 1 | WebHub | 默认蓝 |
 | 2 | WebHub | 自定义 |
 | 3 | LanHub | 网络 |
-| 4 | ECM | CRM |
+| 4 | ECR | 自定义 |
 | 5 | Gming | 自定义 |
 | 6 | Pili | 自定义 |
 | 7 | PILI | 自定义 |
@@ -87,6 +87,12 @@
 | 仓库 | https://github.com/pili8/WebHub |
 
 ## 更新日志
+
+### V2.9.0 (2026-06-26)
+
+- 代码架构重构：拆分为 model/config/engine/webview/util 6 个模块
+- Activity 代码量减少 28%，可维护性大幅提升
+- 预设名称 ECM → ECR，图标更新
 
 ### V2.8.0 (2026-06-26)
 
