@@ -1825,11 +1825,12 @@ public class MainActivity extends AppCompatActivity {
             webView.setTag(R.id._webhub_saved_ua, settings.getUserAgentString());
             // 桌面 UA
             settings.setUserAgentString(DESKTOP_UA);
-            // 桌面视口，禁用内部缩放（缩放由 JS 接管）
+            // 桌面视口渲染，允许双指缩放
             settings.setUseWideViewPort(true);
             settings.setLoadWithOverviewMode(false);
-            settings.setSupportZoom(false);
-            settings.setBuiltInZoomControls(false);
+            settings.setSupportZoom(true);
+            settings.setBuiltInZoomControls(true);
+            settings.setDisplayZoomControls(false);
             // 标记桌面模式
             webView.setTag(R.id._webhub_desktop_mode, true);
         } else {
