@@ -145,6 +145,34 @@
 
 ---
 
+## V2.8.0 (2026-06-26)
+
+**应用名称和图标切换 + 桌面模式优化 + Bug修复**
+
+### 新增
+
+- ✅ 应用名称和图标切换：7 套预设，设置中随时切换桌面图标和名称
+- ✅ 预设: WebHub / WebHub / LanHub / ECM / Gming / Pili / PILI
+- ✅ Activity-Alias 实现启动入口切换，无需重新安装
+- ✅ 桌面模式缩放方案重做：viewport meta + initial-scale + 双指缩放
+
+### 修复
+
+- ✅ 修复内容搜索死锁：synchronized+wait → 回调式异步
+- ✅ 修复 switchToTab 参数校验 bug
+- ✅ 修复 autoRefreshRunnable 重复逻辑
+- ✅ 修复桌面模式 UA 恢复问题
+- ✅ 修复切换图标后闪退恢复（ensureLauncherAlias 误重置）
+- ✅ 修复 activity-alias 缺少 android:exported 导致 Android 12+ 安装失败
+
+### 优化
+
+- ✅ 设置页重排：关于→最上面，网页行为→通用设置改名，导入导出→最下面
+- ✅ 链接卡片的操作项默认折叠，点击展开
+- ✅ 每个链接增加桌面模式开关
+
+---
+
 ## V2.7.6 (2026-06-26)
 
 **测试反馈修复**

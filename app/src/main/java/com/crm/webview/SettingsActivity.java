@@ -260,6 +260,7 @@ public class SettingsActivity extends AppCompatActivity {
         // 更新日志（发版时同步更新）
         tvAboutChangelog.setText(
                 "📋 最近更新:\n" +
+                "v2.8.0 - 应用名称图标切换、桌面模式优化、Bug修复\n" +
                 "v2.7.6 - 设置页样式恢复、操作项折叠、桌面模式缩放优化\n" +
                 "v2.7.5 - 桌面模式开关、设置页重排、Bug修复\n" +
                 "v2.7.4 - 修复定时刷新闪退、工作区上限8个、支持HTTP、页面操作优化\n" +
