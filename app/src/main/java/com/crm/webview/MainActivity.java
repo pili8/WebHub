@@ -1809,9 +1809,13 @@ public class MainActivity extends AppCompatActivity {
             webView.setTag(R.id._webhub_saved_ua, settings.getUserAgentString());
             // 桌面 UA
             settings.setUserAgentString(DESKTOP_UA);
-            // 按屏幕宽度等比缩放，确保页面完整显示
+            // 计算初始缩放比例：将 1024px 桌面页面缩放到屏幕宽度
+            float density = webView.getResources().getDisplayMetrics().density;
+            int screenWidthDp = (int) (webView.getResources().getDisplayMetrics().widthPixels / density);
+            int scale = Math.max(30, screenWidthDp * 100 / 1024);
             settings.setUseWideViewPort(true);
             settings.setLoadWithOverviewMode(true);
+            settings.setInitialScale(scale);
             // 允许双指缩放，方便用户调整
             settings.setSupportZoom(true);
             settings.setBuiltInZoomControls(true);
@@ -1826,6 +1830,7 @@ public class MainActivity extends AppCompatActivity {
             // 恢复移动端缩放行为
             settings.setLoadWithOverviewMode(true);
             settings.setUseWideViewPort(true);
+            settings.setInitialScale(0); // 恢复自动缩放
             settings.setSupportZoom(false);
             settings.setBuiltInZoomControls(false);
         }
