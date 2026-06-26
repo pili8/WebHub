@@ -32,7 +32,6 @@
     <!-- 振动权限 -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
-    <!-- 剪贴板（不需要声明，但确保可用） -->
     <!-- NFC 权限 -->
     <uses-permission android:name="android.permission.NFC" />
 
@@ -40,7 +39,7 @@
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
 
-    <!-- 前台服务（保持后台运行） -->
+    <!-- 前台服务 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <application
@@ -51,24 +50,113 @@
         android:theme="@style/Theme.CRMWebView"
         android:usesCleartextTraffic="true">
 
+        <!-- 主 Activity（不作为启动入口，由 alias 代理） -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:screenOrientation="portrait"
             android:configChanges="orientation|screenSize|keyboard|keyboardHidden"
             android:launchMode="singleTask"
-            android:windowSoftInputMode="adjustResize">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".SettingsActivity"
             android:screenOrientation="portrait"
             android:configChanges="orientation|screenSize|keyboard|keyboardHidden"
             android:windowSoftInputMode="adjustResize" />
+
+        <!-- ========== 启动入口别名（7 套预设，仅一个启用） ========== -->
+
+        <!-- 0: WebHub（默认，图标不变） -->
+        <activity-alias
+            android:name=".AliasWebHub"
+            android:targetActivity=".MainActivity"
+            android:label="WebHub"
+            android:icon="@mipmap/ic_launcher"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- 1: ECM（企业CRM） -->
+        <activity-alias
+            android:name=".AliasECM"
+            android:targetActivity=".MainActivity"
+            android:label="ECM"
+            android:icon="@mipmap/ic_launcher_ecm"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- 2: LanHub（局域网控制集群） -->
+        <activity-alias
+            android:name=".AliasLanHub"
+            android:targetActivity=".MainActivity"
+            android:label="LanHub"
+            android:icon="@mipmap/ic_launcher_lanhub"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- 3: WebHub（自定义图标） -->
+        <activity-alias
+            android:name=".AliasWebHubPng"
+            android:targetActivity=".MainActivity"
+            android:label="WebHub"
+            android:icon="@mipmap/ic_launcher_webhub_png"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- 4: Gming -->
+        <activity-alias
+            android:name=".AliasGming"
+            android:targetActivity=".MainActivity"
+            android:label="Gming"
+            android:icon="@mipmap/ic_launcher_gming"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- 5: Pili -->
+        <activity-alias
+            android:name=".AliasPili"
+            android:targetActivity=".MainActivity"
+            android:label="Pili"
+            android:icon="@mipmap/ic_launcher_pili"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- 6: PILI（抖音版） -->
+        <activity-alias
+            android:name=".AliasPiliDouyin"
+            android:targetActivity=".MainActivity"
+            android:label="PILI"
+            android:icon="@mipmap/ic_launcher_pili_douyin"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
     </application>
 

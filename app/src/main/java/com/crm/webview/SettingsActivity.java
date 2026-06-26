@@ -1,8 +1,10 @@
 package com.crm.webview;
 
 import android.app.AlertDialog;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
@@ -42,7 +44,9 @@ public class SettingsActivity extends AppCompatActivity {
     private Switch switchKdocsOptimize;
     private Switch switchNightModeCSS;
     private Switch switchPageActions;
-    private android.widget.Spinner spinnerUA;
+    private Spinner spinnerPreset;
+    private int currentPresetIndex = -1;
+    private boolean presetInitialized = false;
     private SharedPreferences prefs;
 
     private static final String[] UA_LABELS = {
@@ -65,6 +69,26 @@ public class SettingsActivity extends AppCompatActivity {
     private static final String[] ACTION_TYPES = {"隐藏", "点击", "修改", "自定义脚本"};
     private static final String[] DEFAULT_TAB_ICONS = {"📊", "📋", "➕", "📁", "👤", "📌", "⭐", "🔧"};
     private static final String[] DEFAULT_TAB_TITLES = {"工作区1", "工作区2", "工作区3", "工作区4", "工作区5", "工作区6", "工作区7", "工作区8"};
+
+    // 应用名称和图标预设
+    private static final String[] ALIAS_NAMES = {
+        "com.crm.webview.AliasWebHub",
+        "com.crm.webview.AliasECM",
+        "com.crm.webview.AliasLanHub",
+        "com.crm.webview.AliasWebHubPng",
+        "com.crm.webview.AliasGming",
+        "com.crm.webview.AliasPili",
+        "com.crm.webview.AliasPiliDouyin"
+    };
+    private static final String[] PRESET_LABELS = {
+        "WebHub（默认）",
+        "ECM（企业CRM）",
+        "LanHub（局域网控制）",
+        "WebHub（自定义图标）",
+        "Gming",
+        "Pili",
+        "PILI（抖音版）"
+    };
 
     private List<TabData> tabsData = new ArrayList<>();
 
@@ -131,6 +155,9 @@ public class SettingsActivity extends AppCompatActivity {
         if (isNightMode) {
             applyDarkTheme();
         }
+
+        // 应用名称和图标预设切换
+        setupPresetSwitcher();
 
         setupCache();
         setupExportImport();
@@ -243,6 +270,68 @@ public class SettingsActivity extends AppCompatActivity {
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/pili8/WebHub/releases"));
             startActivity(intent);
         });
+    }
+
+    private void setupPresetSwitcher() {
+        android.widget.Spinner spinnerPreset = findViewById(R.id.spinnerPreset);
+        TextView tvPresetInfo = findViewById(R.id.tvPresetInfo);
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item, PRESET_LABELS);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerPreset.setAdapter(adapter);
+
+        // 找到当前启用的别名
+        int currentPreset = 0;
+        PackageManager pm = getPackageManager();
+        for (int i = 0; i < ALIAS_NAMES.length; i++) {
+            try {
+                ComponentName cn = new ComponentName(getPackageName(), ALIAS_NAMES[i]);
+                int state = pm.getComponentEnabledSetting(cn);
+                if (state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                        || state == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT) {
+                    currentPreset = i;
+                    break;
+                }
+            } catch (Exception e) {}
+        }
+        spinnerPreset.setSelection(currentPreset);
+        tvPresetInfo.setText(PRESET_LABELS[currentPreset]);
+
+        spinnerPreset.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                // 仅在实际切换时生效（避免初始化触发）
+                if (position != currentPreset) {
+                    switchAppPreset(position);
+                }
+            }
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
+    }
+
+    private void switchAppPreset(int index) {
+        PackageManager pm = getPackageManager();
+
+        // 禁用所有别名
+        for (String name : ALIAS_NAMES) {
+            ComponentName cn = new ComponentName(getPackageName(), name);
+            pm.setComponentEnabledSetting(cn,
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                    PackageManager.DONT_KILL_APP);
+        }
+
+        // 启用选中的别名
+        ComponentName selected = new ComponentName(getPackageName(), ALIAS_NAMES[index]);
+        pm.setComponentEnabledSetting(selected,
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                PackageManager.DONT_KILL_APP);
+
+        TextView tvPresetInfo = findViewById(R.id.tvPresetInfo);
+        tvPresetInfo.setText(PRESET_LABELS[index]);
+
+        Toast.makeText(this, "已切换为「" + PRESET_LABELS[index] + "」，返回桌面查看", Toast.LENGTH_LONG).show();
     }
 
     private void exportSettings() {
