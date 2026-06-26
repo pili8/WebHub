@@ -1,7 +1,5 @@
 package com.crm.webview.model;
 
-import com.crm.webview.config.ConfigManager;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -55,7 +53,7 @@ public class AppConfig {
             this.url = url;
             this.actions = actions;
             this.scope = "link";
-            this.actionItems = ConfigManager.parseLegacyActions(actions);
+            this.actionItems = parseLegacyActionsInternal(actions);
         }
 
         public LinkItem(String title, String url, String actions, String scope) {
@@ -63,7 +61,7 @@ public class AppConfig {
             this.url = url;
             this.actions = actions;
             this.scope = scope;
-            this.actionItems = ConfigManager.parseLegacyActions(actions);
+            this.actionItems = parseLegacyActionsInternal(actions);
         }
 
         public LinkItem(String title, String url, String scope, List<ActionItem> actionItems) {
@@ -166,5 +164,44 @@ public class AppConfig {
         public String remark = "";
         public int delay = 0;
         public android.view.View actionView;
+    }
+
+    /**
+     * 内部解析旧格式操作字符串（避免循环依赖 ConfigManager）。
+     */
+    private static List<ActionItem> parseLegacyActionsInternal(String actions) {
+        List<ActionItem> items = new ArrayList<>();
+        if (actions == null || actions.isEmpty()) return items;
+
+        String[] actionGroups = actions.split(";");
+        for (String group : actionGroups) {
+            group = group.trim();
+            if (group.isEmpty()) continue;
+
+            String[] parts = group.split("\\|");
+            if (parts.length < 2) continue;
+
+            String type = parts[0];
+            String selector = parts[1];
+            if (selector.startsWith("@")) continue;
+
+            int delay = 0;
+            String value = "";
+            String remark = "";
+            for (int k = 2; k < parts.length; k++) {
+                String part = parts[k];
+                if (part.startsWith("@")) {
+                    remark = part.substring(1)
+                        .replace("｜", "|")
+                        .replace("；", ";");
+                } else if ("click".equals(type)) {
+                    try { delay = Integer.parseInt(part); } catch (Exception e) {}
+                } else if ("modify".equals(type) && value.isEmpty()) {
+                    value = part;
+                }
+            }
+            items.add(new ActionItem(type, selector, value, delay, remark));
+        }
+        return items;
     }
 }

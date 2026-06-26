@@ -288,7 +288,7 @@ public class MainActivity extends AppCompatActivity implements WebViewFactory.We
     @SuppressLint("SetJavaScriptEnabled")
     private void createTabsAndWebViews() {
         // 先销毁旧的 WebView（防止内存泄漏）
-        for (int i = 0; i < MAX_TABS; i++) {
+        for (int i = 0; i < AppConfig.MAX_TABS; i++) {
             if (webViews[i] != null) {
                 PageActionEngine.stopMutationObserver(webViews[i]);
                 webViews[i].stopLoading();
@@ -655,7 +655,7 @@ public class MainActivity extends AppCompatActivity implements WebViewFactory.We
         // 工作区状态
         int activeCount = 0;
         int loadedCount = 0;
-        for (int i = 0; i < MAX_TABS; i++) {
+        for (int i = 0; i < AppConfig.MAX_TABS; i++) {
             if (webViews[i] != null) {
                 activeCount++;
                 if (tabLoaded[i]) loadedCount++;
@@ -1056,7 +1056,7 @@ public class MainActivity extends AppCompatActivity implements WebViewFactory.We
 
         // 统计需要搜索的 WebView 数量
         int pendingCount = 0;
-        for (int i = 0; i < MAX_TABS; i++) {
+        for (int i = 0; i < AppConfig.MAX_TABS; i++) {
             if (webViews[i] != null) pendingCount++;
         }
 
@@ -1069,7 +1069,7 @@ public class MainActivity extends AppCompatActivity implements WebViewFactory.We
         final int[] pending = {pendingCount};
         final String lowerQuery = query.toLowerCase();
 
-        for (int i = 0; i < MAX_TABS; i++) {
+        for (int i = 0; i < AppConfig.MAX_TABS; i++) {
             WebView wv = webViews[i];
             if (wv == null) continue;
 
@@ -1207,7 +1207,7 @@ public class MainActivity extends AppCompatActivity implements WebViewFactory.We
 
             // 如果网页暗色开关开启，注入 CSS
             if (isNightModeCSS) {
-                for (int i = 0; i < MAX_TABS; i++) {
+                for (int i = 0; i < AppConfig.MAX_TABS; i++) {
                     if (webViews[i] != null) {
                         WebViewFactory.injectNightModeCSS(webViews[i]);
                     }
@@ -1222,7 +1222,7 @@ public class MainActivity extends AppCompatActivity implements WebViewFactory.We
             webViewContainer.setBackgroundColor(Color.WHITE);
 
             // 移除网页暗色 CSS
-            for (int i = 0; i < MAX_TABS; i++) {
+            for (int i = 0; i < AppConfig.MAX_TABS; i++) {
                 if (webViews[i] != null) {
                     WebViewFactory.removeNightModeCSS(webViews[i]);
                 }
@@ -1937,7 +1937,7 @@ public class MainActivity extends AppCompatActivity implements WebViewFactory.We
     @Override
     protected void onPause() {
         super.onPause();
-        for (int i = 0; i < MAX_TABS; i++) {
+        for (int i = 0; i < AppConfig.MAX_TABS; i++) {
             if (webViews[i] != null) {
                 webViews[i].onPause();
             }
@@ -1949,7 +1949,7 @@ public class MainActivity extends AppCompatActivity implements WebViewFactory.We
     protected void onDestroy() {
         super.onDestroy();
         stopAutoRefresh();
-        for (int i = 0; i < MAX_TABS; i++) {
+        for (int i = 0; i < AppConfig.MAX_TABS; i++) {
             if (webViews[i] != null) {
                 webViews[i].destroy();
                 webViews[i] = null;
