@@ -82,8 +82,8 @@ public class SettingsActivity extends AppCompatActivity {
         "com.crm.webview.AliasPiliDouyin"
     };
     private static final String[] PRESET_LABELS = {
-        "WebHub",
-        "WebHub",
+        "WebHub 1",
+        "WebHub 2",
         "LanHub",
         "ECM",
         "Gming",
