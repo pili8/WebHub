@@ -1803,17 +1803,6 @@ public class MainActivity extends AppCompatActivity {
     /** 确保至少有一个启动入口别名可用（修复更新后图标消失） */
     private void ensureLauncherAlias() {
         PackageManager pm = getPackageManager();
-        String defaultAlias = getPackageName() + ".AliasWebHub";
-        ComponentName defaultCn = new ComponentName(getPackageName(), defaultAlias);
-
-        // 如果默认别名已启用，无需修复
-        int state = pm.getComponentEnabledSetting(defaultCn);
-        if (state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                || state == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT) {
-            return;
-        }
-
-        // 重置：禁用所有已知别名，启用默认
         String[] allAliases = {
             "com.crm.webview.AliasWebHub",
             "com.crm.webview.AliasWebHub2",
@@ -1823,12 +1812,25 @@ public class MainActivity extends AppCompatActivity {
             "com.crm.webview.AliasPili",
             "com.crm.webview.AliasPiliDouyin"
         };
+
+        // 检查是否有任何别名已启用
+        for (String name : allAliases) {
+            ComponentName cn = new ComponentName(getPackageName(), name);
+            int state = pm.getComponentEnabledSetting(cn);
+            if (state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                    || state == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT) {
+                return; // 已有可用别名，无需修复
+            }
+        }
+
+        // 没有别名可用（覆盖安装后状态丢失），重置为默认
         for (String name : allAliases) {
             ComponentName cn = new ComponentName(getPackageName(), name);
             pm.setComponentEnabledSetting(cn,
                     PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                     PackageManager.DONT_KILL_APP);
         }
+        ComponentName defaultCn = new ComponentName(getPackageName(), allAliases[0]);
         pm.setComponentEnabledSetting(defaultCn,
                 PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
                 PackageManager.DONT_KILL_APP);
