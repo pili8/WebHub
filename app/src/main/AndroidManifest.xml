@@ -71,6 +71,7 @@
         <activity-alias
             android:name=".AliasWebHub"
             android:targetActivity=".MainActivity"
+            android:exported="true"
             android:label="WebHub"
             android:icon="@mipmap/ic_launcher"
             android:enabled="true">
@@ -84,6 +85,7 @@
         <activity-alias
             android:name=".AliasECM"
             android:targetActivity=".MainActivity"
+            android:exported="true"
             android:label="ECM"
             android:icon="@mipmap/ic_ecm"
             android:enabled="false">
@@ -97,6 +99,7 @@
         <activity-alias
             android:name=".AliasLanHub"
             android:targetActivity=".MainActivity"
+            android:exported="true"
             android:label="LanHub"
             android:icon="@mipmap/ic_lanhub"
             android:enabled="false">
@@ -110,6 +113,7 @@
         <activity-alias
             android:name=".AliasWebHubPng"
             android:targetActivity=".MainActivity"
+            android:exported="true"
             android:label="WebHub"
             android:icon="@mipmap/ic_webhub"
             android:enabled="false">
@@ -123,6 +127,7 @@
         <activity-alias
             android:name=".AliasGming"
             android:targetActivity=".MainActivity"
+            android:exported="true"
             android:label="Gming"
             android:icon="@mipmap/ic_gming"
             android:enabled="false">
@@ -136,6 +141,7 @@
         <activity-alias
             android:name=".AliasPili"
             android:targetActivity=".MainActivity"
+            android:exported="true"
             android:label="Pili"
             android:icon="@mipmap/ic_pili"
             android:enabled="false">
@@ -149,6 +155,7 @@
         <activity-alias
             android:name=".AliasPiliDouyin"
             android:targetActivity=".MainActivity"
+            android:exported="true"
             android:label="PILI"
             android:icon="@mipmap/ic_pili_douyin"
             android:enabled="false">
