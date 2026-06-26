@@ -44,6 +44,7 @@ public class SettingsActivity extends AppCompatActivity {
     private Switch switchKdocsOptimize;
     private Switch switchNightModeCSS;
     private Switch switchPageActions;
+    private android.widget.Spinner spinnerUA;
     private Spinner spinnerPreset;
     private int currentPresetIndex = -1;
     private boolean presetInitialized = false;
