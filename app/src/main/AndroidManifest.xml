@@ -85,7 +85,7 @@
             android:name=".AliasECM"
             android:targetActivity=".MainActivity"
             android:label="ECM"
-            android:icon="@mipmap/ic_launcher_ecm"
+            android:icon="@mipmap/ic_ecm"
             android:enabled="false">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -98,7 +98,7 @@
             android:name=".AliasLanHub"
             android:targetActivity=".MainActivity"
             android:label="LanHub"
-            android:icon="@mipmap/ic_launcher_lanhub"
+            android:icon="@mipmap/ic_lanhub"
             android:enabled="false">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -111,7 +111,7 @@
             android:name=".AliasWebHubPng"
             android:targetActivity=".MainActivity"
             android:label="WebHub"
-            android:icon="@mipmap/ic_launcher_webhub_png"
+            android:icon="@mipmap/ic_webhub"
             android:enabled="false">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -124,7 +124,7 @@
             android:name=".AliasGming"
             android:targetActivity=".MainActivity"
             android:label="Gming"
-            android:icon="@mipmap/ic_launcher_gming"
+            android:icon="@mipmap/ic_gming"
             android:enabled="false">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -137,7 +137,7 @@
             android:name=".AliasPili"
             android:targetActivity=".MainActivity"
             android:label="Pili"
-            android:icon="@mipmap/ic_launcher_pili"
+            android:icon="@mipmap/ic_pili"
             android:enabled="false">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -150,7 +150,7 @@
             android:name=".AliasPiliDouyin"
             android:targetActivity=".MainActivity"
             android:label="PILI"
-            android:icon="@mipmap/ic_launcher_pili_douyin"
+            android:icon="@mipmap/ic_pili_douyin"
             android:enabled="false">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
