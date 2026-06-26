@@ -1496,6 +1496,18 @@ public class MainActivity extends AppCompatActivity {
         webView.evaluateJavascript("(function(){var s=document.getElementById('wh-nm');if(s)s.remove();})()", null);
     }
 
+    /** 桌面模式注入 viewport meta，确保页面缩放到屏幕宽度 */
+    private void injectDesktopViewport(WebView webView) {
+        float density = getResources().getDisplayMetrics().density;
+        int screenWidth = (int) (getResources().getDisplayMetrics().widthPixels / density);
+        webView.evaluateJavascript(
+            "(function(){" +
+            "var meta=document.querySelector('meta[name=viewport]');" +
+            "if(!meta){meta=document.createElement('meta');meta.name='viewport';document.head.appendChild(meta);}" +
+            "meta.content='width=" + screenWidth + "';" +
+            "})()", null);
+    }
+
     /**
      * 显示底部子链接菜单
      */
@@ -1812,11 +1824,15 @@ public class MainActivity extends AppCompatActivity {
             // 使用 overview 模式将桌面页面缩放到屏幕宽度
             settings.setUseWideViewPort(true);
             settings.setLoadWithOverviewMode(true);
-            // 允许双指缩放，方便用户调整
+            // 标记当前为桌面模式，供 onPageFinished 注入 viewport
+            webView.setTag(R.id._webhub_desktop_mode, true);
+            // 允许双指缩放
             settings.setSupportZoom(true);
             settings.setBuiltInZoomControls(true);
             settings.setDisplayZoomControls(false);
         } else {
+            // 清除桌面模式标记
+            webView.setTag(R.id._webhub_desktop_mode, null);
             // 恢复之前保存的 UA
             Object savedUA = webView.getTag(R.id._webhub_saved_ua);
             if (savedUA instanceof String && !((String) savedUA).isEmpty()) {
@@ -1938,6 +1954,11 @@ public class MainActivity extends AppCompatActivity {
                 // 夜间模式 CSS
                 if (isNightMode && isNightModeCSS) {
                     injectNightModeCSS(view);
+                }
+                // 桌面模式 viewport 注入
+                if (view.getTag(R.id._webhub_desktop_mode) instanceof Boolean
+                        && (Boolean) view.getTag(R.id._webhub_desktop_mode)) {
+                    injectDesktopViewport(view);
                 }
             }
 
