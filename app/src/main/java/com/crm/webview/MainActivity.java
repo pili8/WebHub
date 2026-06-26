@@ -1496,6 +1496,22 @@ public class MainActivity extends AppCompatActivity {
         webView.evaluateJavascript("(function(){var s=document.getElementById('wh-nm');if(s)s.remove();})()", null);
     }
 
+    /** 桌面模式：viewport meta 控制渲染宽度和初始缩放 */
+    private void applyDesktopZoom(WebView webView) {
+        if (webView == null) return;
+        float density = getResources().getDisplayMetrics().density;
+        int screenW = (int) (getResources().getDisplayMetrics().widthPixels / density);
+        // 页面按 980 CSS px 宽度渲染，缩放至屏幕 DP 宽度
+        float scale = Math.max(0.2f, (float) screenW / 980f);
+        String scaleStr = String.format("%.3f", scale);
+        webView.evaluateJavascript(
+            "(function(){" +
+            "var m=document.querySelector('meta[name=viewport]');" +
+            "if(!m){m=document.createElement('meta');m.name='viewport';document.head.appendChild(m);}" +
+            "m.content='width=980,initial-scale=" + scaleStr + ",minimum-scale=" + scaleStr + ",maximum-scale=3.0';" +
+            "})()", null);
+    }
+
     /**
      * 显示底部子链接菜单
      */
@@ -1809,14 +1825,15 @@ public class MainActivity extends AppCompatActivity {
             webView.setTag(R.id._webhub_saved_ua, settings.getUserAgentString());
             // 桌面 UA
             settings.setUserAgentString(DESKTOP_UA);
-            // 使用桌面宽度视口 + overview 自动缩放到全宽（与 Chrome 桌面模式一致）
+            // 桌面视口，禁用内部缩放（缩放由 JS 接管）
             settings.setUseWideViewPort(true);
-            settings.setLoadWithOverviewMode(true);
-            // 允许双指缩放到 25%，方便阅读细节
-            settings.setSupportZoom(true);
-            settings.setBuiltInZoomControls(true);
-            settings.setDisplayZoomControls(false);
+            settings.setLoadWithOverviewMode(false);
+            settings.setSupportZoom(false);
+            settings.setBuiltInZoomControls(false);
+            // 标记桌面模式
+            webView.setTag(R.id._webhub_desktop_mode, true);
         } else {
+            webView.setTag(R.id._webhub_desktop_mode, null);
             // 恢复之前保存的 UA
             Object savedUA = webView.getTag(R.id._webhub_saved_ua);
             if (savedUA instanceof String && !((String) savedUA).isEmpty()) {
@@ -1938,6 +1955,11 @@ public class MainActivity extends AppCompatActivity {
                 // 夜间模式 CSS
                 if (isNightMode && isNightModeCSS) {
                     injectNightModeCSS(view);
+                }
+                // 桌面模式：CSS transform 缩放页面至全宽可见
+                if (view.getTag(R.id._webhub_desktop_mode) instanceof Boolean
+                        && (Boolean) view.getTag(R.id._webhub_desktop_mode)) {
+                    applyDesktopZoom(view);
                 }
             }
 

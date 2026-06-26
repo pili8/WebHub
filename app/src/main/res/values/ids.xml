@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <item name="_webhub_saved_ua" type="id" />
+    <item name="_webhub_desktop_mode" type="id" />
 </resources>
