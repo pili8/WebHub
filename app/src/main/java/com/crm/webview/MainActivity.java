@@ -140,6 +140,7 @@ public class MainActivity extends AppCompatActivity {
         String url;
         String actions;
         String scope; // link/domain/tab/all
+        boolean desktopMode = false;
         List<ActionItem> actionItems = new ArrayList<>();
 
         LinkItem(String title, String url) {
@@ -171,6 +172,15 @@ public class MainActivity extends AppCompatActivity {
             this.scope = scope;
             this.actionItems = actionItems != null ? actionItems : new ArrayList<>();
             this.actions = "";
+        }
+
+        LinkItem(String title, String url, String scope, List<ActionItem> actionItems, boolean desktopMode) {
+            this.title = title;
+            this.url = url;
+            this.scope = scope;
+            this.actionItems = actionItems != null ? actionItems : new ArrayList<>();
+            this.actions = "";
+            this.desktopMode = desktopMode;
         }
     }
 
@@ -246,12 +256,7 @@ public class MainActivity extends AppCompatActivity {
             // 重新加载按工作区刷新配置
             loadTabAutoRefresh();
             // 重新启动定时器
-            stopAutoRefresh();
-            autoRefreshInterval = tabAutoRefresh[currentTab];
-            if (autoRefreshInterval > 0) {
-                setAutoRefresh(autoRefreshInterval);
-            }
-            updateAutoRefreshIndicator();
+            startAutoRefresh(tabAutoRefresh[currentTab]);
 
             // 检查工作区数量是否变化
             int oldTabCount = tabCount;
@@ -415,10 +420,12 @@ public class MainActivity extends AppCompatActivity {
                     String titleUrl = parts[0];
                     String actions = parts.length > 1 ? parts[1] : "";
 
-                    String[] titleUrlParts = titleUrl.split(",", 3);
+                    String[] titleUrlParts = titleUrl.split(",", 4);
                     if (titleUrlParts.length >= 2) {
                         String scope = titleUrlParts.length > 2 ? titleUrlParts[2].trim() : "link";
-                        links.add(new LinkItem(titleUrlParts[0].trim(), titleUrlParts[1].trim(), actions, scope));
+                        boolean desktopMode = titleUrlParts.length > 3 && "1".equals(titleUrlParts[3].trim());
+                        links.add(new LinkItem(titleUrlParts[0].trim(), titleUrlParts[1].trim(),
+                                scope, parseLegacyActions(actions), desktopMode));
                     }
                 }
             }
@@ -477,7 +484,9 @@ public class MainActivity extends AppCompatActivity {
                             }
                         }
 
-                        links.add(new LinkItem(title, url, linkJson.optString("scope", "link"), actions));
+                        links.add(new LinkItem(title, url,
+                                linkJson.optString("scope", "link"), actions,
+                                linkJson.optBoolean("desktopMode", false)));
                     }
                 }
 
@@ -1134,30 +1143,32 @@ public class MainActivity extends AppCompatActivity {
     // ========== 定时刷新 ==========
 
     private void setAutoRefresh(int interval) {
-        autoRefreshInterval = interval;
+        startAutoRefresh(interval);
+        if (interval > 0) {
+            Toast.makeText(this, "定时刷新: " + formatInterval(interval) + " (当前工作区)", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "定时刷新已关闭", Toast.LENGTH_SHORT).show();
+        }
+    }
 
-        // 彻底停止之前的定时器
+    /** 启动定时刷新（无 Toast，供内部调用复用） */
+    private void startAutoRefresh(int interval) {
+        autoRefreshInterval = interval;
         stopAutoRefresh();
 
         if (interval > 0) {
-            // 启动定时刷新（只刷新当前工作区）
             autoRefreshRunnable = () -> {
                 autoRefreshRunning = false;
-                // 安全检查：Activity 是否仍然有效
                 if (isFinishing() || isDestroyed()) return;
                 WebView wv = getCurrentWebView();
                 if (wv != null) {
                     wv.reload();
                 }
-                // 如果间隔仍然有效，继续调度
                 if (autoRefreshInterval > 0) {
                     scheduleAutoRefresh();
                 }
             };
             scheduleAutoRefresh();
-            Toast.makeText(this, "定时刷新: " + formatInterval(interval) + " (当前工作区)", Toast.LENGTH_SHORT).show();
-        } else {
-            Toast.makeText(this, "定时刷新已关闭", Toast.LENGTH_SHORT).show();
         }
 
         updateAutoRefreshIndicator();
@@ -1244,14 +1255,11 @@ public class MainActivity extends AppCompatActivity {
         searchResults.addView(loadingText);
 
         if (searchContent) {
-            // 搜索网页内容（后台加载）
-            new Thread(() -> {
-                List<SearchResult> results = searchWebContent(query);
-                runOnUiThread(() -> {
-                    searchResults.removeAllViews();
-                    displaySearchResults(results, query);
-                });
-            }).start();
+            // 搜索网页内容（异步回调，避免阻塞线程）
+            searchWebContent(query, results -> {
+                searchResults.removeAllViews();
+                displaySearchResults(results, query);
+            });
         } else {
             // 只搜索标题和URL（即时）
             List<SearchResult> results = searchLinksOnly(query);
@@ -1274,67 +1282,66 @@ public class MainActivity extends AppCompatActivity {
         return results;
     }
 
-    private List<SearchResult> searchWebContent(String query) {
-        List<SearchResult> results = new ArrayList<>();
+    /** 搜索回调接口 */
+    interface SearchCallback {
+        void onSearchComplete(List<SearchResult> results);
+    }
 
-        // 先搜索标题和URL
-        results.addAll(searchLinksOnly(query));
+    private void searchWebContent(String query, SearchCallback callback) {
+        List<SearchResult> results = new ArrayList<>(searchLinksOnly(query));
 
-        // 遍历所有已创建的 WebView
+        // 统计需要搜索的 WebView 数量
+        int pendingCount = 0;
+        for (int i = 0; i < MAX_TABS; i++) {
+            if (webViews[i] != null) pendingCount++;
+        }
+
+        if (pendingCount == 0) {
+            callback.onSearchComplete(results);
+            return;
+        }
+
+        // 异步搜索每个 WebView 的页面内容
+        final int[] pending = {pendingCount};
+        final String lowerQuery = query.toLowerCase();
+
         for (int i = 0; i < MAX_TABS; i++) {
             WebView wv = webViews[i];
             if (wv == null) continue;
 
-            try {
-                final String[] content = {""};
-                final boolean[] done = {false};
-                final int tabIndex = i;
+            final int tabIndex = i;
+            wv.evaluateJavascript(
+                    "(function() { return document.body.innerText; })();",
+                    value -> {
+                        if (value != null && value.toLowerCase().contains(lowerQuery)) {
+                            if (tabIndex < tabLinks.size()) {
+                                List<LinkItem> links = tabLinks.get(tabIndex);
+                                int linkIndex = (tabIndex == currentTab) ?
+                                        (activeLinkIndex >= 0 ? activeLinkIndex : currentLinkIndex) : 0;
 
-                runOnUiThread(() -> {
-                    wv.evaluateJavascript(
-                            "(function() { return document.body.innerText; })();",
-                            value -> {
-                                content[0] = value != null ? value : "";
-                                synchronized (done) {
-                                    done[0] = true;
-                                    done.notify();
+                                if (linkIndex >= 0 && linkIndex < links.size()) {
+                                    LinkItem link = links.get(linkIndex);
+                                    boolean exists = false;
+                                    for (SearchResult r : results) {
+                                        if (r.tabIndex == tabIndex && r.linkIndex == linkIndex) {
+                                            exists = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!exists) {
+                                        results.add(new SearchResult(tabIndex, linkIndex, link.title, link.url, "页面内容"));
+                                    }
                                 }
-                            }
-                    );
-                });
-
-                synchronized (done) {
-                    if (!done[0]) done.wait(3000);
-                }
-
-                if (!content[0].isEmpty() && content[0].toLowerCase().contains(query)) {
-                    // 查找这个 WebView 对应的链接
-                    if (tabIndex < tabLinks.size()) {
-                        List<LinkItem> links = tabLinks.get(tabIndex);
-                        int linkIndex = (tabIndex == currentTab) ?
-                                (activeLinkIndex >= 0 ? activeLinkIndex : currentLinkIndex) : 0;
-
-                        if (linkIndex >= 0 && linkIndex < links.size()) {
-                            LinkItem link = links.get(linkIndex);
-                            boolean exists = false;
-                            for (SearchResult r : results) {
-                                if (r.tabIndex == tabIndex && r.linkIndex == linkIndex) {
-                                    exists = true;
-                                    break;
-                                }
-                            }
-                            if (!exists) {
-                                results.add(new SearchResult(tabIndex, linkIndex, link.title, link.url, "页面内容"));
                             }
                         }
-                    }
-                }
-            } catch (Exception e) {
-                // 忽略错误
-            }
-        }
 
-        return results;
+                        pending[0]--;
+                        if (pending[0] == 0) {
+                            callback.onSearchComplete(results);
+                        }
+                    }
+            );
+        }
     }
 
     private void displaySearchResults(List<SearchResult> results, String query) {
@@ -1571,9 +1578,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void switchToTab(int tabIndex, int linkIndex) {
-        if (tabIndex < 0 || tabIndex >= tabCount) return;
-        if (linkIndex < 0 || tabIndex >= tabLinks.size()) return;
-        if (linkIndex >= tabLinks.get(tabIndex).size()) return;
+        if (tabIndex < 0 || tabIndex >= tabCount || tabIndex >= tabLinks.size()) return;
+        if (linkIndex < 0 || linkIndex >= tabLinks.get(tabIndex).size()) return;
 
         currentTab = tabIndex;
         currentLinkIndex = linkIndex;
@@ -1624,23 +1630,7 @@ public class MainActivity extends AppCompatActivity {
         isDropdownOpen = false;
 
         // 切换工作区时，更新定时刷新状态（Feature 5）
-        autoRefreshInterval = tabAutoRefresh[index];
-        stopAutoRefresh();
-        if (autoRefreshInterval > 0) {
-            autoRefreshRunnable = () -> {
-                autoRefreshRunning = false;
-                if (isFinishing() || isDestroyed()) return;
-                WebView wv = getCurrentWebView();
-                if (wv != null) {
-                    wv.reload();
-                }
-                if (autoRefreshInterval > 0) {
-                    scheduleAutoRefresh();
-                }
-            };
-            scheduleAutoRefresh();
-        }
-        updateAutoRefreshIndicator();
+        startAutoRefresh(tabAutoRefresh[index]);
 
         // 切换工作区样式
         for (int i = 0; i < tabTextViews.size(); i++) {
@@ -1687,6 +1677,7 @@ public class MainActivity extends AppCompatActivity {
         if (wv != null) {
             LinkItem link = links.get(linkIndex);
             if (!isAllowedUrl(link.url)) return;
+            applyDesktopModeUA(wv, link.desktopMode);
             wv.loadUrl(link.url);
             tvTitle.setText(link.title);
         }
@@ -1781,9 +1772,11 @@ public class MainActivity extends AppCompatActivity {
         List<LinkItem> links = tabLinks.get(currentTab);
         WebView wv = getCurrentWebView();
         if (currentLinkIndex < links.size() && wv != null) {
-            String url = links.get(currentLinkIndex).url;
+            LinkItem link = links.get(currentLinkIndex);
+            String url = link.url;
             if (!isAllowedUrl(url)) return;
             activeLinkIndex = currentLinkIndex; // 设置活跃链接
+            applyDesktopModeUA(wv, link.desktopMode);
             wv.loadUrl(url);
         }
     }
@@ -1802,6 +1795,40 @@ public class MainActivity extends AppCompatActivity {
             if (end > idx) return ua.substring(idx + 7, end);
         }
         return "125.0.0.0"; // fallback
+    }
+
+    private static final String DESKTOP_UA = 
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
+
+    /** 根据链接的桌面模式开关切换 WebView 渲染模式 */
+    private void applyDesktopModeUA(WebView webView, boolean desktopMode) {
+        if (webView == null) return;
+        WebSettings settings = webView.getSettings();
+        if (desktopMode) {
+            // 保存当前 UA，以便恢复
+            webView.setTag(R.id._webhub_saved_ua, settings.getUserAgentString());
+            // 桌面 UA
+            settings.setUserAgentString(DESKTOP_UA);
+            // 不缩放以适应屏幕，按桌面宽度渲染
+            settings.setLoadWithOverviewMode(false);
+            settings.setUseWideViewPort(true);
+            // 允许缩放（桌面页面通常更宽）
+            settings.setSupportZoom(true);
+            settings.setBuiltInZoomControls(true);
+            settings.setDisplayZoomControls(false);
+        } else {
+            // 恢复之前保存的 UA
+            Object savedUA = webView.getTag(R.id._webhub_saved_ua);
+            if (savedUA instanceof String && !((String) savedUA).isEmpty()) {
+                settings.setUserAgentString((String) savedUA);
+            }
+            // 没有保存的 UA（首次加载非桌面链接），保持 setupWebView 设置的 UA 不变
+            // 恢复移动端缩放行为
+            settings.setLoadWithOverviewMode(true);
+            settings.setUseWideViewPort(true);
+            settings.setSupportZoom(false);
+            settings.setBuiltInZoomControls(false);
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")

@@ -81,9 +81,11 @@ public class SettingsActivity extends AppCompatActivity {
         String title;
         String url;
         String scope = "link"; // link/domain/tab/all
+        boolean desktopMode = false;
         List<ActionData> actions = new ArrayList<>();
         View cardView;
         LinearLayout actionsContainer;
+        Switch switchDesktopMode;
     }
 
     static class ActionData {
@@ -230,6 +232,7 @@ public class SettingsActivity extends AppCompatActivity {
         // 更新日志（发版时同步更新）
         tvAboutChangelog.setText(
                 "📋 最近更新:\n" +
+                "v2.7.5 - 桌面模式开关、设置页重排、Bug修复\n" +
                 "v2.7.4 - 修复定时刷新闪退、工作区上限8个、支持HTTP、页面操作优化\n" +
                 "v2.7.3 - 工作区自定义颜色、浏览历史、定时刷新、自定义脚本\n" +
                 "v2.7.2 - 菜单重构、搜索优化");
@@ -471,11 +474,15 @@ public class SettingsActivity extends AppCompatActivity {
                     String titleUrl = parts[0];
                     String actionsStr = parts.length > 1 ? parts[1] : "";
 
-                    String[] titleUrlParts = titleUrl.split(",", 3);
+                    String[] titleUrlParts = titleUrl.split(",", 4);
                     if (titleUrlParts.length >= 2) {
                         link.title = titleUrlParts[0].trim();
                         link.url = titleUrlParts[1].trim();
                         link.scope = titleUrlParts.length > 2 ? titleUrlParts[2].trim() : "link";
+                        // 第4个字段为桌面模式标记
+                        if (titleUrlParts.length > 3 && "1".equals(titleUrlParts[3].trim())) {
+                            link.desktopMode = true;
+                        }
                     }
 
                     if (!actionsStr.isEmpty()) {
@@ -542,6 +549,7 @@ public class SettingsActivity extends AppCompatActivity {
                         link.title = linkJson.optString("title", "");
                         link.url = linkJson.optString("url", "");
                         link.scope = linkJson.optString("scope", "link");
+                        link.desktopMode = linkJson.optBoolean("desktopMode", false);
                         if (link.title.isEmpty() || link.url.isEmpty()) continue;
 
                         JSONArray actionsArray = linkJson.optJSONArray("actions");
@@ -824,10 +832,13 @@ public class SettingsActivity extends AppCompatActivity {
         TextView btnDeleteLink = cardView.findViewById(R.id.btnDeleteLink);
         LinearLayout actionsContainer = cardView.findViewById(R.id.actionsContainer);
         TextView btnAddAction = cardView.findViewById(R.id.btnAddAction);
+        Switch switchDesktopMode = cardView.findViewById(R.id.switchDesktopMode);
 
         etLinkTitle.setText(link.title);
         etLinkUrl.setText(link.url);
         link.actionsContainer = actionsContainer;
+        link.switchDesktopMode = switchDesktopMode;
+        switchDesktopMode.setChecked(link.desktopMode);
 
         // 生效范围
         Spinner spinnerScope = cardView.findViewById(R.id.spinnerScope);
@@ -1090,6 +1101,9 @@ public class SettingsActivity extends AppCompatActivity {
 
                 if (linksStr.length() > 0) linksStr.append("\n");
                 linksStr.append(linkTitle).append(",").append(linkUrl).append(",").append(link.scope);
+                if (link.desktopMode) {
+                    linksStr.append(",1");
+                }
 
                 StringBuilder actionsStr = new StringBuilder();
                 boolean hasActions = false;
@@ -1214,6 +1228,7 @@ public class SettingsActivity extends AppCompatActivity {
                     linkJson.put("title", link.title);
                     linkJson.put("url", link.url);
                     linkJson.put("scope", link.scope == null || link.scope.isEmpty() ? "link" : link.scope);
+                    linkJson.put("desktopMode", link.desktopMode);
 
                     JSONArray actionsArray = new JSONArray();
                     for (ActionData action : link.actions) {
@@ -1254,6 +1269,9 @@ public class SettingsActivity extends AppCompatActivity {
                 EditText etLinkUrl = link.cardView.findViewById(R.id.etLinkUrl);
                 link.title = etLinkTitle.getText().toString().trim();
                 link.url = etLinkUrl.getText().toString().trim();
+                if (link.switchDesktopMode != null) {
+                    link.desktopMode = link.switchDesktopMode.isChecked();
+                }
 
                 for (ActionData action : link.actions) {
                     if (action.actionView == null) continue;
@@ -1293,11 +1311,15 @@ public class SettingsActivity extends AppCompatActivity {
             String titleUrl = parts[0];
             String actionsStr = parts.length > 1 ? parts[1] : "";
 
-            String[] titleUrlParts = titleUrl.split(",", 3);
+            String[] titleUrlParts = titleUrl.split(",", 4);
             if (titleUrlParts.length >= 2) {
                 link.title = titleUrlParts[0].trim();
                 link.url = titleUrlParts[1].trim();
                 link.scope = titleUrlParts.length > 2 ? titleUrlParts[2].trim() : "link";
+                // 第4个字段为桌面模式标记
+                if (titleUrlParts.length > 3 && "1".equals(titleUrlParts[3].trim())) {
+                    link.desktopMode = true;
+                }
             }
             parseLegacyActions(link, actionsStr);
             if (link.title != null && !link.title.isEmpty() && link.url != null && !link.url.isEmpty()) {

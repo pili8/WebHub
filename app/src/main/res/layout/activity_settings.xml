@@ -51,286 +51,7 @@
             android:orientation="vertical"
             android:padding="12dp">
 
-            <!-- ========== 通用设置区域 ========== -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="通用设置"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:textColor="#888888"
-                android:layout_marginBottom="8dp"
-                android:layout_marginStart="4dp" />
-
-            <!-- 金山文档优化开关 -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/card_white"
-                android:padding="14dp"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="8dp">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="金山文档优化"
-                        android:textSize="15sp"
-                        android:textColor="#333333" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="返回键自动关闭金山文档弹窗"
-                        android:textSize="12sp"
-                        android:textColor="#999999"
-                        android:layout_marginTop="2dp" />
-
-                </LinearLayout>
-
-                <android.widget.Switch
-                    android:id="@+id/switchKdocsOptimize"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-
-            </LinearLayout>
-
-            <!-- 网页暗色模式开关 -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/card_white"
-                android:padding="14dp"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="8dp">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="网页暗色模式"
-                        android:textSize="15sp"
-                        android:textColor="#333333" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="通过 CSS 注入让网页变暗色"
-                        android:textSize="12sp"
-                        android:textColor="#999999"
-                        android:layout_marginTop="2dp" />
-
-                </LinearLayout>
-
-                <android.widget.Switch
-                    android:id="@+id/switchNightModeCSS"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-
-            </LinearLayout>
-
-            <!-- UA 切换 -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/card_white"
-                android:padding="14dp"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="8dp">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="浏览器标识"
-                        android:textSize="15sp"
-                        android:textColor="#333333" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="切换 UA 模拟不同设备"
-                        android:textSize="12sp"
-                        android:textColor="#999999"
-                        android:layout_marginTop="2dp" />
-
-                </LinearLayout>
-
-                <Spinner
-                    android:id="@+id/spinnerUA"
-                    android:layout_width="wrap_content"
-                    android:layout_height="40dp"
-                    android:minWidth="120dp" />
-
-            </LinearLayout>
-
-            <!-- 页面操作总开关 -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/card_white"
-                android:padding="14dp"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="8dp">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="页面操作"
-                        android:textSize="15sp"
-                        android:textColor="#333333" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="隐藏/点击/修改页面元素"
-                        android:textSize="12sp"
-                        android:textColor="#999999"
-                        android:layout_marginTop="2dp" />
-
-                </LinearLayout>
-
-                <android.widget.Switch
-                    android:id="@+id/switchPageActions"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-
-            </LinearLayout>
-
-            <!-- 清除缓存 -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/card_white"
-                android:padding="14dp"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="16dp">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="清除缓存"
-                        android:textSize="15sp"
-                        android:textColor="#333333" />
-
-                    <TextView
-                        android:id="@+id/tvCacheSize"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="计算中..."
-                        android:textSize="12sp"
-                        android:textColor="#999999"
-                        android:layout_marginTop="2dp" />
-
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/btnClearCache"
-                    android:layout_width="wrap_content"
-                    android:layout_height="34dp"
-                    android:gravity="center"
-                    android:text="清除"
-                    android:textSize="13sp"
-                    android:textColor="#F44336"
-                    android:background="@drawable/btn_outline_red"
-                    android:paddingStart="14dp"
-                    android:paddingEnd="14dp" />
-
-            </LinearLayout>
-
-            <!-- ========== 工作区配置区域 ========== -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="工作区配置"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:textColor="#888888"
-                android:layout_marginBottom="8dp"
-                android:layout_marginStart="4dp" />
-
-            <!-- 工作区列表容器 -->
-            <LinearLayout
-                android:id="@+id/settingsContainer"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical" />
-
-            <!-- ========== 导入导出区域 ========== -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="数据管理"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:textColor="#888888"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="8dp"
-                android:layout_marginStart="4dp" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/card_white"
-                android:orientation="horizontal"
-                android:padding="10dp"
-                android:layout_marginBottom="12dp">
-
-                <TextView
-                    android:id="@+id/btnExport"
-                    android:layout_width="0dp"
-                    android:layout_height="40dp"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:text="📤 导出"
-                    android:textSize="13sp"
-                    android:textColor="#1976D2"
-                    android:background="@drawable/btn_outline"
-                    android:layout_marginEnd="6dp" />
-
-                <TextView
-                    android:id="@+id/btnImport"
-                    android:layout_width="0dp"
-                    android:layout_height="40dp"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:text="📥 导入"
-                    android:textSize="13sp"
-                    android:textColor="#4CAF50"
-                    android:background="@drawable/btn_outline_green"
-                    android:layout_marginStart="6dp" />
-
-            </LinearLayout>
-
-            <!-- 关于（默认折叠） -->
+            <!-- ========== 关于（放在最上面，默认折叠） ========== -->
             <LinearLayout
                 android:id="@+id/aboutSection"
                 android:layout_width="match_parent"
@@ -338,7 +59,7 @@
                 android:orientation="vertical"
                 android:background="@drawable/card_white"
                 android:padding="14dp"
-                android:layout_marginTop="12dp">
+                android:layout_marginBottom="16dp">
 
                 <!-- 标题栏（可点击展开/折叠） -->
                 <LinearLayout
@@ -404,13 +125,269 @@
                         android:id="@+id/tvAboutGithub"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="📂 查看全部更新日志"
+                        android:text="查看全部更新日志"
                         android:textSize="12sp"
                         android:textColor="#1976D2"
                         android:paddingTop="8dp"
                         android:paddingBottom="4dp" />
 
                 </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- ========== 通用设置区域 ========== -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="通用设置"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="#888888"
+                android:layout_marginBottom="8dp"
+                android:layout_marginStart="4dp" />
+
+            <!-- 三个开关并列 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
+
+                <!-- 金山文档优化 -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@drawable/card_white"
+                    android:padding="10dp"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical"
+                    android:layout_marginEnd="4dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="金山文档优化"
+                        android:textSize="11sp"
+                        android:textColor="#333333"
+                        android:gravity="center"
+                        android:maxLines="1" />
+
+                    <android.widget.Switch
+                        android:id="@+id/switchKdocsOptimize"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" />
+
+                </LinearLayout>
+
+                <!-- 网页暗色模式 -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@drawable/card_white"
+                    android:padding="10dp"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="网页暗色模式"
+                        android:textSize="11sp"
+                        android:textColor="#333333"
+                        android:gravity="center"
+                        android:maxLines="1" />
+
+                    <android.widget.Switch
+                        android:id="@+id/switchNightModeCSS"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" />
+
+                </LinearLayout>
+
+                <!-- 页面操作 -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@drawable/card_white"
+                    android:padding="10dp"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical"
+                    android:layout_marginStart="4dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="页面操作"
+                        android:textSize="11sp"
+                        android:textColor="#333333"
+                        android:gravity="center"
+                        android:maxLines="1" />
+
+                    <android.widget.Switch
+                        android:id="@+id/switchPageActions"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- 浏览器标识（UA 切换）下移一行 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/card_white"
+                android:padding="14dp"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="浏览器标识"
+                        android:textSize="15sp"
+                        android:textColor="#333333" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="切换 UA 模拟不同设备"
+                        android:textSize="12sp"
+                        android:textColor="#999999"
+                        android:layout_marginTop="2dp" />
+
+                </LinearLayout>
+
+                <Spinner
+                    android:id="@+id/spinnerUA"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:minWidth="120dp" />
+
+            </LinearLayout>
+
+            <!-- ========== 工作区配置区域 ========== -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="工作区配置"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="#888888"
+                android:layout_marginBottom="8dp"
+                android:layout_marginStart="4dp" />
+
+            <!-- 工作区列表容器 -->
+            <LinearLayout
+                android:id="@+id/settingsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+            <!-- ========== 数据管理区域 ========== -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="数据管理"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="#888888"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp"
+                android:layout_marginStart="4dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/card_white"
+                android:orientation="horizontal"
+                android:padding="10dp"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:id="@+id/btnExport"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="导出"
+                    android:textSize="13sp"
+                    android:textColor="#1976D2"
+                    android:background="@drawable/btn_outline"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/btnImport"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="导入"
+                    android:textSize="13sp"
+                    android:textColor="#4CAF50"
+                    android:background="@drawable/btn_outline_green"
+                    android:layout_marginStart="6dp" />
+
+            </LinearLayout>
+
+            <!-- ========== 清除缓存（放在最下面） ========== -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/card_white"
+                android:padding="14dp"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="清除缓存"
+                        android:textSize="15sp"
+                        android:textColor="#333333" />
+
+                    <TextView
+                        android:id="@+id/tvCacheSize"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="计算中..."
+                        android:textSize="12sp"
+                        android:textColor="#999999"
+                        android:layout_marginTop="2dp" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/btnClearCache"
+                    android:layout_width="wrap_content"
+                    android:layout_height="34dp"
+                    android:gravity="center"
+                    android:text="清除"
+                    android:textSize="13sp"
+                    android:textColor="#F44336"
+                    android:background="@drawable/btn_outline_red"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp" />
 
             </LinearLayout>
 
