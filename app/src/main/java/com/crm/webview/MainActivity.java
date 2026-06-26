@@ -214,6 +214,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        // 确保启动图标存在（覆盖安装后 PackageManager 状态可能不一致）
+        ensureLauncherAlias();
 
         prefs = getSharedPreferences("app_config", MODE_PRIVATE);
 
@@ -1795,6 +1797,40 @@ public class MainActivity extends AppCompatActivity {
             applyDesktopModeUA(wv, link.desktopMode);
             wv.loadUrl(url);
         }
+    }
+
+    /** 确保至少有一个启动入口别名可用（修复更新后图标消失） */
+    private void ensureLauncherAlias() {
+        PackageManager pm = getPackageManager();
+        String defaultAlias = getPackageName() + ".AliasWebHub";
+        ComponentName defaultCn = new ComponentName(getPackageName(), defaultAlias);
+
+        // 如果默认别名已启用，无需修复
+        int state = pm.getComponentEnabledSetting(defaultCn);
+        if (state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                || state == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT) {
+            return;
+        }
+
+        // 重置：禁用所有已知别名，启用默认
+        String[] allAliases = {
+            "com.crm.webview.AliasWebHub",
+            "com.crm.webview.AliasWebHub2",
+            "com.crm.webview.AliasLanHub",
+            "com.crm.webview.AliasECM",
+            "com.crm.webview.AliasGming",
+            "com.crm.webview.AliasPili",
+            "com.crm.webview.AliasPiliDouyin"
+        };
+        for (String name : allAliases) {
+            ComponentName cn = new ComponentName(getPackageName(), name);
+            pm.setComponentEnabledSetting(cn,
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                    PackageManager.DONT_KILL_APP);
+        }
+        pm.setComponentEnabledSetting(defaultCn,
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                PackageManager.DONT_KILL_APP);
     }
 
     private int dpToPx(int dp) {
