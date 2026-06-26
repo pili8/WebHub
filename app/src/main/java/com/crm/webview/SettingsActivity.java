@@ -274,7 +274,7 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void setupPresetSwitcher() {
-        android.widget.Spinner spinnerPreset = findViewById(R.id.spinnerPreset);
+        spinnerPreset = findViewById(R.id.spinnerPreset);
         TextView tvPresetInfo = findViewById(R.id.tvPresetInfo);
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
@@ -283,7 +283,7 @@ public class SettingsActivity extends AppCompatActivity {
         spinnerPreset.setAdapter(adapter);
 
         // 找到当前启用的别名
-        int currentPreset = 0;
+        currentPresetIndex = -1;
         PackageManager pm = getPackageManager();
         for (int i = 0; i < ALIAS_NAMES.length; i++) {
             try {
@@ -291,19 +291,26 @@ public class SettingsActivity extends AppCompatActivity {
                 int state = pm.getComponentEnabledSetting(cn);
                 if (state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
                         || state == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT) {
-                    currentPreset = i;
+                    currentPresetIndex = i;
                     break;
                 }
             } catch (Exception e) {}
         }
-        spinnerPreset.setSelection(currentPreset);
-        tvPresetInfo.setText(PRESET_LABELS[currentPreset]);
+        if (currentPresetIndex < 0) currentPresetIndex = 0;
+        presetInitialized = false;
+        spinnerPreset.setSelection(currentPresetIndex);
+        tvPresetInfo.setText(PRESET_LABELS[currentPresetIndex]);
 
         spinnerPreset.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                // 仅在实际切换时生效（避免初始化触发）
-                if (position != currentPreset) {
+                // 跳过初始化时的自动触发
+                if (!presetInitialized) {
+                    presetInitialized = true;
+                    return;
+                }
+                if (position >= 0 && position < ALIAS_NAMES.length && position != currentPresetIndex) {
+                    currentPresetIndex = position;
                     switchAppPreset(position);
                 }
             }
