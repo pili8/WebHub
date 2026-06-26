@@ -38,7 +38,6 @@
 
     </LinearLayout>
 
-    <!-- 设置内容 -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -61,7 +60,6 @@
                 android:padding="14dp"
                 android:layout_marginBottom="16dp">
 
-                <!-- 标题栏（可点击展开/折叠） -->
                 <LinearLayout
                     android:id="@+id/aboutHeader"
                     android:layout_width="match_parent"
@@ -89,7 +87,6 @@
 
                 </LinearLayout>
 
-                <!-- 内容区（默认隐藏） -->
                 <LinearLayout
                     android:id="@+id/aboutContent"
                     android:layout_width="match_parent"
@@ -135,7 +132,7 @@
 
             </LinearLayout>
 
-            <!-- ========== 通用设置区域 ========== -->
+            <!-- ========== 通用设置 ========== -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -146,101 +143,124 @@
                 android:layout_marginBottom="8dp"
                 android:layout_marginStart="4dp" />
 
-            <!-- 三个开关并列 -->
+            <!-- 金山文档优化 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
+                android:background="@drawable/card_white"
+                android:padding="14dp"
+                android:gravity="center_vertical"
                 android:layout_marginBottom="8dp">
 
-                <!-- 金山文档优化 -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:background="@drawable/card_white"
-                    android:padding="10dp"
-                    android:gravity="center_horizontal"
-                    android:orientation="vertical"
-                    android:layout_marginEnd="4dp">
+                    android:orientation="vertical">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="金山文档优化"
-                        android:textSize="11sp"
-                        android:textColor="#333333"
-                        android:gravity="center"
-                        android:maxLines="1" />
+                        android:textSize="15sp"
+                        android:textColor="#333333" />
 
-                    <android.widget.Switch
-                        android:id="@+id/switchKdocsOptimize"
+                    <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp" />
+                        android:text="返回键自动关闭金山文档弹窗"
+                        android:textSize="12sp"
+                        android:textColor="#999999"
+                        android:layout_marginTop="2dp" />
 
                 </LinearLayout>
 
-                <!-- 网页暗色模式 -->
+                <android.widget.Switch
+                    android:id="@+id/switchKdocsOptimize"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+            </LinearLayout>
+
+            <!-- 网页暗色模式 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/card_white"
+                android:padding="14dp"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
+
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:background="@drawable/card_white"
-                    android:padding="10dp"
-                    android:gravity="center_horizontal"
-                    android:orientation="vertical"
-                    android:layout_marginStart="4dp"
-                    android:layout_marginEnd="4dp">
+                    android:orientation="vertical">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="网页暗色模式"
-                        android:textSize="11sp"
-                        android:textColor="#333333"
-                        android:gravity="center"
-                        android:maxLines="1" />
+                        android:textSize="15sp"
+                        android:textColor="#333333" />
 
-                    <android.widget.Switch
-                        android:id="@+id/switchNightModeCSS"
+                    <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp" />
+                        android:text="通过 CSS 注入让网页变暗色"
+                        android:textSize="12sp"
+                        android:textColor="#999999"
+                        android:layout_marginTop="2dp" />
 
                 </LinearLayout>
 
-                <!-- 页面操作 -->
+                <android.widget.Switch
+                    android:id="@+id/switchNightModeCSS"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+            </LinearLayout>
+
+            <!-- 页面操作 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/card_white"
+                android:padding="14dp"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
+
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:background="@drawable/card_white"
-                    android:padding="10dp"
-                    android:gravity="center_horizontal"
-                    android:orientation="vertical"
-                    android:layout_marginStart="4dp">
+                    android:orientation="vertical">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="页面操作"
-                        android:textSize="11sp"
-                        android:textColor="#333333"
-                        android:gravity="center"
-                        android:maxLines="1" />
+                        android:textSize="15sp"
+                        android:textColor="#333333" />
 
-                    <android.widget.Switch
-                        android:id="@+id/switchPageActions"
+                    <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp" />
+                        android:text="隐藏/点击/修改页面元素"
+                        android:textSize="12sp"
+                        android:textColor="#999999"
+                        android:layout_marginTop="2dp" />
 
                 </LinearLayout>
 
+                <android.widget.Switch
+                    android:id="@+id/switchPageActions"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
             </LinearLayout>
 
-            <!-- 浏览器标识（UA 切换）下移一行 -->
+            <!-- 浏览器标识（UA 切换） -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -280,7 +300,7 @@
 
             </LinearLayout>
 
-            <!-- ========== 工作区配置区域 ========== -->
+            <!-- ========== 工作区配置 ========== -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -291,14 +311,13 @@
                 android:layout_marginBottom="8dp"
                 android:layout_marginStart="4dp" />
 
-            <!-- 工作区列表容器 -->
             <LinearLayout
                 android:id="@+id/settingsContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical" />
 
-            <!-- ========== 数据管理区域 ========== -->
+            <!-- ========== 数据管理 ========== -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -391,7 +410,7 @@
 
             </LinearLayout>
 
-            <!-- 保存按钮 -->
+            <!-- 保存 -->
             <Button
                 android:id="@+id/btnSave"
                 android:layout_width="match_parent"

@@ -106,20 +106,35 @@
         android:layout_marginTop="12dp"
         android:layout_marginBottom="10dp" />
 
-    <!-- 操作标题 + 生效范围 + 添加按钮 -->
+    <!-- 操作标题 + 生效范围 + 添加按钮（点击标题折叠/展开） -->
     <LinearLayout
+        android:id="@+id/actionHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginBottom="8dp">
+        android:layout_marginBottom="8dp"
+        android:background="?attr/selectableItemBackground"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp">
 
         <TextView
+            android:id="@+id/tvActionLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="操作"
             android:textSize="12sp"
             android:textColor="#757575" />
+
+        <TextView
+            android:id="@+id/tvActionArrow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="▶"
+            android:textSize="10sp"
+            android:textColor="#999999"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp" />
 
         <Spinner
             android:id="@+id/spinnerScope"
@@ -144,11 +159,12 @@
 
     </LinearLayout>
 
-    <!-- 操作列表容器 -->
+    <!-- 操作列表容器（默认折叠） -->
     <LinearLayout
         android:id="@+id/actionsContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical" />
+        android:orientation="vertical"
+        android:visibility="gone" />
 
 </LinearLayout>

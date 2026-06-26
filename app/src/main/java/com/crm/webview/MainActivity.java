@@ -1809,10 +1809,10 @@ public class MainActivity extends AppCompatActivity {
             webView.setTag(R.id._webhub_saved_ua, settings.getUserAgentString());
             // 桌面 UA
             settings.setUserAgentString(DESKTOP_UA);
-            // 不缩放以适应屏幕，按桌面宽度渲染
-            settings.setLoadWithOverviewMode(false);
+            // 按屏幕宽度等比缩放，确保页面完整显示
             settings.setUseWideViewPort(true);
-            // 允许缩放（桌面页面通常更宽）
+            settings.setLoadWithOverviewMode(true);
+            // 允许双指缩放，方便用户调整
             settings.setSupportZoom(true);
             settings.setBuiltInZoomControls(true);
             settings.setDisplayZoomControls(false);

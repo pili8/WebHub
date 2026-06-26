@@ -232,6 +232,7 @@ public class SettingsActivity extends AppCompatActivity {
         // 更新日志（发版时同步更新）
         tvAboutChangelog.setText(
                 "📋 最近更新:\n" +
+                "v2.7.6 - 设置页样式恢复、操作项折叠、桌面模式缩放优化\n" +
                 "v2.7.5 - 桌面模式开关、设置页重排、Bug修复\n" +
                 "v2.7.4 - 修复定时刷新闪退、工作区上限8个、支持HTTP、页面操作优化\n" +
                 "v2.7.3 - 工作区自定义颜色、浏览历史、定时刷新、自定义脚本\n" +
@@ -833,12 +834,27 @@ public class SettingsActivity extends AppCompatActivity {
         LinearLayout actionsContainer = cardView.findViewById(R.id.actionsContainer);
         TextView btnAddAction = cardView.findViewById(R.id.btnAddAction);
         Switch switchDesktopMode = cardView.findViewById(R.id.switchDesktopMode);
+        LinearLayout actionHeader = cardView.findViewById(R.id.actionHeader);
+        TextView tvActionArrow = cardView.findViewById(R.id.tvActionArrow);
 
         etLinkTitle.setText(link.title);
         etLinkUrl.setText(link.url);
         link.actionsContainer = actionsContainer;
         link.switchDesktopMode = switchDesktopMode;
         switchDesktopMode.setChecked(link.desktopMode);
+
+        // 操作折叠/展开（默认折叠）
+        tvActionArrow.setText("▶");
+        actionsContainer.setVisibility(View.GONE);
+        actionHeader.setOnClickListener(v -> {
+            if (actionsContainer.getVisibility() == View.VISIBLE) {
+                actionsContainer.setVisibility(View.GONE);
+                tvActionArrow.setText("▶");
+            } else {
+                actionsContainer.setVisibility(View.VISIBLE);
+                tvActionArrow.setText("▼");
+            }
+        });
 
         // 生效范围
         Spinner spinnerScope = cardView.findViewById(R.id.spinnerScope);
