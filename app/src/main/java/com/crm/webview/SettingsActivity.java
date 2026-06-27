@@ -12,8 +12,6 @@ import android.view.DragEvent;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.webkit.CookieManager;
-import android.webkit.WebStorage;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -34,15 +32,12 @@ import com.crm.webview.model.AppConfig.ActionData;
 import com.crm.webview.model.AppConfig.LinkData;
 import com.crm.webview.model.AppConfig.TabData;
 import com.crm.webview.util.AliasManager;
+import com.crm.webview.util.CacheManager;
 import com.crm.webview.util.UIHelper;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.File;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -113,7 +108,7 @@ public class SettingsActivity extends AppCompatActivity {
         // 检查是否夜间模式
         boolean isNightMode = prefs.getBoolean("night_mode", false);
         if (isNightMode) {
-            applyDarkTheme();
+            UIHelper.applyDarkTheme(this);
         }
 
         // 应用名称和图标预设切换
@@ -121,7 +116,7 @@ public class SettingsActivity extends AppCompatActivity {
 
         setupCache();
         setupExportImport();
-        setupAbout();
+        UIHelper.setupAbout(this);
 
         ImageView btnBack = findViewById(R.id.btnBack);
         btnBack.setOnClickListener(v -> finish());
@@ -133,44 +128,19 @@ public class SettingsActivity extends AppCompatActivity {
         buildUI();
     }
 
-    private void applyDarkTheme() {
-        // 设置页面背景
-        View rootView = findViewById(android.R.id.content);
-        rootView.setBackgroundColor(Color.parseColor("#121212"));
-
-        // 标题栏
-        findViewById(R.id.settingsToolbar).setBackgroundColor(Color.parseColor("#1E1E1E"));
-
-        // 关于区域文字颜色适配
-        TextView tvAboutInfo = findViewById(R.id.tvAboutInfo);
-        TextView tvAboutChangelog = findViewById(R.id.tvAboutChangelog);
-        TextView tvAboutArrow = findViewById(R.id.tvAboutArrow);
-        if (tvAboutInfo != null) tvAboutInfo.setTextColor(Color.parseColor("#AAAAAA"));
-        if (tvAboutChangelog != null) tvAboutChangelog.setTextColor(Color.parseColor("#777777"));
-        if (tvAboutArrow != null) tvAboutArrow.setTextColor(Color.parseColor("#666666"));
-        // aboutHeader 内的标题文字
-        LinearLayout aboutHeader = findViewById(R.id.aboutHeader);
-        if (aboutHeader != null && aboutHeader.getChildCount() > 0) {
-            View firstChild = aboutHeader.getChildAt(0);
-            if (firstChild instanceof TextView) {
-                ((TextView) firstChild).setTextColor(Color.parseColor("#E0E0E0"));
-            }
-        }
-    }
-
     private void setupCache() {
         TextView tvCacheSize = findViewById(R.id.tvCacheSize);
         TextView btnClearCache = findViewById(R.id.btnClearCache);
 
-        updateCacheSize(tvCacheSize);
+        CacheManager.updateCacheSize(this, tvCacheSize);
 
         btnClearCache.setOnClickListener(v -> {
             new AlertDialog.Builder(this)
                     .setTitle("清除缓存")
                     .setMessage("确定要清除所有缓存吗？\n这会清除登录状态。")
                     .setPositiveButton("确定", (dialog, which) -> {
-                        clearAllCache();
-                        updateCacheSize(tvCacheSize);
+                        CacheManager.clearAllCache(this);
+                        CacheManager.updateCacheSize(this, tvCacheSize);
                         Toast.makeText(this, "缓存已清除", Toast.LENGTH_SHORT).show();
                     })
                     .setNegativeButton("取消", null)
@@ -184,54 +154,6 @@ public class SettingsActivity extends AppCompatActivity {
 
         btnExport.setOnClickListener(v -> exportSettings());
         btnImport.setOnClickListener(v -> importSettings());
-    }
-
-    private void setupAbout() {
-        TextView tvAboutInfo = findViewById(R.id.tvAboutInfo);
-        TextView tvAboutChangelog = findViewById(R.id.tvAboutChangelog);
-        TextView tvAboutGithub = findViewById(R.id.tvAboutGithub);
-        LinearLayout aboutHeader = findViewById(R.id.aboutHeader);
-        LinearLayout aboutContent = findViewById(R.id.aboutContent);
-        TextView tvAboutArrow = findViewById(R.id.tvAboutArrow);
-
-        // 折叠/展开切换
-        aboutHeader.setOnClickListener(v -> {
-            if (aboutContent.getVisibility() == View.GONE) {
-                aboutContent.setVisibility(View.VISIBLE);
-                tvAboutArrow.setText("▾");
-            } else {
-                aboutContent.setVisibility(View.GONE);
-                tvAboutArrow.setText("▸");
-            }
-        });
-
-        // 版本信息
-        String versionName = "unknown";
-        try {
-            versionName = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
-        } catch (Exception e) {}
-
-        tvAboutInfo.setText(
-                "📱 WebHub v" + versionName + "\n" +
-                "把常用网页变成 APP，支持自定义外观和自动化操作。\n" +
-                "开发者: pili8 | 开源协议: MIT License");
-
-        // 更新日志（发版时同步更新）
-        tvAboutChangelog.setText(
-                "📋 最近更新:\n" +
-                "v2.9.0 - 架构重构、ECR预设名称图标\n" +
-                "v2.8.0 - 应用名称图标切换、桌面模式优化、Bug修复\n" +
-                "v2.7.6 - 设置页样式恢复、操作项折叠、桌面模式缩放优化\n" +
-                "v2.7.5 - 桌面模式开关、设置页重排、Bug修复\n" +
-                "v2.7.4 - 修复定时刷新闪退、工作区上限8个、支持HTTP、页面操作优化\n" +
-                "v2.7.3 - 工作区自定义颜色、浏览历史、定时刷新、自定义脚本\n" +
-                "v2.7.2 - 菜单重构、搜索优化");
-
-        // 跳转 GitHub
-        tvAboutGithub.setOnClickListener(v -> {
-            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/pili8/WebHub/releases"));
-            startActivity(intent);
-        });
     }
 
     private void setupPresetSwitcher() {
@@ -279,33 +201,8 @@ public class SettingsActivity extends AppCompatActivity {
 
     private void doExport(Uri uri) {
         try {
-            JSONObject json = new JSONObject();
-
-            json.put("version", 2);
-            json.put("kdocs_optimize", prefs.getBoolean("kdocs_optimize", true));
-            json.put("night_mode", prefs.getBoolean("night_mode", false));
-            json.put("night_mode_css", prefs.getBoolean("night_mode_css", false));
-            json.put("page_actions_enabled", prefs.getBoolean("page_actions_enabled", true));
-            json.put("auto_refresh_interval", prefs.getInt("auto_refresh_interval", 0));
-            json.put("tab_count", prefs.getInt("tab_count", 3));
-            json.put("tabs_config", prefs.getString("tabs_config", ConfigManager.buildTabsJsonFromPrefs(prefs).toString()));
-
-            // 保留旧格式字段，方便旧版本导入。
-            JSONArray tabsArray = new JSONArray();
-            for (int i = 0; i < prefs.getInt("tab_count", 3); i++) {
-                JSONObject tab = new JSONObject();
-                tab.put("icon", prefs.getString("icon" + (i + 1), AppConfig.DEFAULT_TAB_ICONS[i]));
-                tab.put("title", prefs.getString("title" + (i + 1), AppConfig.DEFAULT_TAB_TITLES[i]));
-                tab.put("links", prefs.getString("links" + (i + 1), ""));
-                tabsArray.put(tab);
-            }
-            json.put("tabs", tabsArray);
-
-            // 写入到用户选择的位置
-            OutputStream os = getContentResolver().openOutputStream(uri);
-            if (os != null) {
-                os.write(json.toString(2).getBytes("UTF-8"));
-                os.close();
+            JSONObject json = ConfigManager.buildExportJson(prefs);
+            if (ConfigManager.writeJsonToUri(this, uri, json.toString(2))) {
                 Toast.makeText(this, "导出成功", Toast.LENGTH_SHORT).show();
 
                 // 分享文件
@@ -313,8 +210,9 @@ public class SettingsActivity extends AppCompatActivity {
                 shareIntent.setType("application/json");
                 shareIntent.putExtra(Intent.EXTRA_STREAM, uri);
                 startActivity(Intent.createChooser(shareIntent, "分享配置文件"));
+            } else {
+                Toast.makeText(this, "导出失败", Toast.LENGTH_SHORT).show();
             }
-
         } catch (Exception e) {
             Toast.makeText(this, "导出失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
@@ -345,126 +243,21 @@ public class SettingsActivity extends AppCompatActivity {
 
     private void doImport(Uri uri) {
         try {
-            InputStream is = getContentResolver().openInputStream(uri);
-            InputStreamReader reader = new InputStreamReader(is);
-            StringBuilder sb = new StringBuilder();
-            char[] buffer = new char[1024];
-            int len;
-            while ((len = reader.read(buffer)) != -1) {
-                sb.append(buffer, 0, len);
+            String jsonStr = ConfigManager.readJsonFromUri(this, uri);
+            if (ConfigManager.applyImportJson(prefs, jsonStr)) {
+                tabsData = ConfigManager.loadConfigAsTabs(prefs);
+                buildUI();
+                switchKdocsOptimize.setChecked(prefs.getBoolean("kdocs_optimize", true));
+                switchNightModeCSS.setChecked(prefs.getBoolean("night_mode_css", false));
+                switchPageActions.setChecked(prefs.getBoolean("page_actions_enabled", true));
+                Toast.makeText(this, "导入成功", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "导入失败: JSON 解析错误", Toast.LENGTH_SHORT).show();
             }
-            reader.close();
-
-            JSONObject json = new JSONObject(sb.toString());
-
-            SharedPreferences.Editor editor = prefs.edit();
-
-            if (json.has("kdocs_optimize")) {
-                editor.putBoolean("kdocs_optimize", json.getBoolean("kdocs_optimize"));
-            }
-            if (json.has("night_mode")) {
-                editor.putBoolean("night_mode", json.getBoolean("night_mode"));
-            }
-            if (json.has("night_mode_css")) {
-                editor.putBoolean("night_mode_css", json.getBoolean("night_mode_css"));
-            }
-            if (json.has("page_actions_enabled")) {
-                editor.putBoolean("page_actions_enabled", json.getBoolean("page_actions_enabled"));
-            }
-            if (json.has("auto_refresh_interval")) {
-                editor.putInt("auto_refresh_interval", json.getInt("auto_refresh_interval"));
-            }
-            if (json.has("tab_count")) {
-                editor.putInt("tab_count", json.getInt("tab_count"));
-            }
-            if (json.has("tabs_config")) {
-                editor.putString("tabs_config", json.getString("tabs_config"));
-            } else if (json.has("tabs")) {
-                JSONArray tabsArray = json.getJSONArray("tabs");
-                for (int i = 0; i < tabsArray.length(); i++) {
-                    JSONObject tab = tabsArray.getJSONObject(i);
-                    editor.putString("icon" + (i + 1), tab.getString("icon"));
-                    editor.putString("title" + (i + 1), tab.getString("title"));
-                    editor.putString("links" + (i + 1), tab.getString("links"));
-                }
-            }
-
-            editor.apply();
-            tabsData = ConfigManager.loadConfigAsTabs(prefs);
-            buildUI();
-            switchKdocsOptimize.setChecked(prefs.getBoolean("kdocs_optimize", true));
-            switchNightModeCSS.setChecked(prefs.getBoolean("night_mode_css", false));
-            switchPageActions.setChecked(prefs.getBoolean("page_actions_enabled", true));
-
-            Toast.makeText(this, "导入成功", Toast.LENGTH_SHORT).show();
-
         } catch (Exception e) {
             Toast.makeText(this, "导入失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
-
-    private void updateCacheSize(TextView textView) {
-        long size = getCacheSize();
-        if (size < 1024) {
-            textView.setText(String.format("当前缓存: %d B", size));
-        } else if (size < 1024 * 1024) {
-            textView.setText(String.format("当前缓存: %.1f KB", size / 1024.0));
-        } else {
-            textView.setText(String.format("当前缓存: %.1f MB", size / (1024.0 * 1024.0)));
-        }
-    }
-
-    private long getCacheSize() {
-        long size = 0;
-        try {
-            size += getDirSize(getCacheDir());
-            File webviewDir = new File(getFilesDir(), "../app_webview");
-            if (webviewDir.exists()) size += getDirSize(webviewDir);
-        } catch (Exception e) {}
-        return size;
-    }
-
-    private long getDirSize(File dir) {
-        long size = 0;
-        if (dir.isDirectory()) {
-            File[] files = dir.listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    size += file.isFile() ? file.length() : getDirSize(file);
-                }
-            }
-        }
-        return size;
-    }
-
-    private void clearAllCache() {
-        try {
-            android.webkit.WebView webView = new android.webkit.WebView(this);
-            webView.clearCache(true);
-            webView.clearHistory();
-            webView.destroy();
-            CookieManager.getInstance().removeAllCookies(null);
-            CookieManager.getInstance().flush();
-            WebStorage.getInstance().deleteAllData();
-            deleteDir(getCacheDir());
-            File webviewDir = new File(getFilesDir(), "../app_webview");
-            if (webviewDir.exists()) deleteDir(webviewDir);
-        } catch (Exception e) {}
-    }
-
-    private boolean deleteDir(File dir) {
-        if (dir != null && dir.isDirectory()) {
-            File[] children = dir.listFiles();
-            if (children != null) {
-                for (File child : children) {
-                    deleteDir(child);
-                }
-            }
-        }
-        return dir != null && dir.delete();
-    }
-
-
 
     private boolean isEditMode = false;
 

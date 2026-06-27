@@ -522,4 +522,119 @@ public class ConfigManager {
     public static String getTabsConfigSnapshot(SharedPreferences prefs) {
         return prefs.getInt("tab_count", 3) + "|" + prefs.getString("tabs_config", "");
     }
+
+    // ==================== 导出/导入 ====================
+
+    /**
+     * 构建导出 JSON 对象。
+     * 原 SettingsActivity.doExport() 中的 JSON 构建逻辑。
+     */
+    public static JSONObject buildExportJson(SharedPreferences prefs) throws Exception {
+        JSONObject json = new JSONObject();
+        json.put("version", 2);
+        json.put("kdocs_optimize", prefs.getBoolean("kdocs_optimize", true));
+        json.put("night_mode", prefs.getBoolean("night_mode", false));
+        json.put("night_mode_css", prefs.getBoolean("night_mode_css", false));
+        json.put("page_actions_enabled", prefs.getBoolean("page_actions_enabled", true));
+        json.put("auto_refresh_interval", prefs.getInt("auto_refresh_interval", 0));
+        json.put("tab_count", prefs.getInt("tab_count", 3));
+        json.put("tabs_config", prefs.getString("tabs_config", buildTabsJsonFromPrefs(prefs).toString()));
+
+        // 保留旧格式字段，方便旧版本导入
+        JSONArray tabsArray = new JSONArray();
+        for (int i = 0; i < prefs.getInt("tab_count", 3); i++) {
+            JSONObject tab = new JSONObject();
+            tab.put("icon", prefs.getString("icon" + (i + 1), AppConfig.DEFAULT_TAB_ICONS[i]));
+            tab.put("title", prefs.getString("title" + (i + 1), AppConfig.DEFAULT_TAB_TITLES[i]));
+            tab.put("links", prefs.getString("links" + (i + 1), ""));
+            tabsArray.put(tab);
+        }
+        json.put("tabs", tabsArray);
+        return json;
+    }
+
+    /**
+     * 从导入的 JSON 应用配置到 SharedPreferences。
+     * 原 SettingsActivity.doImport() 中的解析逻辑。
+     *
+     * @return true 如果导入成功
+     */
+    public static boolean applyImportJson(SharedPreferences prefs, String jsonString) {
+        try {
+            JSONObject json = new JSONObject(jsonString);
+            SharedPreferences.Editor editor = prefs.edit();
+
+            if (json.has("kdocs_optimize")) {
+                editor.putBoolean("kdocs_optimize", json.getBoolean("kdocs_optimize"));
+            }
+            if (json.has("night_mode")) {
+                editor.putBoolean("night_mode", json.getBoolean("night_mode"));
+            }
+            if (json.has("night_mode_css")) {
+                editor.putBoolean("night_mode_css", json.getBoolean("night_mode_css"));
+            }
+            if (json.has("page_actions_enabled")) {
+                editor.putBoolean("page_actions_enabled", json.getBoolean("page_actions_enabled"));
+            }
+            if (json.has("auto_refresh_interval")) {
+                editor.putInt("auto_refresh_interval", json.getInt("auto_refresh_interval"));
+            }
+            if (json.has("tab_count")) {
+                editor.putInt("tab_count", json.getInt("tab_count"));
+            }
+            if (json.has("tabs_config")) {
+                editor.putString("tabs_config", json.getString("tabs_config"));
+            } else if (json.has("tabs")) {
+                JSONArray tabsArray = json.getJSONArray("tabs");
+                for (int i = 0; i < tabsArray.length(); i++) {
+                    JSONObject tab = tabsArray.getJSONObject(i);
+                    editor.putString("icon" + (i + 1), tab.getString("icon"));
+                    editor.putString("title" + (i + 1), tab.getString("title"));
+                    editor.putString("links" + (i + 1), tab.getString("links"));
+                }
+            }
+
+            editor.apply();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * 从 Uri 读取 JSON 字符串。
+     * 原 SettingsActivity.doImport() 中的读取逻辑。
+     */
+    public static String readJsonFromUri(android.content.Context context, Uri uri) throws Exception {
+        InputStream is = context.getContentResolver().openInputStream(uri);
+        InputStreamReader reader = new InputStreamReader(is);
+        StringBuilder sb = new StringBuilder();
+        char[] buffer = new char[1024];
+        int len;
+        while ((len = reader.read(buffer)) != -1) {
+            sb.append(buffer, 0, len);
+        }
+        reader.close();
+        return sb.toString();
+    }
+
+    /**
+     * 将 JSON 字符串写入 Uri。
+     * 原 SettingsActivity.doExport() 中的写入逻辑。
+     *
+     * @return true 如果写入成功
+     */
+    public static boolean writeJsonToUri(android.content.Context context, Uri uri, String json) {
+        try {
+            OutputStream os = context.getContentResolver().openOutputStream(uri);
+            if (os != null) {
+                os.write(json.getBytes("UTF-8"));
+                os.close();
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
 }

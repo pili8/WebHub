@@ -183,7 +183,7 @@ public class MainActivity extends AppCompatActivity implements WebViewFactory.We
             settingsChanged = false;
 
             // 重新加载按工作区刷新配置
-            loadTabAutoRefresh();
+            tabAutoRefresh = ConfigManager.loadTabAutoRefreshWithMigration(prefs, currentTab);
             // 重新启动定时器
             startAutoRefresh(tabAutoRefresh[currentTab]);
 
@@ -622,7 +622,7 @@ public class MainActivity extends AppCompatActivity implements WebViewFactory.We
             final int interval = menuIntervals.get(i);
             menuRows.get(i).setOnClickListener(v -> {
                 popup.dismiss();
-                saveTabAutoRefresh(currentTab, interval);
+                ConfigManager.saveTabAutoRefresh(prefs, currentTab, interval);
                 setAutoRefresh(interval);
             });
         }
