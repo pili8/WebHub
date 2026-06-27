@@ -1,6 +1,7 @@
 package com.crm.webview.config;
 
 import android.content.SharedPreferences;
+import android.net.Uri;
 
 import com.crm.webview.model.AppConfig;
 import com.crm.webview.model.AppConfig.ActionData;
@@ -12,6 +13,9 @@ import com.crm.webview.model.AppConfig.TabData;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
