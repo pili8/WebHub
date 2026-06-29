@@ -231,15 +231,6 @@ public class SettingsActivity extends AppCompatActivity {
 
 
     private void updatePresetInfo() {
-        TextView tv = findViewById(R.id.tvPresetInfo);
-        String label = AliasManager.getLabelByIndex(currentPresetIndex);
-        if (pendingPresetIndex != currentPresetIndex) {
-            tv.setText("当前: " + label + "  →  待保存: " + AliasManager.getLabelByIndex(pendingPresetIndex));
-            tv.setTextColor(0xFFFF9800);
-        } else {
-            tv.setText(label);
-            tv.setTextColor(0xFF999999);
-        }
         ivPresetPreview.setImageResource(PRESET_ICONS[pendingPresetIndex]);
     }
 
