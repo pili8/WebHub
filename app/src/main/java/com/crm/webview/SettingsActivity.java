@@ -12,6 +12,7 @@ import android.view.DragEvent;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -221,7 +222,7 @@ public class SettingsActivity extends AppCompatActivity {
         int spinnerPosToRealPos(int sp) { Integer v = posToReal.get(sp); return v != null ? v : -1; }
         int realPosToSpinnerPos(int ri) { Integer v = realToPos.get(ri); return v != null ? v : 0; }
         @Override public int getCount() { return 2 + AliasManager.G1_COUNT + AliasManager.G2_COUNT; }
-        @Override public Object getItem(int p) { return null; }
+        @Override public String getItem(int p) { return ""; }
         @Override public long getItemId(int p) { return p; }
         @Override public boolean isEnabled(int p) { return posToReal.containsKey(p); }
         @Override public int getItemViewType(int p) { return posToReal.containsKey(p) ? 1 : 0; }
