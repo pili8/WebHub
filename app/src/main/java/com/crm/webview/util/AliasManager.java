@@ -13,22 +13,28 @@ public class AliasManager {
 
     public static final String[] ALIAS_NAMES = {
         "com.crm.webview.AliasWebHub",
-        "com.crm.webview.AliasWebHub2",
+        "com.crm.webview.AliasPengPai",
         "com.crm.webview.AliasLanHub",
         "com.crm.webview.AliasECM",
         "com.crm.webview.AliasGming",
         "com.crm.webview.AliasPili",
-        "com.crm.webview.AliasPiliDouyin"
+        "com.crm.webview.AliasPiliDouyin",
+        "com.crm.webview.AliasWebHub3",
+        "com.crm.webview.AliasWebHub4",
+        "com.crm.webview.AliasECR1"
     };
 
     public static final String[] PRESET_LABELS = {
         "WebHub 1",
-        "WebHub 2",
+        "澎湃",
         "LanHub",
-        "ECR",
+        "ECR2",
         "Gming",
         "Pili",
-        "PILI"
+        "PILI",
+        "WebHub 3",
+        "WebHub 4",
+        "ECR1"
     };
 
     /**
