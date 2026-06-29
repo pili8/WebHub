@@ -23,6 +23,8 @@ import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.graphics.Typeface;
+import android.widget.BaseAdapter;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -48,8 +50,8 @@ public class SettingsActivity extends AppCompatActivity {
     private Switch switchNightModeCSS;
     private Switch switchPageActions;
     private android.widget.Spinner spinnerUA;
+    private Spinner spinnerPreset;
     private ImageView ivPresetPreview;
-    private AlertDialog presetDialog;
     private int pendingPresetIndex = -1;
     private int currentPresetIndex = -1;
     private SharedPreferences prefs;
@@ -183,133 +185,98 @@ public class SettingsActivity extends AppCompatActivity {
         pendingPresetIndex = currentPresetIndex;
 
         ivPresetPreview = findViewById(R.id.ivPresetPreview);
+        spinnerPreset = findViewById(R.id.spinnerPreset);
+
+        GroupedPresetAdapter adapter = new GroupedPresetAdapter();
+        spinnerPreset.setAdapter(adapter);
+        spinnerPreset.setSelection(adapter.realPosToSpinnerPos(pendingPresetIndex));
         updatePresetInfo();
 
-        // 点击打开分组选择对话框
-        findViewById(R.id.btnPresetPicker).setOnClickListener(v -> showPresetDialog());
-    }
-
-    private int dialogGroup = 1;
-    private LinearLayout dialogGrid;
-    private ImageView dialogBigIcon;
-
-    private void showPresetDialog() {
-        dialogGroup = AliasManager.getGroup(pendingPresetIndex);
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("应用名称和图标");
-
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.HORIZONTAL);
-        root.setPadding(8, 8, 8, 8);
-
-        // 左侧大图标
-        dialogBigIcon = new ImageView(this);
-        dialogBigIcon.setLayoutParams(new LinearLayout.LayoutParams(dp(80), dp(80)));
-        dialogBigIcon.setImageResource(PRESET_ICONS[pendingPresetIndex]);
-        dialogBigIcon.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        root.addView(dialogBigIcon);
-
-        // 右侧
-        LinearLayout right = new LinearLayout(this);
-        right.setOrientation(LinearLayout.VERTICAL);
-        right.setPadding(dp(10), 0, 0, 0);
-
-        // 分组切换标签
-        LinearLayout tabs = new LinearLayout(this);
-        tabs.setOrientation(LinearLayout.HORIZONTAL);
-        addTab(tabs, "WebHub / LanHub / ECR", 1);
-        addTab(tabs, "Gming / 澎湃浪 / Pili", 2);
-        right.addView(tabs);
-
-        // 图标网格
-        dialogGrid = new LinearLayout(this);
-        dialogGrid.setOrientation(LinearLayout.HORIZONTAL);
-        right.addView(dialogGrid);
-
-        root.addView(right);
-        refreshGrid();
-
-        builder.setView(root);
-        builder.setNegativeButton("取消", null);
-        presetDialog = builder.create();
-        presetDialog.show();
-    }
-
-    private void addTab(LinearLayout tabs, String text, int group) {
-        TextView tv = new TextView(this);
-        tv.setText(group == dialogGroup ? "◉ " + text : text);
-        tv.setTextSize(11);
-        tv.setTextColor(group == dialogGroup ? 0xFF1976D2 : 0xFF888888);
-        tv.setPadding(dp(6), dp(6), dp(10), dp(6));
-        tv.setClickable(true);
-        tv.setOnClickListener(v -> {
-            dialogGroup = group;
-            refreshGrid();
-            // 更新左侧预览为当前组第一个
-            int first = group == 1 ? 0 : AliasManager.G1_COUNT;
-            dialogBigIcon.setImageResource(PRESET_ICONS[first]);
+        spinnerPreset.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            boolean init = true;
+            public void onItemSelected(AdapterView<?> p, View v, int spinnerPos, long id) {
+                if (init) { init = false; return; }
+                int idx = ((GroupedPresetAdapter) spinnerPreset.getAdapter()).spinnerPosToRealPos(spinnerPos);
+                if (idx >= 0) {
+                    pendingPresetIndex = idx;
+                    updatePresetInfo();
+                }
+            }
+            public void onNothingSelected(AdapterView<?> p) {}
         });
-        tabs.addView(tv);
     }
 
-    private void refreshGrid() {
-        if (dialogGrid == null) return;
-        dialogGrid.removeAllViews();
+    private class GroupedPresetAdapter extends BaseAdapter {
+        private final java.util.Map<Integer, Integer> posToReal = new java.util.HashMap<>();
+        private final java.util.Map<Integer, Integer> realToPos = new java.util.HashMap<>();
 
-        LinearLayout wrap = new LinearLayout(this);
-        wrap.setOrientation(LinearLayout.VERTICAL);
-        dialogGrid.addView(wrap);
+        GroupedPresetAdapter() {
+            int sp = 0;
+            sp++; // header 1
+            for (int i = 0; i < AliasManager.G1_COUNT; i++) { posToReal.put(sp, i); realToPos.put(i, sp); sp++; }
+            sp++; // header 2
+            for (int i = 0; i < AliasManager.G2_COUNT; i++) { posToReal.put(sp, i + AliasManager.G1_COUNT); realToPos.put(i + AliasManager.G1_COUNT, sp); sp++; }
+        }
+        int spinnerPosToRealPos(int sp) { Integer v = posToReal.get(sp); return v != null ? v : -1; }
+        int realPosToSpinnerPos(int ri) { Integer v = realToPos.get(ri); return v != null ? v : 0; }
+        @Override public int getCount() { return 2 + AliasManager.G1_COUNT + AliasManager.G2_COUNT; }
+        @Override public Object getItem(int p) { return null; }
+        @Override public long getItemId(int p) { return p; }
+        @Override public boolean isEnabled(int p) { return posToReal.containsKey(p); }
+        @Override public int getItemViewType(int p) { return posToReal.containsKey(p) ? 1 : 0; }
+        @Override public int getViewTypeCount() { return 2; }
 
-        int start = dialogGroup == 1 ? 0 : AliasManager.G1_COUNT;
-        int count = dialogGroup == 1 ? AliasManager.G1_COUNT : AliasManager.G2_COUNT;
-
-        final int COL = 5;
-        LinearLayout row = null;
-        for (int i = 0; i < count; i++) {
-            if (i % COL == 0) {
-                row = new LinearLayout(this);
-                row.setOrientation(LinearLayout.HORIZONTAL);
-                wrap.addView(row);
+        @Override
+        public View getView(int position, View cv, ViewGroup parent) {
+            Integer idx = posToReal.get(position);
+            if (idx != null) {
+                TextView tv = cv instanceof TextView ? (TextView) cv : new TextView(SettingsActivity.this);
+                tv.setPadding(dp2(8), dp2(10), dp2(8), dp2(10));
+                tv.setText(AliasManager.getLabelByIndex(idx));
+                tv.setTextSize(14);
+                tv.setTextColor(idx == pendingPresetIndex ? 0xFF1976D2 : 0xFF333333);
+                return tv;
             }
-            int index = start + i;
-            LinearLayout item = new LinearLayout(this);
-            item.setOrientation(LinearLayout.VERTICAL);
-            item.setPadding(dp(3), dp(2), dp(3), dp(2));
-            item.setGravity(Gravity.CENTER);
-            item.setClickable(true);
+            return new View(SettingsActivity.this);
+        }
 
-            ImageView icon = new ImageView(this);
-            icon.setLayoutParams(new LinearLayout.LayoutParams(dp(44), dp(44)));
-            icon.setImageResource(PRESET_ICONS[index]);
-            icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            if (index == pendingPresetIndex) {
-                icon.setBackgroundColor(0x331976D2);
+        @Override
+        public View getDropDownView(int position, View cv, ViewGroup parent) {
+            Integer idx = posToReal.get(position);
+            if (idx != null) {
+                LinearLayout item = new LinearLayout(SettingsActivity.this);
+                item.setOrientation(LinearLayout.HORIZONTAL);
+                item.setGravity(Gravity.CENTER_VERTICAL);
+                item.setPadding(dp2(10), dp2(6), dp2(10), dp2(6));
+                if (idx == pendingPresetIndex) item.setBackgroundColor(0x101976D2);
+
+                ImageView ic = new ImageView(SettingsActivity.this);
+                ic.setLayoutParams(new LinearLayout.LayoutParams(dp2(36), dp2(36)));
+                ic.setImageResource(PRESET_ICONS[idx]);
+                ic.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                item.addView(ic);
+
+                TextView tv = new TextView(SettingsActivity.this);
+                tv.setText(AliasManager.getLabelByIndex(idx));
+                tv.setTextSize(14);
+                tv.setTextColor(idx == pendingPresetIndex ? 0xFF1976D2 : 0xFF333333);
+                tv.setPadding(dp2(8), 0, 0, 0);
+                item.addView(tv);
+                return item;
+            } else {
+                TextView tv = new TextView(SettingsActivity.this);
+                tv.setText(position == 0 ? "WebHub / LanHub / ECR" : "Gming / 澎湃浪 / Pili");
+                tv.setTextSize(12);
+                tv.setTextColor(0xFF888888);
+                tv.setPadding(dp2(10), dp2(8), dp2(10), dp2(2));
+                tv.setTypeface(null, Typeface.BOLD);
+                return tv;
             }
-            item.addView(icon);
-
-            TextView label = new TextView(this);
-            label.setText(AliasManager.getLabelByIndex(index));
-            label.setTextSize(9);
-            label.setTextColor(index == pendingPresetIndex ? 0xFF1976D2 : 0xFF666666);
-            label.setGravity(Gravity.CENTER);
-            label.setMaxLines(1);
-            item.addView(label);
-
-            final int idx = index;
-            item.setOnClickListener(v2 -> {
-                pendingPresetIndex = idx;
-                updatePresetInfo();
-                if (presetDialog != null) presetDialog.dismiss();
-            });
-
-            row.addView(item);
         }
     }
 
-    private int dp(int dp) {
-        return (int) (dp * getResources().getDisplayMetrics().density);
-    }
+    private int dp2(int dp) { return (int) (dp * getResources().getDisplayMetrics().density); }
+
 
     private void updatePresetInfo() {
         TextView tv = findViewById(R.id.tvPresetInfo);
