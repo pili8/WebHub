@@ -50,7 +50,6 @@
         android:theme="@style/Theme.CRMWebView"
         android:usesCleartextTraffic="true">
 
-        <!-- 主 Activity（不作为启动入口，由 alias 代理） -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -65,148 +64,49 @@
             android:configChanges="orientation|screenSize|keyboard|keyboardHidden"
             android:windowSoftInputMode="adjustResize" />
 
-        <!-- ========== 启动入口别名（10 套预设，仅一个启用） ========== -->
+        <!-- ================================================================ -->
+        <!-- 分组1：WebHub / LanHub / ECR -->
+        <!-- ================================================================ -->
 
-        <!-- 0: WebHub（默认，图标不变） -->
-        <activity-alias
-            android:name=".AliasWebHub"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:label="WebHub"
-            android:icon="@mipmap/ic_launcher"
-            android:enabled="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
+        <activity-alias android:name=".AliasWH1" android:targetActivity=".MainActivity" android:exported="true" android:label="WebHub" android:icon="@mipmap/ic_launcher" android:enabled="true">
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
+        <activity-alias android:name=".AliasWH2" android:targetActivity=".MainActivity" android:exported="true" android:label="WebHub" android:icon="@mipmap/ic_webhub2" android:enabled="false">
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
+        <activity-alias android:name=".AliasWH3" android:targetActivity=".MainActivity" android:exported="true" android:label="WebHub" android:icon="@mipmap/ic_webhub3" android:enabled="false">
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
+        <activity-alias android:name=".AliasWH4" android:targetActivity=".MainActivity" android:exported="true" android:label="WebHub" android:icon="@mipmap/ic_webhub4" android:enabled="false">
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
+        <activity-alias android:name=".AliasWH5" android:targetActivity=".MainActivity" android:exported="true" android:label="WebHub" android:icon="@mipmap/ic_webhub5" android:enabled="false">
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
+        <activity-alias android:name=".AliasWH6" android:targetActivity=".MainActivity" android:exported="true" android:label="WebHub" android:icon="@mipmap/ic_webhub6" android:enabled="false">
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
+        <activity-alias android:name=".AliasLH1" android:targetActivity=".MainActivity" android:exported="true" android:label="LanHub" android:icon="@mipmap/ic_lanhub1" android:enabled="false">
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
+        <activity-alias android:name=".AliasLH2" android:targetActivity=".MainActivity" android:exported="true" android:label="LanHub" android:icon="@mipmap/ic_lanhub2" android:enabled="false">
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
+        <activity-alias android:name=".AliasECR1" android:targetActivity=".MainActivity" android:exported="true" android:label="ECR" android:icon="@mipmap/ic_ecr1" android:enabled="false">
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
+        <activity-alias android:name=".AliasECR2" android:targetActivity=".MainActivity" android:exported="true" android:label="ECR" android:icon="@mipmap/ic_ecr2" android:enabled="false">
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
+        <activity-alias android:name=".AliasECRcn" android:targetActivity=".MainActivity" android:exported="true" android:label="企业客户记录" android:icon="@mipmap/ic_ecr_cn" android:enabled="false">
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
 
-        <!-- 1: 澎湃 -->
-        <activity-alias
-            android:name=".AliasPengPai"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:label="澎湃"
-            android:icon="@mipmap/ic_pengpai"
-            android:enabled="false">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
+        <!-- ================================================================ -->
+        <!-- 分组2：Gming / 澎湃浪 / Pili -->
+        <!-- ================================================================ -->
 
-        <!-- 2: LanHub -->
-        <activity-alias
-            android:name=".AliasLanHub"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:label="LanHub"
-            android:icon="@mipmap/ic_lanhub"
-            android:enabled="false">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <!-- 3: ECR2 -->
-        <activity-alias
-            android:name=".AliasECM"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:label="ECR2"
-            android:icon="@mipmap/ic_ecm"
-            android:enabled="false">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <!-- 4: Gming -->
-        <activity-alias
-            android:name=".AliasGming"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:label="Gming"
-            android:icon="@mipmap/ic_gming"
-            android:enabled="false">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <!-- 5: Pili -->
-        <activity-alias
-            android:name=".AliasPili"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:label="Pili"
-            android:icon="@mipmap/ic_pili"
-            android:enabled="false">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <!-- 6: PILI -->
-        <activity-alias
-            android:name=".AliasPiliDouyin"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:label="PILI"
-            android:icon="@mipmap/ic_pili_douyin"
-            android:enabled="false">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <!-- 7: WebHub 3 -->
-        <activity-alias
-            android:name=".AliasWebHub3"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:label="WebHub"
-            android:icon="@mipmap/ic_webhub3"
-            android:enabled="false">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <!-- 8: WebHub 4 -->
-        <activity-alias
-            android:name=".AliasWebHub4"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:label="WebHub"
-            android:icon="@mipmap/ic_webhub4"
-            android:enabled="false">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <!-- 9: ECR1 -->
-        <activity-alias
-            android:name=".AliasECR1"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:label="ECR1"
-            android:icon="@mipmap/ic_ecr1"
-            android:enabled="false">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
+        <activity-alias android:name=".AliasGM1" android:targetActivity=".MainActivity" android:exported="true" android:label="Gming" android:icon="@mipmap/ic_gming1" android:enabled="false">
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
+        <activity-alias android:name=".AliasGM2" android:targetActivity=".MainActivity" android:exported="true" android:label="Gming" android:icon="@mipmap/ic_gming2" android:enabled="false">
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
+        <activity-alias android:name=".AliasGM3" android:targetActivity=".MainActivity" android:exported="true" android:label="Gming" android:icon="@mipmap/ic_gming3" android:enabled="false">
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
+        <activity-alias android:name=".AliasPPL" android:targetActivity=".MainActivity" android:exported="true" android:label="澎湃浪" android:icon="@mipmap/ic_ppl" android:enabled="false">
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
+        <activity-alias android:name=".AliasPL1" android:targetActivity=".MainActivity" android:exported="true" android:label="Pili" android:icon="@mipmap/ic_pili" android:enabled="false">
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
+        <activity-alias android:name=".AliasPLdy" android:targetActivity=".MainActivity" android:exported="true" android:label="Pili" android:icon="@mipmap/ic_pili_dy" android:enabled="false">
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
 
     </application>
-
 </manifest>

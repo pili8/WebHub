@@ -48,9 +48,10 @@ public class SettingsActivity extends AppCompatActivity {
     private Switch switchNightModeCSS;
     private Switch switchPageActions;
     private android.widget.Spinner spinnerUA;
-    private Spinner spinnerPreset;
-    private int currentPresetIndex = -1;
-    private boolean presetInitialized = false;
+    private Spinner spinnerPreset1;
+    private Spinner spinnerPreset2;
+    private int pendingPresetIndex = -1; // 选择但未保存的预设
+    private int currentPresetIndex = -1;  // 当前实际生效的预设
     private SharedPreferences prefs;
 
     private static final String[] UA_LABELS = {
@@ -157,37 +158,68 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void setupPresetSwitcher() {
-        spinnerPreset = findViewById(R.id.spinnerPreset);
-        TextView tvPresetInfo = findViewById(R.id.tvPresetInfo);
+        currentPresetIndex = AliasManager.getCurrentIndex(getPackageManager(), getPackageName());
+        pendingPresetIndex = currentPresetIndex;
 
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item, AliasManager.PRESET_LABELS);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerPreset.setAdapter(adapter);
+        // === 分组1 Spinner ===
+        spinnerPreset1 = findViewById(R.id.spinnerPreset1);
+        ArrayAdapter<String> ad1 = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item, AliasManager.G1_LABELS);
+        ad1.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerPreset1.setAdapter(ad1);
 
-        currentPresetIndex = AliasManager.getCurrentPresetIndex(getPackageManager(), getPackageName());
-        presetInitialized = false;
-        spinnerPreset.setSelection(currentPresetIndex);
-        tvPresetInfo.setText(AliasManager.PRESET_LABELS[currentPresetIndex]);
+        // === 分组2 Spinner ===
+        spinnerPreset2 = findViewById(R.id.spinnerPreset2);
+        ArrayAdapter<String> ad2 = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item, AliasManager.G2_LABELS);
+        ad2.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerPreset2.setAdapter(ad2);
 
-        spinnerPreset.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (!presetInitialized) {
-                    presetInitialized = true;
-                    return;
-                }
-                if (position >= 0 && position < AliasManager.ALIAS_NAMES.length && position != currentPresetIndex) {
-                    currentPresetIndex = position;
-                    AliasManager.switchAppPreset(getPackageManager(), getPackageName(), position);
-                    TextView tvInfo = findViewById(R.id.tvPresetInfo);
-                    tvInfo.setText(AliasManager.PRESET_LABELS[position]);
-                    Toast.makeText(SettingsActivity.this, "已切换为「" + AliasManager.PRESET_LABELS[position] + "」，返回桌面查看", Toast.LENGTH_LONG).show();
-                }
+        // 根据 currentIndex 设置两个 Spinner 的初始状态
+        if (AliasManager.getGroup(currentPresetIndex) == 1) {
+            spinnerPreset1.setSelection(AliasManager.getGroupPos(currentPresetIndex));
+            spinnerPreset2.setSelection(0);
+        } else {
+            spinnerPreset1.setSelection(0);
+            spinnerPreset2.setSelection(AliasManager.getGroupPos(currentPresetIndex));
+        }
+        updatePresetInfo();
+
+        // 分组1 选择 → 重置分组2
+        spinnerPreset1.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            boolean init = true;
+            public void onItemSelected(AdapterView<?> p, View v, int pos, long id) {
+                if (init) { init = false; return; }
+                pendingPresetIndex = pos; // G1: index = pos
+                spinnerPreset2.setSelection(0);
+                updatePresetInfo();
             }
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {}
+            public void onNothingSelected(AdapterView<?> p) {}
         });
+
+        // 分组2 选择 → 重置分组1
+        spinnerPreset2.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            boolean init = true;
+            public void onItemSelected(AdapterView<?> p, View v, int pos, long id) {
+                if (init) { init = false; return; }
+                pendingPresetIndex = AliasManager.G1_COUNT + pos;
+                spinnerPreset1.setSelection(0);
+                updatePresetInfo();
+            }
+            public void onNothingSelected(AdapterView<?> p) {}
+        });
+    }
+
+    private void updatePresetInfo() {
+        TextView tv1 = findViewById(R.id.tvPresetInfo);
+        TextView tv2 = findViewById(R.id.tvPresetInfo2);
+        tv1.setText("当前: " + AliasManager.getLabelByIndex(currentPresetIndex));
+        if (pendingPresetIndex != currentPresetIndex) {
+            tv2.setText("待保存: " + AliasManager.getLabelByIndex(pendingPresetIndex) + "（需点保存）");
+            tv2.setTextColor(0xFFFF9800);
+        } else {
+            tv2.setText("");
+        }
     }
 
     private void exportSettings() {
@@ -760,6 +792,14 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void saveConfig() {
+        // 应用预设切换（仅在选择变更时）
+        if (pendingPresetIndex >= 0 && pendingPresetIndex != currentPresetIndex) {
+            AliasManager.switchPreset(getPackageManager(), getPackageName(), pendingPresetIndex);
+            currentPresetIndex = pendingPresetIndex;
+            updatePresetInfo();
+            Toast.makeText(this, "图标和名称已更新，返回桌面查看", Toast.LENGTH_LONG).show();
+        }
+
         SharedPreferences.Editor editor = prefs.edit();
         JSONArray tabsJson = ConfigManager.buildTabsJson(tabsData);
 
