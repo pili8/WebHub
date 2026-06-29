@@ -189,19 +189,46 @@ public class SettingsActivity extends AppCompatActivity {
         findViewById(R.id.btnPresetPicker).setOnClickListener(v -> showPresetDialog());
     }
 
+    private int dialogGroup = 1;
+    private LinearLayout dialogGrid;
+    private ImageView dialogBigIcon;
+
     private void showPresetDialog() {
+        dialogGroup = AliasManager.getGroup(pendingPresetIndex);
+
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("选择名称和图标");
+        builder.setTitle("应用名称和图标");
 
         LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
+        root.setOrientation(LinearLayout.HORIZONTAL);
         root.setPadding(8, 8, 8, 8);
 
-        addGroupHeader(root, "WebHub / LanHub / ECR", 0, AliasManager.G1_COUNT);
-        addGroupItems(root, 0, AliasManager.G1_COUNT);
+        // 左侧大图标
+        dialogBigIcon = new ImageView(this);
+        dialogBigIcon.setLayoutParams(new LinearLayout.LayoutParams(dp(80), dp(80)));
+        dialogBigIcon.setImageResource(PRESET_ICONS[pendingPresetIndex]);
+        dialogBigIcon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        root.addView(dialogBigIcon);
 
-        addGroupHeader(root, "Gming / 澎湃浪 / Pili", AliasManager.G1_COUNT, AliasManager.G2_COUNT);
-        addGroupItems(root, AliasManager.G1_COUNT, AliasManager.G2_COUNT);
+        // 右侧
+        LinearLayout right = new LinearLayout(this);
+        right.setOrientation(LinearLayout.VERTICAL);
+        right.setPadding(dp(10), 0, 0, 0);
+
+        // 分组切换标签
+        LinearLayout tabs = new LinearLayout(this);
+        tabs.setOrientation(LinearLayout.HORIZONTAL);
+        addTab(tabs, "WebHub / LanHub / ECR", 1);
+        addTab(tabs, "Gming / 澎湃浪 / Pili", 2);
+        right.addView(tabs);
+
+        // 图标网格
+        dialogGrid = new LinearLayout(this);
+        dialogGrid.setOrientation(LinearLayout.HORIZONTAL);
+        right.addView(dialogGrid);
+
+        root.addView(right);
+        refreshGrid();
 
         builder.setView(root);
         builder.setNegativeButton("取消", null);
@@ -209,51 +236,64 @@ public class SettingsActivity extends AppCompatActivity {
         presetDialog.show();
     }
 
-    private void addGroupHeader(LinearLayout root, String title, int start, int count) {
-        // 判断当前选中项是否在这个分组
-        boolean active = pendingPresetIndex >= start && pendingPresetIndex < start + count;
-        TextView header = new TextView(this);
-        header.setText(title + (active ? "  ◀" : ""));
-        header.setTextSize(13);
-        header.setTextColor(active ? 0xFF1976D2 : 0xFF888888);
-        header.setPadding(8, 12, 8, 4);
-        root.addView(header);
+    private void addTab(LinearLayout tabs, String text, int group) {
+        TextView tv = new TextView(this);
+        tv.setText(group == dialogGroup ? "◉ " + text : text);
+        tv.setTextSize(11);
+        tv.setTextColor(group == dialogGroup ? 0xFF1976D2 : 0xFF888888);
+        tv.setPadding(dp(6), dp(6), dp(10), dp(6));
+        tv.setClickable(true);
+        tv.setOnClickListener(v -> {
+            dialogGroup = group;
+            refreshGrid();
+            // 更新左侧预览为当前组第一个
+            int first = group == 1 ? 0 : AliasManager.G1_COUNT;
+            dialogBigIcon.setImageResource(PRESET_ICONS[first]);
+        });
+        tabs.addView(tv);
     }
 
-    private void addGroupItems(LinearLayout root, int start, int count) {
-        LinearLayout scroll = new LinearLayout(this);
-        scroll.setOrientation(LinearLayout.HORIZONTAL);
+    private void refreshGrid() {
+        if (dialogGrid == null) return;
+        dialogGrid.removeAllViews();
 
+        LinearLayout wrap = new LinearLayout(this);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        dialogGrid.addView(wrap);
+
+        int start = dialogGroup == 1 ? 0 : AliasManager.G1_COUNT;
+        int count = dialogGroup == 1 ? AliasManager.G1_COUNT : AliasManager.G2_COUNT;
+
+        final int COL = 5;
+        LinearLayout row = null;
         for (int i = 0; i < count; i++) {
+            if (i % COL == 0) {
+                row = new LinearLayout(this);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                wrap.addView(row);
+            }
             int index = start + i;
             LinearLayout item = new LinearLayout(this);
             item.setOrientation(LinearLayout.VERTICAL);
-            item.setPadding(8, 4, 8, 8);
+            item.setPadding(dp(3), dp(2), dp(3), dp(2));
             item.setGravity(Gravity.CENTER);
             item.setClickable(true);
-            item.setFocusable(true);
 
-            // 图标
             ImageView icon = new ImageView(this);
-            LinearLayout.LayoutParams ip = new LinearLayout.LayoutParams(dp(52), dp(52));
-            icon.setLayoutParams(ip);
+            icon.setLayoutParams(new LinearLayout.LayoutParams(dp(44), dp(44)));
             icon.setImageResource(PRESET_ICONS[index]);
             icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
-
-            // 选中高亮
             if (index == pendingPresetIndex) {
                 icon.setBackgroundColor(0x331976D2);
             }
             item.addView(icon);
 
-            // 名称
             TextView label = new TextView(this);
             label.setText(AliasManager.getLabelByIndex(index));
-            label.setTextSize(10);
+            label.setTextSize(9);
             label.setTextColor(index == pendingPresetIndex ? 0xFF1976D2 : 0xFF666666);
             label.setGravity(Gravity.CENTER);
             label.setMaxLines(1);
-            label.setLayoutParams(new LinearLayout.LayoutParams(dp(56), LinearLayout.LayoutParams.WRAP_CONTENT));
             item.addView(label);
 
             final int idx = index;
@@ -263,9 +303,8 @@ public class SettingsActivity extends AppCompatActivity {
                 if (presetDialog != null) presetDialog.dismiss();
             });
 
-            scroll.addView(item);
+            row.addView(item);
         }
-        root.addView(scroll);
     }
 
     private int dp(int dp) {
