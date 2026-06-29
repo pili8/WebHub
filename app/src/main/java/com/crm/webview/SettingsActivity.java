@@ -206,11 +206,12 @@ public class SettingsActivity extends AppCompatActivity {
         });
     }
 
-    private class GroupedPresetAdapter extends BaseAdapter {
+    private class GroupedPresetAdapter extends ArrayAdapter<String> {
         private final java.util.Map<Integer, Integer> posToReal = new java.util.HashMap<>();
         private final java.util.Map<Integer, Integer> realToPos = new java.util.HashMap<>();
 
         GroupedPresetAdapter() {
+            super(SettingsActivity.this, android.R.layout.simple_spinner_item, new String[2 + AliasManager.G1_COUNT + AliasManager.G2_COUNT]);
             int sp = 0;
             sp++; // header 1
             for (int i = 0; i < AliasManager.G1_COUNT; i++) { posToReal.put(sp, i); realToPos.put(i, sp); sp++; }
