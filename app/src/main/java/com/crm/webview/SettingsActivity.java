@@ -189,8 +189,6 @@ public class SettingsActivity extends AppCompatActivity {
         findViewById(R.id.btnPresetPicker).setOnClickListener(v -> showPresetDialog());
     }
 
-    private AlertDialog presetDialog;
-
     private void showPresetDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("选择名称和图标");
@@ -255,7 +253,7 @@ public class SettingsActivity extends AppCompatActivity {
             label.setTextColor(index == pendingPresetIndex ? 0xFF1976D2 : 0xFF666666);
             label.setGravity(Gravity.CENTER);
             label.setMaxLines(1);
-            label.setLayoutParams(new LinearLayout.LayoutParams(dp(56), LayoutParams.WRAP_CONTENT));
+            label.setLayoutParams(new LinearLayout.LayoutParams(dp(56), LinearLayout.LayoutParams.WRAP_CONTENT));
             item.addView(label);
 
             final int idx = index;
