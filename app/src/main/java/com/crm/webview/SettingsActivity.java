@@ -24,8 +24,6 @@ import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.graphics.Typeface;
-import android.widget.BaseAdapter;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -51,7 +49,6 @@ public class SettingsActivity extends AppCompatActivity {
     private Switch switchNightModeCSS;
     private Switch switchPageActions;
     private android.widget.Spinner spinnerUA;
-    private Spinner spinnerPreset;
     private ImageView ivPresetPreview;
     private int pendingPresetIndex = -1;
     private int currentPresetIndex = -1;
@@ -181,103 +178,56 @@ public class SettingsActivity extends AppCompatActivity {
         btnImport.setOnClickListener(v -> importSettings());
     }
 
+    private static final String[] GROUP_LABELS = { "WebHub / LanHub / ECR", "Gming / 澎湃浪 / Pili" };
+
     private void setupPresetSwitcher() {
         currentPresetIndex = AliasManager.getCurrentIndex(getPackageManager(), getPackageName());
         pendingPresetIndex = currentPresetIndex;
-
         ivPresetPreview = findViewById(R.id.ivPresetPreview);
-        spinnerPreset = findViewById(R.id.spinnerPreset);
-
-        GroupedPresetAdapter adapter = new GroupedPresetAdapter();
-        spinnerPreset.setAdapter(adapter);
-        spinnerPreset.setSelection(adapter.realPosToSpinnerPos(pendingPresetIndex));
         updatePresetInfo();
 
-        spinnerPreset.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        Spinner spGroup = findViewById(R.id.spinnerGroup);
+        spGroup.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, GROUP_LABELS));
+        ((ArrayAdapter<?>) spGroup.getAdapter()).setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
+        Spinner spItem = findViewById(R.id.spinnerItem);
+
+        spGroup.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             boolean init = true;
-            public void onItemSelected(AdapterView<?> p, View v, int spinnerPos, long id) {
+            public void onItemSelected(AdapterView<?> p, View v, int g, long id) {
                 if (init) { init = false; return; }
-                int idx = ((GroupedPresetAdapter) spinnerPreset.getAdapter()).spinnerPosToRealPos(spinnerPos);
-                if (idx >= 0) {
-                    pendingPresetIndex = idx;
-                    updatePresetInfo();
-                }
+                String[] items = g == 0 ? AliasManager.G1_LABELS : AliasManager.G2_LABELS;
+                ArrayAdapter<String> ad = new ArrayAdapter<>(SettingsActivity.this,
+                        android.R.layout.simple_spinner_item, items);
+                ad.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                spItem.setAdapter(ad);
+                spItem.setSelection(0);
             }
             public void onNothingSelected(AdapterView<?> p) {}
         });
+
+        spItem.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            boolean init = true;
+            public void onItemSelected(AdapterView<?> p, View v, int pos, long id) {
+                if (init) { init = false; return; }
+                int g = spGroup.getSelectedItemPosition();
+                pendingPresetIndex = g == 0 ? pos : AliasManager.G1_COUNT + pos;
+                updatePresetInfo();
+            }
+            public void onNothingSelected(AdapterView<?> p) {}
+        });
+
+        int curGroup = AliasManager.getGroup(currentPresetIndex);
+        int curPos = AliasManager.getGroupPos(currentPresetIndex);
+        spGroup.setSelection(curGroup - 1);
+        String[] curItems = curGroup == 1 ? AliasManager.G1_LABELS : AliasManager.G2_LABELS;
+        ArrayAdapter<String> initAd = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item, curItems);
+        initAd.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spItem.setAdapter(initAd);
+        spItem.setSelection(curPos);
     }
 
-    private class GroupedPresetAdapter extends ArrayAdapter<String> {
-        private final java.util.Map<Integer, Integer> posToReal = new java.util.HashMap<>();
-        private final java.util.Map<Integer, Integer> realToPos = new java.util.HashMap<>();
-
-        GroupedPresetAdapter() {
-            super(SettingsActivity.this, android.R.layout.simple_spinner_item, new String[2 + AliasManager.G1_COUNT + AliasManager.G2_COUNT]);
-            int sp = 0;
-            sp++; // header 1
-            for (int i = 0; i < AliasManager.G1_COUNT; i++) { posToReal.put(sp, i); realToPos.put(i, sp); sp++; }
-            sp++; // header 2
-            for (int i = 0; i < AliasManager.G2_COUNT; i++) { posToReal.put(sp, i + AliasManager.G1_COUNT); realToPos.put(i + AliasManager.G1_COUNT, sp); sp++; }
-        }
-        int spinnerPosToRealPos(int sp) { Integer v = posToReal.get(sp); return v != null ? v : -1; }
-        int realPosToSpinnerPos(int ri) { Integer v = realToPos.get(ri); return v != null ? v : 0; }
-        @Override public int getCount() { return 2 + AliasManager.G1_COUNT + AliasManager.G2_COUNT; }
-        @Override public String getItem(int p) { return ""; }
-        @Override public long getItemId(int p) { return p; }
-        @Override public boolean isEnabled(int p) { return posToReal.containsKey(p); }
-        @Override public int getItemViewType(int p) { return posToReal.containsKey(p) ? 1 : 0; }
-        @Override public int getViewTypeCount() { return 2; }
-
-        @Override
-        public View getView(int position, View cv, ViewGroup parent) {
-            Integer idx = posToReal.get(position);
-            if (idx != null) {
-                TextView tv = cv instanceof TextView ? (TextView) cv : new TextView(SettingsActivity.this);
-                tv.setPadding(dp2(8), dp2(10), dp2(8), dp2(10));
-                tv.setText(AliasManager.getLabelByIndex(idx));
-                tv.setTextSize(14);
-                tv.setTextColor(idx == pendingPresetIndex ? 0xFF1976D2 : 0xFF333333);
-                return tv;
-            }
-            return new View(SettingsActivity.this);
-        }
-
-        @Override
-        public View getDropDownView(int position, View cv, ViewGroup parent) {
-            Integer idx = posToReal.get(position);
-            if (idx != null) {
-                LinearLayout item = new LinearLayout(SettingsActivity.this);
-                item.setOrientation(LinearLayout.HORIZONTAL);
-                item.setGravity(Gravity.CENTER_VERTICAL);
-                item.setPadding(dp2(10), dp2(6), dp2(10), dp2(6));
-                if (idx == pendingPresetIndex) item.setBackgroundColor(0x101976D2);
-
-                ImageView ic = new ImageView(SettingsActivity.this);
-                ic.setLayoutParams(new LinearLayout.LayoutParams(dp2(36), dp2(36)));
-                ic.setImageResource(PRESET_ICONS[idx]);
-                ic.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                item.addView(ic);
-
-                TextView tv = new TextView(SettingsActivity.this);
-                tv.setText(AliasManager.getLabelByIndex(idx));
-                tv.setTextSize(14);
-                tv.setTextColor(idx == pendingPresetIndex ? 0xFF1976D2 : 0xFF333333);
-                tv.setPadding(dp2(8), 0, 0, 0);
-                item.addView(tv);
-                return item;
-            } else {
-                TextView tv = new TextView(SettingsActivity.this);
-                tv.setText(position == 0 ? "WebHub / LanHub / ECR" : "Gming / 澎湃浪 / Pili");
-                tv.setTextSize(12);
-                tv.setTextColor(0xFF888888);
-                tv.setPadding(dp2(10), dp2(8), dp2(10), dp2(2));
-                tv.setTypeface(null, Typeface.BOLD);
-                return tv;
-            }
-        }
-    }
-
-    private int dp2(int dp) { return (int) (dp * getResources().getDisplayMetrics().density); }
 
 
     private void updatePresetInfo() {
