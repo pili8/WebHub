@@ -329,14 +329,25 @@
                 android:layout_marginBottom="8dp"
                 android:layout_marginStart="4dp" />
 
-            <!-- 应用名称和图标 — 分组1 -->
+            <!-- 应用名称和图标（点击弹出分组选择） -->
             <LinearLayout
+                android:id="@+id/btnPresetPicker"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/card_white"
                 android:padding="14dp"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="8dp">
+                android:layout_marginBottom="8dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground">
+
+                <ImageView
+                    android:id="@+id/ivPresetPreview"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:scaleType="fitCenter"
+                    android:layout_marginEnd="12dp" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -347,9 +358,9 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="名称和图标·分组1"
-                        android:textSize="13sp"
-                        android:textColor="#888888" />
+                        android:text="应用名称和图标"
+                        android:textSize="15sp"
+                        android:textColor="#333333" />
 
                     <TextView
                         android:id="@+id/tvPresetInfo"
@@ -362,52 +373,12 @@
 
                 </LinearLayout>
 
-                <Spinner
-                    android:id="@+id/spinnerPreset1"
+                <TextView
                     android:layout_width="wrap_content"
-                    android:layout_height="40dp"
-                    android:minWidth="120dp" />
-
-            </LinearLayout>
-
-            <!-- 应用名称和图标 — 分组2 -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/card_white"
-                android:padding="14dp"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="8dp">
-
-                <LinearLayout
-                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="名称和图标·分组2"
-                        android:textSize="13sp"
-                        android:textColor="#888888" />
-
-                    <TextView
-                        android:id="@+id/tvPresetInfo2"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="-"
-                        android:textSize="12sp"
-                        android:textColor="#999999"
-                        android:layout_marginTop="2dp" />
-
-                </LinearLayout>
-
-                <Spinner
-                    android:id="@+id/spinnerPreset2"
-                    android:layout_width="wrap_content"
-                    android:layout_height="40dp"
-                    android:minWidth="120dp" />
+                    android:text="›"
+                    android:textSize="22sp"
+                    android:textColor="#CCCCCC" />
 
             </LinearLayout>
 

@@ -48,11 +48,32 @@ public class SettingsActivity extends AppCompatActivity {
     private Switch switchNightModeCSS;
     private Switch switchPageActions;
     private android.widget.Spinner spinnerUA;
-    private Spinner spinnerPreset1;
-    private Spinner spinnerPreset2;
-    private int pendingPresetIndex = -1; // 选择但未保存的预设
-    private int currentPresetIndex = -1;  // 当前实际生效的预设
+    private ImageView ivPresetPreview;
+    private AlertDialog presetDialog;
+    private int pendingPresetIndex = -1;
+    private int currentPresetIndex = -1;
     private SharedPreferences prefs;
+
+    // 预设图标资源 ID（与 AliasManager.ALL_NAMES 顺序一致）
+    private static final int[] PRESET_ICONS = {
+        R.mipmap.ic_launcher,    // 0  WebHub1
+        R.mipmap.ic_webhub2,     // 1  WebHub2
+        R.mipmap.ic_webhub3,     // 2  WebHub3
+        R.mipmap.ic_webhub4,     // 3  WebHub4
+        R.mipmap.ic_webhub5,     // 4  WebHub5
+        R.mipmap.ic_webhub6,     // 5  WebHub6
+        R.mipmap.ic_lanhub1,     // 6  LanHub1
+        R.mipmap.ic_lanhub2,     // 7  LanHub2
+        R.mipmap.ic_ecr1,        // 8  ECR1
+        R.mipmap.ic_ecr2,        // 9  ECR2
+        R.mipmap.ic_ecr_cn,      // 10 ECR中文
+        R.mipmap.ic_gming1,      // 11 Gming1
+        R.mipmap.ic_gming2,      // 12 Gming2
+        R.mipmap.ic_gming3,      // 13 Gming3
+        R.mipmap.ic_ppl,         // 14 澎湃浪
+        R.mipmap.ic_pili,        // 15 Pili
+        R.mipmap.ic_pili_dy      // 16 Pili抖音版
+    };
 
     private static final String[] UA_LABELS = {
         "默认", "Android Chrome", "iPhone", "iPad", "微信内置",
@@ -161,65 +182,109 @@ public class SettingsActivity extends AppCompatActivity {
         currentPresetIndex = AliasManager.getCurrentIndex(getPackageManager(), getPackageName());
         pendingPresetIndex = currentPresetIndex;
 
-        // === 分组1 Spinner ===
-        spinnerPreset1 = findViewById(R.id.spinnerPreset1);
-        ArrayAdapter<String> ad1 = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item, AliasManager.G1_LABELS);
-        ad1.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerPreset1.setAdapter(ad1);
-
-        // === 分组2 Spinner ===
-        spinnerPreset2 = findViewById(R.id.spinnerPreset2);
-        ArrayAdapter<String> ad2 = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item, AliasManager.G2_LABELS);
-        ad2.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerPreset2.setAdapter(ad2);
-
-        // 根据 currentIndex 设置两个 Spinner 的初始状态
-        if (AliasManager.getGroup(currentPresetIndex) == 1) {
-            spinnerPreset1.setSelection(AliasManager.getGroupPos(currentPresetIndex));
-            spinnerPreset2.setSelection(0);
-        } else {
-            spinnerPreset1.setSelection(0);
-            spinnerPreset2.setSelection(AliasManager.getGroupPos(currentPresetIndex));
-        }
+        ivPresetPreview = findViewById(R.id.ivPresetPreview);
         updatePresetInfo();
 
-        // 分组1 选择 → 重置分组2
-        spinnerPreset1.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            boolean init = true;
-            public void onItemSelected(AdapterView<?> p, View v, int pos, long id) {
-                if (init) { init = false; return; }
-                pendingPresetIndex = pos; // G1: index = pos
-                spinnerPreset2.setSelection(0);
-                updatePresetInfo();
-            }
-            public void onNothingSelected(AdapterView<?> p) {}
-        });
+        // 点击打开分组选择对话框
+        findViewById(R.id.btnPresetPicker).setOnClickListener(v -> showPresetDialog());
+    }
 
-        // 分组2 选择 → 重置分组1
-        spinnerPreset2.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            boolean init = true;
-            public void onItemSelected(AdapterView<?> p, View v, int pos, long id) {
-                if (init) { init = false; return; }
-                pendingPresetIndex = AliasManager.G1_COUNT + pos;
-                spinnerPreset1.setSelection(0);
-                updatePresetInfo();
+    private AlertDialog presetDialog;
+
+    private void showPresetDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("选择名称和图标");
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(8, 8, 8, 8);
+
+        addGroupHeader(root, "WebHub / LanHub / ECR", 0, AliasManager.G1_COUNT);
+        addGroupItems(root, 0, AliasManager.G1_COUNT);
+
+        addGroupHeader(root, "Gming / 澎湃浪 / Pili", AliasManager.G1_COUNT, AliasManager.G2_COUNT);
+        addGroupItems(root, AliasManager.G1_COUNT, AliasManager.G2_COUNT);
+
+        builder.setView(root);
+        builder.setNegativeButton("取消", null);
+        presetDialog = builder.create();
+        presetDialog.show();
+    }
+
+    private void addGroupHeader(LinearLayout root, String title, int start, int count) {
+        // 判断当前选中项是否在这个分组
+        boolean active = pendingPresetIndex >= start && pendingPresetIndex < start + count;
+        TextView header = new TextView(this);
+        header.setText(title + (active ? "  ◀" : ""));
+        header.setTextSize(13);
+        header.setTextColor(active ? 0xFF1976D2 : 0xFF888888);
+        header.setPadding(8, 12, 8, 4);
+        root.addView(header);
+    }
+
+    private void addGroupItems(LinearLayout root, int start, int count) {
+        LinearLayout scroll = new LinearLayout(this);
+        scroll.setOrientation(LinearLayout.HORIZONTAL);
+
+        for (int i = 0; i < count; i++) {
+            int index = start + i;
+            LinearLayout item = new LinearLayout(this);
+            item.setOrientation(LinearLayout.VERTICAL);
+            item.setPadding(8, 4, 8, 8);
+            item.setGravity(Gravity.CENTER);
+            item.setClickable(true);
+            item.setFocusable(true);
+
+            // 图标
+            ImageView icon = new ImageView(this);
+            LinearLayout.LayoutParams ip = new LinearLayout.LayoutParams(dp(52), dp(52));
+            icon.setLayoutParams(ip);
+            icon.setImageResource(PRESET_ICONS[index]);
+            icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+
+            // 选中高亮
+            if (index == pendingPresetIndex) {
+                icon.setBackgroundColor(0x331976D2);
             }
-            public void onNothingSelected(AdapterView<?> p) {}
-        });
+            item.addView(icon);
+
+            // 名称
+            TextView label = new TextView(this);
+            label.setText(AliasManager.getLabelByIndex(index));
+            label.setTextSize(10);
+            label.setTextColor(index == pendingPresetIndex ? 0xFF1976D2 : 0xFF666666);
+            label.setGravity(Gravity.CENTER);
+            label.setMaxLines(1);
+            label.setLayoutParams(new LinearLayout.LayoutParams(dp(56), LayoutParams.WRAP_CONTENT));
+            item.addView(label);
+
+            final int idx = index;
+            item.setOnClickListener(v2 -> {
+                pendingPresetIndex = idx;
+                updatePresetInfo();
+                if (presetDialog != null) presetDialog.dismiss();
+            });
+
+            scroll.addView(item);
+        }
+        root.addView(scroll);
+    }
+
+    private int dp(int dp) {
+        return (int) (dp * getResources().getDisplayMetrics().density);
     }
 
     private void updatePresetInfo() {
-        TextView tv1 = findViewById(R.id.tvPresetInfo);
-        TextView tv2 = findViewById(R.id.tvPresetInfo2);
-        tv1.setText("当前: " + AliasManager.getLabelByIndex(currentPresetIndex));
+        TextView tv = findViewById(R.id.tvPresetInfo);
+        String label = AliasManager.getLabelByIndex(currentPresetIndex);
         if (pendingPresetIndex != currentPresetIndex) {
-            tv2.setText("待保存: " + AliasManager.getLabelByIndex(pendingPresetIndex) + "（需点保存）");
-            tv2.setTextColor(0xFFFF9800);
+            tv.setText("当前: " + label + "  →  待保存: " + AliasManager.getLabelByIndex(pendingPresetIndex));
+            tv.setTextColor(0xFFFF9800);
         } else {
-            tv2.setText("");
+            tv.setText(label);
+            tv.setTextColor(0xFF999999);
         }
+        ivPresetPreview.setImageResource(PRESET_ICONS[pendingPresetIndex]);
     }
 
     private void exportSettings() {
