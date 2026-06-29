@@ -178,7 +178,7 @@ public class SettingsActivity extends AppCompatActivity {
         btnImport.setOnClickListener(v -> importSettings());
     }
 
-    private static final String[] GROUP_LABELS = { "WebHub / LanHub / ECR", "Gming / 澎湃浪 / Pili" };
+    private static final String[] GROUP_LABELS = { "分组1", "分组2" };
 
     private void setupPresetSwitcher() {
         currentPresetIndex = AliasManager.getCurrentIndex(getPackageManager(), getPackageName());
