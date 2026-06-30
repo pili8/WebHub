@@ -412,13 +412,15 @@ public class SettingsActivity extends AppCompatActivity {
                 });
             }
 
-            // 更多选项按钮
-            if (tabsData.size() > 2) {
+            // 更多选项按钮（≥2个Tab时显示）
+            if (tabsData.size() >= 2) {
                 btnDeleteTab.setVisibility(View.VISIBLE);
                 btnDeleteTab.setOnClickListener(v -> {
                     PopupMenu popup = new PopupMenu(this, v);
                     popup.getMenu().add(0, 1, 0, "编辑工作区");
-                    popup.getMenu().add(0, 2, 0, "删除工作区");
+                    if (tabsData.size() > 2) {
+                        popup.getMenu().add(0, 2, 0, "删除工作区");
+                    }
                     popup.setOnMenuItemClickListener(item -> {
                         if (item.getItemId() == 1) {
                             // 进入编辑模式
@@ -519,7 +521,7 @@ public class SettingsActivity extends AppCompatActivity {
             tvTabTitle.setVisibility(View.VISIBLE);
             etTabIcon.setVisibility(View.GONE);
             etTabTitle.setVisibility(View.GONE);
-            btnDeleteTab.setVisibility(tabsData.size() > 2 ? View.VISIBLE : View.GONE);
+            btnDeleteTab.setVisibility(tabsData.size() >= 2 ? View.VISIBLE : View.GONE);
             btnConfirmEdit.setVisibility(View.GONE);
         }
 
