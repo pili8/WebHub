@@ -234,21 +234,6 @@ public class SettingsActivity extends AppCompatActivity {
         ivPresetPreview.setImageResource(PRESET_ICONS[pendingPresetIndex]);
     }
 
-    /**
-     * 将 UI EditText 中的值同步回数据模型，确保 buildTabsJson 能读到用户输入。
-     */
-    private void syncUIToModel() {
-        for (TabData tab : tabsData) {
-            for (LinkData link : tab.links) {
-                if (link.cardView == null) continue;
-                EditText etTitle = link.cardView.findViewById(R.id.etLinkTitle);
-                EditText etUrl = link.cardView.findViewById(R.id.etLinkUrl);
-                if (etTitle != null) link.title = etTitle.getText().toString().trim();
-                if (etUrl != null) link.url = etUrl.getText().toString().trim();
-            }
-        }
-    }
-
     private void exportSettings() {
         // 使用 SAF (Storage Access Framework) 选择保存位置
         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
@@ -829,8 +814,8 @@ public class SettingsActivity extends AppCompatActivity {
             Toast.makeText(this, "图标和名称已更新，返回桌面查看", Toast.LENGTH_LONG).show();
         }
 
-        // 同步 UI → 模型（修复 buildTabsJson 读不到用户输入的问题）
-        syncUIToModel();
+        // 同步 UI → 模型
+        syncUiToData();
 
         SharedPreferences.Editor editor = prefs.edit();
         JSONArray tabsJson = ConfigManager.buildTabsJson(tabsData);
